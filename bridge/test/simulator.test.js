@@ -84,6 +84,7 @@ async function run() {
       verified_apply: true,
       apply_integrity_receipt: true,
       authoritative_readback: true,
+      midi_parameter_input: true,
     },
     'simulator capabilities should describe only implemented feature protocols',
   );

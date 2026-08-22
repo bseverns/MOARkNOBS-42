@@ -55,7 +55,9 @@ flowchart TD
   Simple --> Schema[ConfigSchema]
   Dispatch --> BulkTransport[ConfigBulkTransport]
   BulkTransport --> BulkApply[ConfigJsonApply]
+  BulkApply --> MidiCodec[MidiInputConfigCodec]
   BulkApply --> Digest[ConfigApplyDigest]
+  Simple --> MidiCodec
   Simple --> ChunkedRead[ChunkedReadTransport]
   Simple --> ModMatrix[ModMatrixReport]
   Dispatch --> Manifest[ManifestReport]
@@ -99,6 +101,8 @@ Files:
 - [`firmware/src/protocol/ConfigJsonApply.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigJsonApply.cpp)
 - [`firmware/include/protocol/ConfigApplyDigest.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ConfigApplyDigest.h)
 - [`firmware/src/protocol/ConfigApplyDigest.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigApplyDigest.cpp)
+- [`firmware/include/protocol/MidiInputConfigCodec.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/MidiInputConfigCodec.h)
+- [`firmware/src/protocol/MidiInputConfigCodec.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/MidiInputConfigCodec.cpp)
 
 Question answered: how does `SET_ALL` become a safe whole-machine mutation?
 
@@ -108,6 +112,8 @@ This lane is split by responsibility:
   duplicate detection, and ACK discipline
 - `ConfigJsonApply` owns normalized decoding, complete validation, and atomic
   runtime/persistence mutation
+- `MidiInputConfigCodec` is the single JSON parser/writer for profile-owned MIDI
+  input routes, shared by whole-config and profile commands
 - `ConfigApplyDigest` computes the device-owned checksum over normalized applied
   state
 

@@ -44,15 +44,18 @@ void MIDIHandler::begin() {
 }
 
 // Send one CC event across every enabled transport.
-void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
+void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t channel,
+                                    MidiInputPort suppressPort) {
     // Validate before sending
     if (control > 127 || value > 127 || channel < 1 || channel > 16)
         return;
     _txCount++;
-    enqueueSerialMessage(makeControlChange(channel, control, value));
-    serviceSerialQueue();
+    if (suppressPort != MidiInputPort::Din) {
+        enqueueSerialMessage(makeControlChange(channel, control, value));
+        serviceSerialQueue();
+    }
 #ifndef USB_MIDI_STUB
-    if (g_usbMidiOutEnabled) {
+    if (g_usbMidiOutEnabled && suppressPort != MidiInputPort::Usb) {
         usbMIDI.sendControlChange(control, value, channel); // USB MIDI
     }
 #endif
@@ -239,7 +242,8 @@ void MIDIHandler::processIncomingMIDI() {
         } else if (type == MidiType_SystemExclusiveStart) {
             handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
         } else {
-            handleMIDI(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
+            handleMIDI(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2(),
+                       MidiInputPort::Din);
         }
     }
 
@@ -273,7 +277,8 @@ void MIDIHandler::processIncomingMIDI() {
         } else if (type == MidiType_SystemExclusiveStart) {
             handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
         } else {
-            handleMIDI(type, usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
+            handleMIDI(type, usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2(),
+                       MidiInputPort::Usb);
         }
     }
 #endif
@@ -296,7 +301,8 @@ void MIDIHandler::processIncomingMIDI() {
     }
 }
 
-void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2) {
+void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2,
+                             MidiInputPort port) {
     // Only validate channel/data for channelized messages; realtime Start/Stop ignore them.
     if (type != midi::Start && type != midi::Stop && type != midi::Continue) {
         if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
@@ -382,6 +388,9 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
             break;
         default:
             MIDI_DBG_PRINTF("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
+            if (_controlChangeInputCallback) {
+                _controlChangeInputCallback(port, channel, data1, data2);
+            }
             break;
         }
         break;

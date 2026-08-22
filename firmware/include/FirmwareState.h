@@ -32,6 +32,7 @@ class MIDIHandler;
 class String;
 class TaskScheduler;
 class LedAnimator;
+class MidiInputRouter;
 struct ButtonManagerContext;
 
 // Definitions for these externs live in src/SystemState.cpp.
@@ -59,6 +60,7 @@ extern BiquadFilter filter;
 extern TaskScheduler scheduler;
 extern Arpeggiator arpeggiator;
 extern LFOManager lfoManager;
+extern MidiInputRouter midiInputRouter;
 
 // Signal-processing runtime state: voices, followers, and follower telemetry.
 extern std::array<EfVoice, NUM_SLOTS> efVoices;

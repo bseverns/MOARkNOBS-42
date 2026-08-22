@@ -6,7 +6,7 @@ const BRIDGE_CONTRACT = Object.freeze({
   event_contract_version: 1,
   bridge_version: '1.0.0-test',
   bridge_source_sha: 'test-source-sha',
-  supported_schema_versions: [8],
+  supported_schema_versions: [9],
   verified_apply: true,
   structured_session: true
 });

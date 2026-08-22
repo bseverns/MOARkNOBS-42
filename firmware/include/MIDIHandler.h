@@ -11,6 +11,7 @@ class HardwareSerial;
 #include <array>
 #include <cstdint>
 #include "MIDITypes.h"
+#include "MidiInputTypes.h"
 #include <MIDI.h>
 #include "MidiTypeShim.h"
 #if defined(USB_MIDI_STUB)
@@ -31,12 +32,17 @@ Thin wrapper around the Arduino and USB MIDI libraries.
 */
 class MIDIHandler {
   public:
+    using ControlChangeInputCallback =
+        void (*)(MidiInputPort, uint8_t, uint8_t, uint8_t);
     static constexpr uint16_t kMaxOutgoingSysExBytes = 64;
     // Assign a DisplayManager so MIDI traffic can be displayed.
     void setDisplayManager(DisplayManager *dm) { _displayManager = dm; }
 
     // Hook in a diagnostics block so we can count dropped bytes and overruns.
     void setDiagnostics(SystemDiagnostics *diag) { _diagnostics = diag; }
+    void setControlChangeInputCallback(ControlChangeInputCallback callback) {
+        _controlChangeInputCallback = callback;
+    }
 
     // Create a new MIDI handler with no side effects.
     MIDIHandler();
@@ -45,7 +51,8 @@ class MIDIHandler {
     void begin();
 
     // Send a standard Control Change message.
-    void sendControlChange(uint8_t control, uint8_t value, uint8_t channel);
+    void sendControlChange(uint8_t control, uint8_t value, uint8_t channel,
+                           MidiInputPort suppressPort = MidiInputPort::Any);
 
     // Send a MIDI Note On message.
     void sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel);
@@ -81,7 +88,8 @@ class MIDIHandler {
     void processIncomingMIDI();
 
     // Dispatch a parsed MIDI message to the appropriate handler.
-    void handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2);
+    void handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2,
+                    MidiInputPort port = MidiInputPort::Any);
 
     // Convenience helpers for specific message types.
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
@@ -151,6 +159,7 @@ class MIDIHandler {
     bool _clockRunning = false; // Track Start/Continue vs Stop for sync-aware modules
     DisplayManager *_displayManager = nullptr;
     SystemDiagnostics *_diagnostics = nullptr;
+    ControlChangeInputCallback _controlChangeInputCallback = nullptr;
 
     enum class ParameterSelection : uint8_t { None, Nrpn, Rpn };
     struct ParameterDecodeState {

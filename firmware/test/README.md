@@ -30,6 +30,7 @@ To take it for a spin from repo root:
 
 ```bash
 pio test -d firmware -e teensy40_unity -vvv
+pio test -d firmware -e native_midi_input -vvv
 ```
 
 Or, if you're already inside `firmware/`:

@@ -2,12 +2,13 @@
 #define PROFILE_MODULATION_TYPES_H
 
 #include "MIDITypes.h"
+#include "MidiInputTypes.h"
 #include "StorageLayout.h"
 
 #include <cstdint>
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
-inline constexpr uint16_t PROFILE_MODULATION_VERSION = 0x0001;
+inline constexpr uint16_t PROFILE_MODULATION_VERSION = 0x0002;
 
 struct __attribute__((packed)) ProfileSlotModSettings {
     uint16_t argPacked = 0;
@@ -18,6 +19,8 @@ struct __attribute__((packed)) ProfileModulationExtension {
     uint16_t version = PROFILE_MODULATION_VERSION;
     uint16_t crc = 0;
     ProfileSlotModSettings slots[NUM_SLOTS]{};
+    uint8_t midiInputBindingCount = 0;
+    MidiInputBinding midiInputBindings[MIDI_INPUT_MAX_BINDINGS]{};
 };
 
 static_assert(sizeof(ProfileSlotModSettings) == 6,

@@ -16,6 +16,7 @@
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
 #include "LFO/LFOManager.h"
+#include "MidiInputRouter.h"
 #include "EnvelopeFollower.h"
 #include "PerlinNoise.h"
 #include "Utility.h"
@@ -43,6 +44,7 @@ BiquadFilter filter;
 TaskScheduler scheduler;
 Arpeggiator arpeggiator;
 LFOManager lfoManager;
+MidiInputRouter midiInputRouter;
 std::array<EfVoice, NUM_SLOTS> efVoices;
 
 // 3. Front-panel input wiring and the managers that read it.

@@ -17,10 +17,12 @@
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Modes.h"
+#include "MidiInputRouter.h"
 #include "Protocol.h"
 #include "UI.h"
 #include "protocol/ProtocolErrors.h"
 #include "protocol/ConfigApplyDigest.h"
+#include "protocol/MidiInputConfigCodec.h"
 #include "protocol/SysExTemplateCodec.h"
 
 namespace {
@@ -1000,6 +1002,11 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     if (!validateSlotDefinitions(slotsJson, seq)) {
         return false;
     }
+    const MidiInputConfigCodec::ParseResult midiBindings = MidiInputConfigCodec::parse(config);
+    if (!midiBindings.ok) {
+        emitBulkError(midiBindings.errorCode, midiBindings.errorMessage, seq);
+        return false;
+    }
 
     StorageBackend *storage = ConfigManager::getStorageBackend();
     if (!storage->supportsTransactions() || !storage->beginTransaction()) {
@@ -1036,6 +1043,9 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     applyGlobalFilterState(config, anySlotPayloadSpecified);
     applyGlobalArgAndModeState(config, defaultArg);
     applyLedStateFromConfig(config);
+    if (midiBindings.specified) {
+        midiInputRouter.setBindings(midiBindings.bindings.data(), midiBindings.count);
+    }
     if (!persistActiveProfileSnapshot()) {
         rollbackRuntimeFromActiveGeneration();
         emitBulkError("profile_snapshot", "active profile snapshot could not be staged", seq);

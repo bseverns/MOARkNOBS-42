@@ -3,7 +3,7 @@
   "schema_source": "App/config_schema.json",
   "manifest": {
     "device_name": "MOARkNOBS-42",
-    "schema_version": 8,
+    "schema_version": 9,
     "slot_count": 42,
     "pot_count": 42,
     "envelope_count": 6,
@@ -23,6 +23,7 @@
     "clock_live": false,
     "note_dynamics_live": false,
     "jitter_live": false,
+    "midi_parameter_input": false,
     "usb_midi_toggle": false,
     "device_schema": false,
     "bulk_config": false,

@@ -185,6 +185,12 @@ export function compactConfigForDevice(config, previousConfig, options) {
     out.led = clone(config.led);
   }
   if (
+    Array.isArray(config.midiInputBindings) &&
+    !equivalentConfig(config.midiInputBindings, previousConfig?.midiInputBindings)
+  ) {
+    out.midiInputBindings = clone(config.midiInputBindings);
+  }
+  if (
     config.envelopeMode !== undefined &&
     !equivalentConfig(config.envelopeMode, previousConfig?.envelopeMode)
   ) {

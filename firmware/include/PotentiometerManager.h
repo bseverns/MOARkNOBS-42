@@ -40,6 +40,9 @@ class PotentiometerManager {
     static constexpr float ALPHA = 0.1f; // weight of the newest sample
     int smoothedValue[NUM_POTS];         // running EWMA for each pot
     bool scanInitialized[NUM_POTS];      // first physical sample seeds the filter, never a gesture
+    bool remoteTakeoverActive[NUM_POTS];
+    int remoteTargetRaw[NUM_POTS];
+    int remotePreviousPhysicalRaw[NUM_POTS];
 
     bool dirtyFlags[NUM_POTS]; // pots that moved enough to matter
 
@@ -102,8 +105,9 @@ class PotentiometerManager {
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);
 
-    // Inject a host-driven 0-127 value through the same callback lane as a live pot move.
-    void injectMidiValue(uint8_t potIndex, uint8_t midiValue);
+    // Inject a host-driven value. The physical pot regains control only after
+    // crossing that value, preventing the next mux scan from causing a jump.
+    void injectMidiValue(uint8_t potIndex, uint8_t midiValue, bool emitCallback = true);
 
     /*
     Read every pot via the muxes and invoke the MIDI callback for changes.

@@ -370,6 +370,13 @@ void test_profile_modulation_round_trip_preserves_arg_and_lfo_lanes() {
     saved.slots[9].lfo[1].setEnabled(true);
     saved.slots[9].lfo[1].setMode(ModCombineMode::Scale);
     saved.slots[9].lfo[1].amount = -37;
+    saved.midiInputBindingCount = 1;
+    saved.midiInputBindings[0].port = static_cast<uint8_t>(MidiInputPort::Usb);
+    saved.midiInputBindings[0].channel = 7;
+    saved.midiInputBindings[0].controller = 74;
+    saved.midiInputBindings[0].target =
+        static_cast<uint8_t>(MachineParameterTarget::ArpSwing);
+    saved.midiInputBindings[0].flags = MIDI_INPUT_FLAG_SOFT_TAKEOVER;
 
     TEST_ASSERT_TRUE(cfg.saveProfileModulation(2, saved));
     ProfileModulationExtension restored{};
@@ -382,6 +389,11 @@ void test_profile_modulation_round_trip_preserves_arg_and_lfo_lanes() {
     TEST_ASSERT_EQUAL_UINT8(2, restoredArg.sourceB);
     TEST_ASSERT_EQUAL_INT8(61, restored.slots[9].lfo[0].amount);
     TEST_ASSERT_EQUAL_INT8(-37, restored.slots[9].lfo[1].amount);
+    TEST_ASSERT_EQUAL_UINT8(1, restored.midiInputBindingCount);
+    TEST_ASSERT_EQUAL_UINT8(7, restored.midiInputBindings[0].channel);
+    TEST_ASSERT_EQUAL_UINT8(74, restored.midiInputBindings[0].controller);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MachineParameterTarget::ArpSwing),
+                            restored.midiInputBindings[0].target);
 
     ConfigManager::setStorageBackend(nullptr);
 }

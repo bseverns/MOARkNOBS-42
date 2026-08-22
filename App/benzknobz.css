@@ -2892,6 +2892,12 @@ label select:focus,
   margin-top: 0.85rem;
 }
 
+.schema-array-add,
+.schema-array-remove {
+  margin-top: 0.75rem;
+  align-self: flex-start;
+}
+
 .schema-section-body[data-empty-message]:empty {
   min-height: 38px;
   margin-top: 0.6rem;

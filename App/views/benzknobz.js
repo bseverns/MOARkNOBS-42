@@ -176,7 +176,8 @@ const boot = () => {
   const schemaSections = Array.from(document.querySelectorAll('[data-schema-target]')).map(
     (element) => ({
       target: element,
-      schemaPath: element.dataset.schemaTarget
+      schemaPath: element.dataset.schemaTarget,
+      applyMode: element.dataset.schemaApply
     })
   );
   const formRenderer = new FormRenderer({ runtime, sections: schemaSections });

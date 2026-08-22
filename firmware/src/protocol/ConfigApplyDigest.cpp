@@ -64,6 +64,19 @@ void hashProfileModulation(uint32_t &hash,
             hashByte(hash, static_cast<uint8_t>(lane.amount));
         }
     }
+    hashByte(hash, modulation.midiInputBindingCount);
+    for (uint8_t i = 0; i < modulation.midiInputBindingCount; ++i) {
+        const MidiInputBinding &binding = modulation.midiInputBindings[i];
+        hashByte(hash, binding.port);
+        hashByte(hash, binding.channel);
+        hashByte(hash, binding.controller);
+        hashByte(hash, binding.target);
+        hashByte(hash, binding.targetIndex);
+        hashByte(hash, binding.mode);
+        hashByte(hash, binding.minValue);
+        hashByte(hash, binding.maxValue);
+        hashByte(hash, binding.flags);
+    }
 }
 
 // Device-owned digest over the normalized slot arena and the semantic profile

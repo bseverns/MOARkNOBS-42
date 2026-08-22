@@ -49,6 +49,29 @@ function setValueAt(obj, path, value) {
   }
 }
 
+// Materialize a valid starter value when an optional schema array gains an
+// item. Defaults remain contract-owned instead of being duplicated by panels.
+function defaultValueForSchema(schema) {
+  if (schema.default !== undefined) return structuredClone(schema.default);
+  if (schema.type === 'object') {
+    return Object.fromEntries(
+      Object.entries(schema.properties ?? {}).map(([key, child]) => [
+        key,
+        defaultValueForSchema(child)
+      ])
+    );
+  }
+  if (schema.type === 'array') {
+    return Array.from({ length: schema.minItems ?? 0 }, () =>
+      defaultValueForSchema(schema.items ?? {})
+    );
+  }
+  if (schema.enum?.length) return schema.enum[0];
+  if (schema.type === 'integer' || schema.type === 'number') return schema.minimum ?? 0;
+  if (schema.type === 'boolean') return false;
+  return '';
+}
+
 // Per-field debounce keeps sliders and number inputs from flooding immediate patches.
 function debounce(fn, delay) {
   let timer;
@@ -91,6 +114,9 @@ export class FormRenderer {
   constructor({ runtime, sections = [], debounceMs = DEFAULT_DEBOUNCE }) {
     this.runtime = runtime;
     this.sections = sections;
+    this.stagedRoots = new Set(
+      sections.filter((section) => section.applyMode === 'staged').map((section) => section.schemaPath)
+    );
     this.debounceMs = debounceMs;
     this.schema = null;
     this.fields = new Map();
@@ -107,6 +133,7 @@ export class FormRenderer {
   // Render each configured schema section into its target container.
   renderSections() {
     if (!this.schema) return;
+    this.fields.clear();
     this.sections.forEach((section) => {
       const target = section.target;
       target.innerHTML = '';
@@ -202,8 +229,36 @@ export class FormRenderer {
       body.className = 'schema-section-body';
       const childPath = `${basePath}.${index}`;
       this.buildNode(childPath, schema.items ?? {}, entryValue, body);
+      if (count > (schema.minItems ?? 0)) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'schema-array-remove';
+        remove.textContent = `Remove ${baseLabel} ${index + 1}`;
+        remove.addEventListener('click', () => {
+          const next = items.slice();
+          next.splice(index, 1);
+          this.stageValue(basePath, next);
+          this.renderSections();
+          this.schedulePatch(basePath, next);
+        });
+        body.appendChild(remove);
+      }
       detail.appendChild(body);
       container.appendChild(detail);
+    }
+    if (count < (schema.maxItems ?? Number.POSITIVE_INFINITY)) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'schema-array-add';
+      add.textContent = `Add ${schema.title ?? titleize(basePath.split('.').pop() ?? basePath)}`;
+      add.addEventListener('click', () => {
+        const next = items.slice();
+        next.push(defaultValueForSchema(schema.items ?? {}));
+        this.stageValue(basePath, next);
+        this.renderSections();
+        this.schedulePatch(basePath, next);
+      });
+      container.appendChild(add);
     }
   }
 
@@ -401,6 +456,7 @@ export class FormRenderer {
   }
 
   schedulePatch(path, value) {
+    if (this.stagedRoots.has(String(splitPath(path)[0]))) return;
     const key = path;
     // Last-write-wins per path: replace any pending timer so only the freshest value is sent.
     if (this._patchSchedule.has(key)) clearTimeout(this._patchSchedule.get(key));

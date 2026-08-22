@@ -18,24 +18,25 @@ If you are already standing inside `src/protocol/`, read these files in order:
 3. [ProtocolDispatch.cpp](ProtocolDispatch.cpp)
 4. [ConfigBulkTransport.cpp](ConfigBulkTransport.cpp)
 5. [ConfigJsonApply.cpp](ConfigJsonApply.cpp)
-6. [ConfigApplyDigest.cpp](ConfigApplyDigest.cpp)
-7. [ProtocolSimpleHandlers.cpp](ProtocolSimpleHandlers.cpp)
-8. [ChunkedReadTransport.cpp](ChunkedReadTransport.cpp)
-9. [ModMatrixReport.cpp](ModMatrixReport.cpp)
-10. [ProtocolLiveControlHandlers.cpp](ProtocolLiveControlHandlers.cpp)
-11. [ProtocolErrors.cpp](ProtocolErrors.cpp)
-12. [ManifestReport.cpp](ManifestReport.cpp)
-13. [ProfileCommands.cpp](ProfileCommands.cpp)
-14. [ProfileSetHandler.cpp](ProfileSetHandler.cpp)
-15. [ProfileMacroHandlers.cpp](ProfileMacroHandlers.cpp)
-16. [SceneCommands.cpp](SceneCommands.cpp)
-17. [SceneStorage.cpp](SceneStorage.cpp)
+6. [MidiInputConfigCodec.cpp](MidiInputConfigCodec.cpp)
+7. [ConfigApplyDigest.cpp](ConfigApplyDigest.cpp)
+8. [ProtocolSimpleHandlers.cpp](ProtocolSimpleHandlers.cpp)
+9. [ChunkedReadTransport.cpp](ChunkedReadTransport.cpp)
+10. [ModMatrixReport.cpp](ModMatrixReport.cpp)
+11. [ProtocolLiveControlHandlers.cpp](ProtocolLiveControlHandlers.cpp)
+12. [ProtocolErrors.cpp](ProtocolErrors.cpp)
+13. [ManifestReport.cpp](ManifestReport.cpp)
+14. [ProfileCommands.cpp](ProfileCommands.cpp)
+15. [ProfileSetHandler.cpp](ProfileSetHandler.cpp)
+16. [ProfileMacroHandlers.cpp](ProfileMacroHandlers.cpp)
+17. [SceneCommands.cpp](SceneCommands.cpp)
+18. [SceneStorage.cpp](SceneStorage.cpp)
 
 That order preserves the machine shape:
 
 - top-level protocol execution
 - command routing
-- bulk transport, transactional apply, and applied-state digest
+- bulk transport, transactional apply, MIDI-input config codec, and applied-state digest
 - direct reads, bounded read transport, modulation reports, and live-control writes
 - error formatting
 - manifest/report emission

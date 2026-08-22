@@ -266,6 +266,7 @@ def main() -> None:
                 ("native transport tests", ["pio", "test", "-d", "firmware", "-e", "native_transport", "-vvv"]),
                 ("native modulation tests", ["pio", "test", "-d", "firmware", "-e", "native_modulation", "-vvv"]),
                 ("native persistence tests", ["pio", "test", "-d", "firmware", "-e", "native_persistence", "-vvv"]),
+                ("native MIDI input tests", ["pio", "test", "-d", "firmware", "-e", "native_midi_input", "-vvv"]),
             ]
         )
 

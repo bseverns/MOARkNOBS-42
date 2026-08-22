@@ -1,6 +1,7 @@
 #include "ProfileModulationStorage.h"
 
 #include <cstddef>
+#include <cstring>
 
 #ifndef FLASHMEM
 #define FLASHMEM
@@ -42,6 +43,12 @@ FLASHMEM ProfileModulationExtension sanitizeProfileModulation(
         slot.argPacked = packProfileSlotArg(unpackProfileSlotArg(slot.argPacked));
         for (SlotLfoLane &lane : slot.lfo) lane = sanitizeSlotLfoLane(lane);
     }
+    if (extension.midiInputBindingCount > MIDI_INPUT_MAX_BINDINGS) {
+        extension.midiInputBindingCount = MIDI_INPUT_MAX_BINDINGS;
+    }
+    for (uint8_t i = extension.midiInputBindingCount; i < MIDI_INPUT_MAX_BINDINGS; ++i) {
+        extension.midiInputBindings[i] = MidiInputBinding{};
+    }
     return extension;
 }
 
@@ -53,4 +60,28 @@ FLASHMEM uint16_t computeProfileModulationCrc(const ProfileModulationExtension &
         crc = crc16Update(crc, bytes[i]);
     }
     return crc;
+}
+
+bool decodeProfileModulationV1(const uint8_t *bytes, size_t length,
+                               ProfileModulationExtension &extension) {
+    struct __attribute__((packed)) LegacyV1 {
+        uint16_t version;
+        uint16_t crc;
+        ProfileSlotModSettings slots[NUM_SLOTS];
+    };
+    if (!bytes || length < sizeof(LegacyV1)) return false;
+    LegacyV1 legacy{};
+    std::memcpy(&legacy, bytes, sizeof(legacy));
+    if (legacy.version != 0x0001) return false;
+    uint16_t crc = 0xFFFF;
+    const uint8_t *legacyBytes = reinterpret_cast<const uint8_t *>(&legacy);
+    for (size_t i = offsetof(LegacyV1, slots); i < sizeof(LegacyV1); ++i) {
+        crc = crc16Update(crc, legacyBytes[i]);
+    }
+    if (crc != legacy.crc) return false;
+    extension = ProfileModulationExtension{};
+    std::memcpy(extension.slots, legacy.slots, sizeof(legacy.slots));
+    extension = sanitizeProfileModulation(extension);
+    extension.crc = computeProfileModulationCrc(extension);
+    return true;
 }

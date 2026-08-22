@@ -21,7 +21,7 @@ flowchart LR
   Inputs --> Firmware
   App <--> Bridge
   Bridge <--> Firmware
-  Firmware --> Hosts
+  Firmware <--> Hosts
   Bridge --> Hosts
   Firmware --> Evidence
   App --> Evidence
@@ -45,6 +45,7 @@ Use the contracts when behavior matters:
 - [Bridge Transport Contract](../bridge/BridgeTransportContract.md) for browser-to-Bridge session behavior.
 - [MN42 Line Protocol](../reference/MN42LineProtocol.md) and [Serial Protocol](../reference/SerialProtocol.md) for device command lanes.
 - [Modulation Matrix Contract](../reference/ModulationMatrixContract.md) for EF, ARG, LFO, and route reporting.
+- [MIDI Input Mapping](../guides/MidiInputMapping.md) for profile-owned inbound CC routes and takeover behavior.
 
 Use the evidence pages when readiness matters:
 

@@ -13,6 +13,8 @@
 #include "EfFilterControl.h"
 #include "LEDManager.h"
 #include "MIDIHandler.h"
+#include "MachineParameterService.h"
+#include "MidiInputRouter.h"
 #include "PotentiometerManager.h"
 #include "Arpeggiator.h"
 #include "Utility.h"
@@ -420,6 +422,11 @@ void initializeRuntime(bool baselinesLoaded) {
     midiHandler.begin();
     midiHandler.setDiagnostics(&g_systemDiagnostics);
     midiHandler.setDisplayManager(&displayManager);
+    midiInputRouter.setCallbacks(MachineParameterService::apply, MachineParameterService::read);
+    midiHandler.setControlChangeInputCallback(
+        [](MidiInputPort port, uint8_t channel, uint8_t controller, uint8_t value) {
+            midiInputRouter.routeControlChange(port, channel, controller, value);
+        });
     if (g_seedboxInteropEnabled) {
         seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
     }

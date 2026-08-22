@@ -19,6 +19,7 @@ const FIRMWARE_CAPABILITY_KEYS = [
   'verified_apply',
   'apply_integrity_receipt',
   'authoritative_readback',
+  'midi_parameter_input',
   'one_shot_config_boot'
 ];
 
@@ -90,6 +91,7 @@ test('simulator manifest advertises the firmware lanes it emulates', async ({ pa
     verified_apply: true,
     apply_integrity_receipt: true,
     authoritative_readback: true,
+    midi_parameter_input: true,
     one_shot_config_boot: false
   });
 });

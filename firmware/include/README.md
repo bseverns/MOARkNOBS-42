@@ -28,7 +28,9 @@ before wandering file-by-file.
 - **FirmwareState.h** – the runtime cast list: which shared managers, followers, caches, and UI flags are alive once the board boots ([SystemState.cpp](../src/SystemState.cpp)).
 - **hardware_config.h** – optional `applyHardwareRuntimeTuningOverrides()` hook for scheduler cadence. Structural wiring is fixed at build time because managers capture it before `setup()`.
 - **LEDManager.h** – drives the 52-piece addressable LED circus: slot halos, envelope meters, pot glows and the control-button beacon ([LEDManager.cpp](../src/LEDManager.cpp)).
- - **MIDIHandler.h** – thin wrapper for USB, DIN, and TRS MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
+- **MIDIHandler.h** – thin wrapper for USB, DIN, and TRS MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
+- **MidiInputRouter.h** – matches normalized inbound CC events against the active profile's fixed binding table ([MidiInputRouter.cpp](../src/MidiInputRouter.cpp)).
+- **MachineParameterService.h** – applies normalized writes through one range-checked machine-parameter boundary ([MachineParameterService.cpp](../src/MachineParameterService.cpp)).
 - **MIDITypes.h** – enums and structs defining slot data.
 - **PotentiometerManager.h** – reads analog pots via multiplexers ([PotentiometerManager.cpp](../src/PotentiometerManager.cpp)).
 - **ProfileRuntimeRequests.h** – explicit reload/save mailbox shared by button contexts and the main-loop profile lifecycle.
@@ -49,7 +51,9 @@ flowchart LR
     PotentiometerManager --> ConfigManager
     ConfigManager --> LEDManager
     ConfigManager --> DisplayManager
-    MIDIHandler --> Arpeggiator
+    MIDIHandler --> MidiInputRouter --> MachineParameterService
+    MachineParameterService --> Arpeggiator
+    MachineParameterService --> PotentiometerManager
     EnvelopeFollower --> MIDIHandler --> LEDManager
     Arpeggiator --> MIDIHandler --> LEDManager
     ButtonManager --> DisplayManager --> LEDManager

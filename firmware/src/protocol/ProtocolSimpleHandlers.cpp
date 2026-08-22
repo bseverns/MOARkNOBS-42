@@ -22,6 +22,7 @@
 #include "Modes.h"
 #include "Protocol.h"
 #include "protocol/ManifestReport.h"
+#include "protocol/MidiInputConfigCodec.h"
 #include "protocol/SysExTemplateCodec.h"
 #include "version.h"
 
@@ -387,6 +388,8 @@ void handleGetConfigCommand(const String &command) {
 
     JsonArray pots = doc.createNestedArray("pots");
     writePotMappings(pots);
+    JsonArray midiInputBindings = doc.createNestedArray("midiInputBindings");
+    MidiInputConfigCodec::write(midiInputBindings, midiInputRouter);
 
     JsonArray slots = doc.createNestedArray("slots");
     const auto &slotDefs = configManager.getSlots();
@@ -429,6 +432,8 @@ void handleGetConfigChunkedCommand(const String &command) {
     doc["fw_version"] = FW_VERSION_STR;
     doc["schema_version"] = CONFIG_VERSION;
     JsonArray pots = doc.createNestedArray("pots"); writePotMappings(pots);
+    JsonArray midiInputBindings = doc.createNestedArray("midiInputBindings");
+    MidiInputConfigCodec::write(midiInputBindings, midiInputRouter);
     JsonArray slots = doc.createNestedArray("slots");
     const auto &slotDefs = configManager.getSlots();
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) writeSlotConfig(slots, i, slotDefs[i]);

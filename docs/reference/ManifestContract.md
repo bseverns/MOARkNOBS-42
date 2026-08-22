@@ -9,7 +9,7 @@
 | Field                    | Current fallback  | Source                                                  |
 | ------------------------ | ----------------- | ------------------------------------------------------- |
 | `device_name`            | `MOARkNOBS-42`    | `interop/mn42_contract.json`                            |
-| `schema_version`         | `8`               | `interop/mn42_contract.json`                            |
+| `schema_version`         | `9`               | `interop/mn42_contract.json`                            |
 | `slot_count`             | `42`              | `interop/mn42_contract.json`                            |
 | `pot_count`              | `42`              | `interop/mn42_contract.json`                            |
 | `envelope_count`         | `6`               | `interop/mn42_contract.json`                            |
@@ -53,6 +53,7 @@ The `eeprom_*` names are legacy compatibility diagnostics. They describe whether
 | `capabilities.verified_apply` | Firmware implements the complete verified Apply contract.                                                |
 | `capabilities.apply_integrity_receipt` | A successful Apply ACK includes `applied_checksum` and `storage_generation`.                 |
 | `capabilities.authoritative_readback` | Hosts can read device-owned configuration after Apply to verify semantic state.               |
+| `capabilities.midi_parameter_input` | Firmware executes profile-owned MIDI CC input bindings without requiring the Bridge.             |
 
 The current commit and recovery guarantees are defined in the [Generation-Backed Persistence Contract](PersistenceContract.md). Hosts must not infer write readiness from the legacy `eeprom_*` fields.
 

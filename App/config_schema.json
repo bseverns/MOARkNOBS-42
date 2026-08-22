@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": 8,
+  "schema_version": 9,
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
   "required": ["slots", "efSlots", "filter", "arg", "led"],
@@ -390,6 +390,46 @@
         }
       },
       "additionalProperties": false
+    },
+    "midiInputBindings": {
+      "type": "array",
+      "title": "MIDI Input Bindings",
+      "description": "Profile-owned MIDI CC routes into slot values and internal machine parameters.",
+      "default": [],
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": ["source", "destination", "mode", "outputRange", "pickup"],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": ["port", "type", "channel", "number"],
+            "properties": {
+              "port": { "type": "string", "enum": ["any", "din", "usb"], "default": "any" },
+              "type": { "type": "string", "enum": ["cc7"], "default": "cc7" },
+              "channel": { "type": "integer", "minimum": 1, "maximum": 16, "default": 1 },
+              "number": { "type": "integer", "minimum": 0, "maximum": 127, "default": 0 }
+            },
+            "additionalProperties": false
+          },
+          "destination": {
+            "type": "string",
+            "default": "slot.0.value",
+            "description": "Stable machine parameter name or slot.N.value for N=0..41.",
+            "pattern": "^(slot\\.([0-9]|[1-3][0-9]|4[01])\\.value|arp\\.(swing|gate)|note\\.(velocity_shift|probability)|jitter\\.(depth|smoothness))$"
+          },
+          "mode": { "type": "string", "enum": ["absolute", "momentary", "toggle"], "default": "absolute" },
+          "outputRange": {
+            "type": "array",
+            "default": [0, 127],
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "integer", "minimum": 0, "maximum": 127 }
+          },
+          "pickup": { "type": "string", "enum": ["soft", "jump"], "default": "soft" }
+        },
+        "additionalProperties": false
+      }
     },
     "scenes": {
       "type": "array",

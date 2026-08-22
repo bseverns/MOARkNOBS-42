@@ -578,7 +578,22 @@ export function normalizeConfig(config, manifest = {}) {
     envelopeMode = null;
   }
 
-  const normalized = { slots, efSlots, filter, arg, led };
+  const midiInputBindings = Array.isArray(config.midiInputBindings)
+    ? config.midiInputBindings.slice(0, 16).map((binding) => ({
+        source: {
+          port: binding?.source?.port,
+          type: binding?.source?.type,
+          channel: binding?.source?.channel,
+          number: binding?.source?.number
+        },
+        destination: binding?.destination,
+        mode: binding?.mode,
+        outputRange: Array.isArray(binding?.outputRange) ? [...binding.outputRange] : undefined,
+        pickup: binding?.pickup
+      }))
+    : [];
+
+  const normalized = { slots, efSlots, filter, arg, led, midiInputBindings };
   if (envelopeMode) normalized.envelopeMode = envelopeMode;
   return normalized;
 }

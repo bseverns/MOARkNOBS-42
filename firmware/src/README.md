@@ -21,6 +21,8 @@ If you're trying to grok what a file is supposed to do, jump straight to its man
 - [EnvelopeFollower.cpp](EnvelopeFollower.cpp) → [../include/EnvelopeFollower/README.md](../include/EnvelopeFollower/README.md)
 - [LEDManager.cpp](LEDManager.cpp) → [../include/LEDManager/README.md](../include/LEDManager/README.md)
 - [MIDIHandler.cpp](MIDIHandler.cpp) → [../include/MIDIHandler/README.md](../include/MIDIHandler/README.md)
+- [MidiInputRouter.cpp](MidiInputRouter.cpp) → profile-owned inbound CC matching and pickup
+- [MachineParameterService.cpp](MachineParameterService.cpp) → normalized internal/slot mutation boundary
 - [PotentiometerManager.cpp](PotentiometerManager.cpp) → [../include/PotentiometerManager/README.md](../include/PotentiometerManager/README.md)
 - [protocol/Protocol.cpp](protocol/Protocol.cpp) → [protocol/README.md](protocol/README.md)
 

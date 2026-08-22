@@ -11,6 +11,7 @@ contracts:
       - docs/app/AppBehaviorContract.md
       - docs/reference/ConfigurationTransactionModel.md
       - docs/reference/ManifestContract.md
+      - docs/guides/MidiInputMapping.md
       - docs/app/AppTransportTruthTable.md
       - docs/bridge/BridgeTransportContract.md
       - docs/guides/Configurator.md
@@ -46,3 +47,4 @@ contracts:
       - docs/reference/MN42LineProtocol.md
       - docs/reference/SerialProtocol.md
       - docs/reference/ManifestContract.md
+      - docs/guides/MidiInputMapping.md

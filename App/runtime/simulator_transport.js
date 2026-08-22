@@ -189,6 +189,7 @@ export function createSimulator(simDeps = {}) {
       channel: (idx % 16) + 1,
       cc: (idx * 7) % 128
     })),
+    midiInputBindings: [],
     slots: Array.from({ length: manifest.slot_count }, (_, idx) => {
       const efIndex = idx % manifest.envelope_count;
       const filterIndex = idx % efFilterNames.length;
@@ -264,6 +265,7 @@ export function createSimulator(simDeps = {}) {
   const profileSlots = Array.from({ length: 4 }, () => cloneValue(config));
   const defaultProfile = cloneValue(config);
   const defaultProfileSettings = {
+    midiInputBindings: [],
     arp: {
       length_ticks: 12,
       shape: 0,
@@ -738,6 +740,7 @@ export function createSimulator(simDeps = {}) {
           arp: cloneValue(profileSettingsSlots[slot].arp),
           lfos: cloneValue(profileSettingsSlots[slot].lfos),
           routes: cloneValue(profileSettingsSlots[slot].routes),
+          midiInputBindings: cloneValue(profileSettingsSlots[slot].midiInputBindings),
           slots: []
         });
         break;
@@ -790,6 +793,9 @@ export function createSimulator(simDeps = {}) {
         }
         if (Array.isArray(next.routes)) {
           profileSettingsSlots[slot].routes = cloneValue(next.routes);
+        }
+        if (Array.isArray(next.midiInputBindings)) {
+          profileSettingsSlots[slot].midiInputBindings = cloneValue(next.midiInputBindings);
         }
         respond({
           profile: slot,

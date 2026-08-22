@@ -37,7 +37,7 @@ or `/ws/events`. The current response is:
     "event_contract_version": 1,
     "bridge_version": "1.0.0",
     "bridge_source_sha": null,
-    "supported_schema_versions": [8],
+    "supported_schema_versions": [9],
     "verified_apply": true,
     "structured_session": true
   }

@@ -9,6 +9,7 @@
 #include "Log.h"
 #include "Modes.h"
 #include "protocol/ProfileCommands.h"
+#include "protocol/MidiInputConfigCodec.h"
 #include "protocol/SceneStorage.h"
 
 // ProfileMacroHandlers.cpp is the host-facing wrapper around profile slots,
@@ -23,7 +24,7 @@
 
 namespace {
 constexpr size_t kProfileFullJsonCapacity = 24576;
-constexpr size_t kProfileModulationJsonCapacity = 4096;
+constexpr size_t kProfileModulationJsonCapacity = 8192;
 
 // Full profile export includes 42 slots with EF state and can exceed RAM1 stack budget.
 // Keep the scratch documents in RAM2, matching the heavier config/matrix exports.
@@ -211,7 +212,8 @@ void writeProfileSlots(JsonArray slots, const ProfileData &profile) {
 
 template <size_t Capacity>
 void writeProfileResponse(StaticJsonDocument<Capacity> &doc, uint8_t id, bool stored,
-                          const ProfileData &profile, bool includeSlots) {
+                          const ProfileData &profile,
+                          const ProfileModulationExtension &modulation, bool includeSlots) {
     doc.clear();
     doc["profile"] = id;
     doc["active_profile"] = g_activeProfile;
@@ -239,6 +241,10 @@ void writeProfileResponse(StaticJsonDocument<Capacity> &doc, uint8_t id, bool st
     JsonArray routes = doc.createNestedArray("routes");
     writeProfileRoutes(routes, profile);
 
+    JsonArray midiInputBindings = doc.createNestedArray("midiInputBindings");
+    MidiInputConfigCodec::write(midiInputBindings, modulation.midiInputBindings,
+                                modulation.midiInputBindingCount);
+
     if (includeSlots) {
         JsonArray slots = doc.createNestedArray("slots");
         writeProfileSlots(slots, profile);
@@ -261,12 +267,18 @@ void handleGetProfileCommand(const String &command) {
         profile = captureProfileSnapshot();
     }
 
+    ProfileModulationExtension modulation{};
+    if (!configManager.loadProfileModulation(static_cast<uint8_t>(id), modulation)) {
+        modulation = id == g_activeProfile ? captureProfileModulation()
+                                           : defaultProfileModulationSnapshot();
+    }
+
     const uint8_t profileId = static_cast<uint8_t>(id);
     if (isModulationProfileRequest(command)) {
-        writeProfileResponse(profileModulationDoc, profileId, stored, profile, false);
+        writeProfileResponse(profileModulationDoc, profileId, stored, profile, modulation, false);
         sendJsonResponse(profileModulationDoc);
     } else {
-        writeProfileResponse(profileFullDoc, profileId, stored, profile, true);
+        writeProfileResponse(profileFullDoc, profileId, stored, profile, modulation, true);
         sendJsonResponse(profileFullDoc);
     }
 }

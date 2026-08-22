@@ -6,7 +6,7 @@
 
 namespace ManifestContract {
 inline constexpr char kDeviceName[] = "MOARkNOBS-42";
-inline constexpr uint16_t kSchemaVersion = 8;
+inline constexpr uint16_t kSchemaVersion = 9;
 inline constexpr uint8_t kSlotCount = 42;
 inline constexpr uint8_t kPotCount = 42;
 inline constexpr uint8_t kEnvelopeCount = 6;

@@ -14,6 +14,7 @@
 #include "Log.h"
 #include "Modes.h"
 #include "UI.h"
+#include "protocol/MidiInputConfigCodec.h"
 
 // ProfileSetHandler.cpp is the structured `SET_PROFILE` patching layer.
 //
@@ -681,13 +682,24 @@ void applySlotProfilePatch(JsonObject root, ProfileData &profile, bool applyLive
     }
 }
 
-bool persistPatchedProfile(uint8_t id, ProfileData &profile, bool &activeApplied) {
+bool persistPatchedProfile(uint8_t id, ProfileData &profile,
+                           const MidiInputConfigCodec::ParseResult &midiBindings,
+                           bool &activeApplied) {
     ProfileModulationExtension modulation{};
     if (id == g_activeProfile) {
         modulation = captureProfileModulation();
     } else if (!configManager.loadProfileModulation(id, modulation)) {
         // A profile created before schema 8 shared the live slot modulation.
         modulation = captureProfileModulation();
+    }
+    if (midiBindings.specified) {
+        modulation.midiInputBindingCount = midiBindings.count;
+        for (uint8_t i = 0; i < midiBindings.count; ++i) {
+            modulation.midiInputBindings[i] = midiBindings.bindings[i];
+        }
+        for (uint8_t i = midiBindings.count; i < MIDI_INPUT_MAX_BINDINGS; ++i) {
+            modulation.midiInputBindings[i] = MidiInputBinding{};
+        }
     }
     if (!configManager.saveProfileSettings(id, profile) ||
         !configManager.saveProfileModulation(id, modulation)) {
@@ -744,6 +756,11 @@ void handleSetProfilePayloadCommand(const String &command) {
 
     ProfileData profile = buildPatchedProfileBaseline(request.id);
     JsonObject root = doc.as<JsonObject>();
+    const MidiInputConfigCodec::ParseResult midiBindings = MidiInputConfigCodec::parse(root);
+    if (!midiBindings.ok) {
+        logProfileSetError(midiBindings.errorMessage);
+        return;
+    }
     applyArpProfilePatch(root, profile);
     applyLedProfilePatch(root, profile);
     applyClockProfilePatch(root, profile);
@@ -758,7 +775,7 @@ void handleSetProfilePayloadCommand(const String &command) {
     applySlotProfilePatch(root, profile, request.id == g_activeProfile);
 
     bool activeApplied = false;
-    if (!persistPatchedProfile(request.id, profile, activeApplied)) {
+    if (!persistPatchedProfile(request.id, profile, midiBindings, activeApplied)) {
         logProfileSetError("Profile patch could not be persisted");
         return;
     }

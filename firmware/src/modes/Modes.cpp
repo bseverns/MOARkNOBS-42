@@ -9,6 +9,7 @@
 #include "FirmwareState.h"
 #include "Arpeggiator.h"
 #include "LFO/LFOManager.h"
+#include "MidiInputRouter.h"
 #include "LEDManager.h"
 #include "EnvelopeFollower.h"
 #include "ProfileModulationStorage.h"
@@ -171,6 +172,12 @@ ProfileModulationExtension captureProfileModulation() {
             extension.slots[i].lfo[lane] = slots[i].lfo.lfo[lane];
         }
     }
+    extension.midiInputBindingCount =
+        static_cast<uint8_t>(std::min(midiInputRouter.bindingCount(),
+                                      static_cast<size_t>(MIDI_INPUT_MAX_BINDINGS)));
+    for (uint8_t i = 0; i < extension.midiInputBindingCount; ++i) {
+        midiInputRouter.getBinding(i, extension.midiInputBindings[i]);
+    }
     return sanitizeProfileModulation(extension);
 }
 
@@ -261,6 +268,8 @@ void applyProfileModulation(const ProfileModulationExtension &candidate, bool pe
         slot.lfo = sanitizeSlotLfoConfig(slot.lfo);
         if (persistSlots) configManager.saveSlot(i, slot);
     }
+    midiInputRouter.setBindings(extension.midiInputBindings,
+                                extension.midiInputBindingCount);
 }
 
 void applyCompleteProfile(const ProfileData &profile,

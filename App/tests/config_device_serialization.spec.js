@@ -63,3 +63,17 @@ test('device serialization makes omitted arp state deterministic', () => {
 
   expect(serialize(current, current).slots[0].arpNote).toBe(0);
 });
+
+test('device serialization includes changed MIDI input bindings', () => {
+  const previous = { ...configWithEf(clone(defaultEf)), midiInputBindings: [] };
+  const current = clone(previous);
+  current.midiInputBindings.push({
+    source: { port: 'din', type: 'cc7', channel: 1, number: 74 },
+    destination: 'arp.swing',
+    mode: 'absolute',
+    outputRange: [0, 127],
+    pickup: 'soft'
+  });
+
+  expect(serialize(current, previous).midiInputBindings).toEqual(current.midiInputBindings);
+});

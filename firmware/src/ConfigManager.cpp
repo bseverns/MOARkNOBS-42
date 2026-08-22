@@ -560,12 +560,19 @@ FLASHMEM bool ConfigManager::loadProfileModulation(uint8_t id,
     if (id >= NUM_PROFILES) return false;
     const uint16_t base = EEPROM_PROFILE_MODULATION_START(id);
     if (!activeStorageBackend().contains(base, sizeof(ProfileModulationExtension))) return false;
+    uint16_t storedVersion = 0;
+    storageGet(base, storedVersion);
+    if (storedVersion == 0x0001) {
+        uint8_t legacyBytes[4 + sizeof(ProfileSlotModSettings) * NUM_SLOTS]{};
+        for (size_t i = 0; i < sizeof(legacyBytes); ++i) {
+            legacyBytes[i] = activeStorageBackend().read(base + i);
+        }
+        return decodeProfileModulationV1(legacyBytes, sizeof(legacyBytes), extension);
+    }
     ProfileModulationExtension stored{};
     storageGet(base, stored);
     if (stored.version != PROFILE_MODULATION_VERSION ||
-        stored.crc != computeProfileModulationCrc(stored)) {
-        return false;
-    }
+        stored.crc != computeProfileModulationCrc(stored)) return false;
     extension = sanitizeProfileModulation(stored);
     extension.crc = computeProfileModulationCrc(extension);
     return true;

@@ -21,7 +21,7 @@ The direct USB lane is line-oriented and intentionally pragmatic: newline-delimi
      "fw_version": "1.3.0",
      "git_sha": "012dead",
      "build_time": "2024-05-10 21:37:02",
-     "schema_version": 8,
+     "schema_version": 9,
      "slot_count": 42,
      "pot_count": 42,
      "envelope_count": 6,

@@ -15,6 +15,6 @@ export const SIMULATOR_CAPABILITIES = Object.freeze({
   verified_apply: true,
   apply_integrity_receipt: true,
   authoritative_readback: true,
+  midi_parameter_input: true,
   one_shot_config_boot: false
 });
-

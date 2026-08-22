@@ -28,6 +28,9 @@ PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins, const uin
         potLastValues[i] = -1; // Ensure the first read updates
         smoothedValue[i] = 0;  // EWMA starting point
         scanInitialized[i] = false;
+        remoteTakeoverActive[i] = false;
+        remoteTargetRaw[i] = 0;
+        remotePreviousPhysicalRaw[i] = 0;
         dirtyFlags[i] = false; // Nothing dirty yet
     }
 }
@@ -135,18 +138,21 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
-// Inject a host-driven MIDI value as if the physical pot had moved there.
-void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue) {
+// Inject a host-driven MIDI value and hold it until the physical pot crosses it.
+void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue,
+                                           bool emitCallback) {
     if (potIndex >= NUM_POTS) {
         return;
     }
     const uint8_t bounded = static_cast<uint8_t>(constrain(static_cast<int>(midiValue), 0, 127));
     const uint16_t rawValue =
         static_cast<uint16_t>(map(static_cast<int>(bounded), 0, 127, 0, 1023));
+    remoteTakeoverActive[potIndex] = true;
+    remoteTargetRaw[potIndex] = static_cast<int>(rawValue);
+    remotePreviousPhysicalRaw[potIndex] = smoothedValue[potIndex];
     potLastValues[potIndex] = static_cast<int>(rawValue);
-    smoothedValue[potIndex] = static_cast<int>(rawValue);
     dirtyFlags[potIndex] = true;
-    if (midiCallback) {
+    if (emitCallback && midiCallback) {
         midiCallback(getCCNumber(potIndex), bounded, rawValue, potIndex);
     }
 }
@@ -191,6 +197,21 @@ void PotentiometerManager::processPots(LedAnimator &ledAnimator,
         smoothedValue[currentPotIndex] =
             Utility::exponentialMovingAverage(rawValue, smoothedValue[currentPotIndex], ALPHA);
         int smoothedReading = smoothedValue[currentPotIndex];
+
+        if (remoteTakeoverActive[currentPotIndex]) {
+            const int target = remoteTargetRaw[currentPotIndex];
+            const int previous = remotePreviousPhysicalRaw[currentPotIndex];
+            const bool close = abs(smoothedReading - target) <= CHANGE_THRESHOLD;
+            const bool crossed = (previous <= target && smoothedReading >= target) ||
+                                 (previous >= target && smoothedReading <= target);
+            remotePreviousPhysicalRaw[currentPotIndex] = smoothedReading;
+            if (!close && !crossed) {
+                currentPotIndex = (currentPotIndex + 1) % NUM_POTS;
+                continue;
+            }
+            remoteTakeoverActive[currentPotIndex] = false;
+            potLastValues[currentPotIndex] = smoothedReading;
+        }
 
         // Stage 3: bail if the movement is smaller than the noise floor.
         if (abs(smoothedReading - potLastValues[currentPotIndex]) > CHANGE_THRESHOLD) {

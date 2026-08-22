@@ -1,4 +1,5 @@
 const { EventEmitter } = require('node:events');
+const { MN42_MANIFEST_CONTRACT } = require('../manifest_contract');
 
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -10,7 +11,7 @@ function createDefaultManifest(overrides = {}) {
     fw_version: 'sim-fw',
     git_sha: 'simulated',
     build_time: '2026-05-24T00:00:00Z',
-    schema_version: 8,
+    schema_version: MN42_MANIFEST_CONTRACT.schema_version,
     slot_count: 42,
     pot_count: 42,
     envelope_count: 6,
@@ -40,6 +41,7 @@ function createDefaultManifest(overrides = {}) {
       verified_apply: true,
       apply_integrity_receipt: true,
       authoritative_readback: true,
+      midi_parameter_input: true,
     },
     ...overrides,
   };
@@ -48,7 +50,7 @@ function createDefaultManifest(overrides = {}) {
 function createDefaultSchema(overrides = {}) {
   return {
     type: 'object',
-    schema_version: 8,
+    schema_version: MN42_MANIFEST_CONTRACT.schema_version,
     required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
     properties: {
       slots: { type: 'array', items: { type: 'object' } },
@@ -56,6 +58,7 @@ function createDefaultSchema(overrides = {}) {
       filter: { type: 'object' },
       arg: { type: 'object' },
       led: { type: 'object' },
+      midiInputBindings: { type: 'array', items: { type: 'object' } },
     },
     ...overrides,
   };
@@ -70,6 +73,7 @@ function createDefaultConfig(manifest = createDefaultManifest()) {
       channel: (index % 16) + 1,
       cc: index % 128,
     })),
+    midiInputBindings: [],
     slots: Array.from({ length: manifest.slot_count }, (_, index) => ({
       index,
       type: 1,
@@ -199,6 +203,7 @@ function createSimulatedMn42Device(options = {}) {
     arp: clone(defaultArp),
     lfos: [],
     routes: [],
+    midiInputBindings: [],
   };
   const profiles = Array.from({ length: 4 }, () => clone(defaultProfile));
   const profileChunkBuffers = new Map();

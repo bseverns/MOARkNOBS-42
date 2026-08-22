@@ -135,6 +135,7 @@ void writeManifestCapabilities(JsonObject object) {
     capabilities["clock_live"] = true;
     capabilities["note_dynamics_live"] = true;
     capabilities["jitter_live"] = true;
+    capabilities["midi_parameter_input"] = true;
     capabilities["usb_midi_toggle"] = HAS_USB_MIDI;
     capabilities["device_schema"] = true;
     capabilities["bulk_config"] = profiles;
