@@ -26,10 +26,11 @@
 #include "version.h"
 #include "Modes.h"
 #include "Utility.h"
-#include "protocol/ConfigJsonApply.h"
+#include "protocol/ConfigBulkTransport.h"
 #include "protocol/ManifestReport.h"
 #include "protocol/ProtocolDispatch.h"
 #include "protocol/ProtocolErrors.h"
+#include "protocol/ProtocolLiveControlHandlers.h"
 #include "protocol/ProfileCommands.h"
 #include "protocol/ProfileMacroHandlers.h"
 #include "protocol/ProfileSetHandler.h"
@@ -45,9 +46,10 @@
 // 2. small shared naming/encoding helpers reused by response emitters
 // 3. command-queue ingestion from the serial transport
 // 4. handler fan-out into protocol submachines:
-//    - ProtocolSimpleHandlers for direct GET/SET lanes
+//    - ProtocolSimpleHandlers for direct read lanes
+//    - ProtocolLiveControlHandlers for non-persistent runtime writes
 //    - ProtocolDispatch for command routing
-//    - ConfigJsonApply for bulk `SET_ALL`
+//    - ConfigBulkTransport + ConfigJsonApply for staged bulk `SET_ALL`
 //    - profile / scene / macro helpers for stateful storage actions
 //
 // This file should answer "how does a host line enter the firmware and where
@@ -372,19 +374,19 @@ void handleAbortSetAllCommand(const ParsedCommand &cmd) {
 }
 
 void handleSetArgMethodCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetArgMethodCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetArgMethodCommand(cmd.fullCommand());
 }
 
 void handleSetArpCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetArpCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetArpCommand(cmd.fullCommand());
 }
 
 void handleSetClockCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetClockCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetClockCommand(cmd.fullCommand());
 }
 
 void handleSetEfCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetEfCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetEfCommand(cmd.fullCommand());
 }
 
 void handleSetEfIdleFloorCommand(const ParsedCommand &cmd) {
@@ -407,19 +409,19 @@ void handleSetEfIdleFloorCommand(const ParsedCommand &cmd) {
 }
 
 void handleSetJitterCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetJitterCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetJitterCommand(cmd.fullCommand());
 }
 
 void handleSetLedCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetLedCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetLedCommand(cmd.fullCommand());
 }
 
 void handleSetNoteDynamicsCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetNoteDynamicsCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetNoteDynamicsCommand(cmd.fullCommand());
 }
 
 void handleSetPotCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetPotCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetPotCommand(cmd.fullCommand());
 }
 
 void handleSetProfileCommand(const ParsedCommand &cmd) {
@@ -431,11 +433,11 @@ void handleSetProfileChunkCommand(const ParsedCommand &cmd) {
 }
 
 void handleSetSlotValueCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetSlotValueCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetSlotValueCommand(cmd.fullCommand());
 }
 
 void handleSetUsbMidiCommand(const ParsedCommand &cmd) {
-    ProtocolSimpleHandlers::handleSetUsbMidiCommand(cmd.fullCommand());
+    ProtocolLiveControlHandlers::handleSetUsbMidiCommand(cmd.fullCommand());
 }
 
 } // namespace ProtocolDispatchHandlers

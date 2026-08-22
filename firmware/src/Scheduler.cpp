@@ -12,7 +12,7 @@
 #include "Utility.h"
 #include "Log.h"
 #include "interop/SeedBoxLink.h"
-#include "protocol/ConfigJsonApply.h"
+#include "protocol/ConfigBulkTransport.h"
 
 // Register the recurring task tiers that keep transport, DSP, UI, and interop in balance.
 void initializeSchedulers() {

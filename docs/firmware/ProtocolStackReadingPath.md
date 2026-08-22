@@ -50,9 +50,12 @@ flowchart TD
   Queue --> Protocol[Protocol.cpp]
   Protocol --> Dispatch[ProtocolDispatch]
   Protocol --> SceneJson[SceneCommands]
-  Dispatch --> Simple[ProtocolSimpleHandlers]
+  Dispatch --> Simple[ProtocolSimpleHandlers reads]
+  Dispatch --> Live[ProtocolLiveControlHandlers writes]
   Simple --> Schema[ConfigSchema]
-  Dispatch --> Bulk[ConfigJsonApply]
+  Dispatch --> BulkTransport[ConfigBulkTransport]
+  BulkTransport --> BulkApply[ConfigJsonApply]
+  BulkApply --> Digest[ConfigApplyDigest]
   Dispatch --> Manifest[ManifestReport]
   Dispatch --> Profile[Profile command family]
   Dispatch --> Scenes[SceneStorage]
@@ -84,22 +87,27 @@ This is the command-router submachine:
 
 Read this before the deeper handlers so you know the routing policy first.
 
-### 2. `ConfigJsonApply`
+### 2. Bulk config transport and apply
 
 Files:
 
+- [`firmware/include/protocol/ConfigBulkTransport.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ConfigBulkTransport.h)
+- [`firmware/src/protocol/ConfigBulkTransport.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigBulkTransport.cpp)
 - [`firmware/include/protocol/ConfigJsonApply.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ConfigJsonApply.h)
 - [`firmware/src/protocol/ConfigJsonApply.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigJsonApply.cpp)
+- [`firmware/include/protocol/ConfigApplyDigest.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ConfigApplyDigest.h)
+- [`firmware/src/protocol/ConfigApplyDigest.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigApplyDigest.cpp)
 
 Question answered: how does `SET_ALL` become a safe whole-machine mutation?
 
-This is the bulk-config apply submachine:
+This lane is split by responsibility:
 
-- chunk assembly
-- checksum/config ID handling
-- full JSON parse
-- live state mutation
-- ACK discipline
+- `ConfigBulkTransport` owns chunk assembly, timeout/abort, config identity,
+  duplicate detection, and ACK discipline
+- `ConfigJsonApply` owns normalized decoding, complete validation, and atomic
+  runtime/persistence mutation
+- `ConfigApplyDigest` computes the device-owned checksum over normalized applied
+  state
 
 This is the heaviest protocol path because it is the full staged-apply lane.
 
@@ -109,17 +117,19 @@ Files:
 
 - [`firmware/include/protocol/ProtocolSimpleHandlers.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolSimpleHandlers.h)
 - [`firmware/src/protocol/ProtocolSimpleHandlers.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolSimpleHandlers.cpp)
+- [`firmware/include/protocol/ProtocolLiveControlHandlers.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolLiveControlHandlers.h)
+- [`firmware/src/protocol/ProtocolLiveControlHandlers.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolLiveControlHandlers.cpp)
 
-Question answered: which host requests are simple direct reads/writes?
+Question answered: which host requests are direct reads?
 
 This family is best read in its own internal order:
 
 1. deprecated compatibility shims
 2. identity/config export reads
 3. live runtime inspection reads
-4. direct live-control writes
-
-This is where most narrow `GET_*` and `SET_*` commands live.
+This is where the narrow `GET_*` commands live. Direct, non-persistent `SET_*`
+commands live in `ProtocolLiveControlHandlers`, keeping mutation dependencies
+out of the read-model builder.
 `GET_SCHEMA` delegates its host-contract construction to
 `protocol/ConfigSchema.cpp`. That adapter returns the generated device
 projection in `protocol/GeneratedConfigSchema.h`; the machine source is

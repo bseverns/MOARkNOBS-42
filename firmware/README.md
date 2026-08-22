@@ -63,6 +63,15 @@ ID/address validation and the public load/save façade. Migration fixtures cover
 versions 1–6, current-version coverage protects version 7, and decoder failure
 tests verify that invalid records do not mutate the caller's output.
 
+The `SET_ALL` implementation is separated into `ConfigBulkTransport` for chunk
+staging, timeout/idempotency, and ACKs; `ConfigJsonApply` for complete validation
+and atomic runtime/persistence mutation; and `ConfigApplyDigest` for the
+device-owned normalized-state checksum. Direct reads remain in
+`ProtocolSimpleHandlers`, while non-persistent live `SET_*` mutations live in
+`ProtocolLiveControlHandlers`. These are ownership boundaries only: command
+names, response shapes, persistence semantics, and the durable layout are
+unchanged.
+
 ## On-device Double-press Editing
 
 The performance surface can now reach three formerly configurator-heavy slot settings without entering config mode:

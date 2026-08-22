@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cctype>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 
 #include "ARGMixer.h"
@@ -17,117 +16,14 @@
 #include "EnvelopeFollower.h"
 #include "FirmwareState.h"
 #include "Globals.h"
-#include "Log.h"
 #include "Modes.h"
 #include "Protocol.h"
 #include "UI.h"
-#include "Utility.h"
 #include "protocol/ProtocolErrors.h"
+#include "protocol/ConfigApplyDigest.h"
 #include "protocol/SysExTemplateCodec.h"
 
 namespace {
-Utility::BulkConfigAssembler bulkConfigAssembler;
-uint32_t lastAckSequence = 0;
-String lastAckChecksum;
-String lastAppliedChecksum;
-uint32_t lastStorageGeneration = 0;
-// Bulk SET_ALL parse state is large by design; keep the reusable document in
-// RAM2 so unit-test and runtime stacks keep more RAM1 headroom.
-DMAMEM StaticJsonDocument<Utility::kMaxBulkConfigSize> bulkApplyDoc;
-
-struct BulkApplyIdentity {
-    uint32_t sequence = 0;
-    String configId;
-};
-
-void hashByte(uint32_t &hash, uint8_t value) {
-    hash ^= value;
-    hash *= 16777619UL;
-}
-
-void hashU16(uint32_t &hash, uint16_t value) {
-    hashByte(hash, static_cast<uint8_t>(value));
-    hashByte(hash, static_cast<uint8_t>(value >> 8));
-}
-
-void hashFloat(uint32_t &hash, float value) {
-    // Canonicalize signed zero, then hash IEEE-754 bytes in a fixed order.
-    if (value == 0.0f) value = 0.0f;
-    uint32_t bits = 0;
-    std::memcpy(&bits, &value, sizeof(bits));
-    for (uint8_t shift = 0; shift < 32; shift += 8) {
-        hashByte(hash, static_cast<uint8_t>(bits >> shift));
-    }
-}
-
-void hashSlot(uint32_t &hash, const MIDISlot &slot) {
-    hashByte(hash, static_cast<uint8_t>(slot.type));
-    hashByte(hash, slot.midiChannel); hashByte(hash, slot.data1); hashByte(hash, slot.active ? 1 : 0);
-    hashByte(hash, slot.arpNote); hashByte(hash, slot.sysexLength);
-    for (uint8_t value : slot.sysexTemplate) hashByte(hash, value);
-    const auto &ef = slot.efSettings;
-    hashByte(hash, static_cast<uint8_t>(ef.followerIndex)); hashByte(hash, ef.oversample);
-    hashByte(hash, static_cast<uint8_t>(ef.filterType)); hashByte(hash, ef.efMode);
-    hashByte(hash, ef.autoBaseline); hashByte(hash, ef.autoGain); hashByte(hash, ef.gateThreshold);
-    hashByte(hash, ef.gateHysteresis); hashByte(hash, ef.activityThreshold); hashByte(hash, ef.gainTarget);
-    hashByte(hash, ef.destinationMode); hashU16(hash, ef.attackMs); hashU16(hash, ef.releaseMs);
-    hashU16(hash, ef.rmsWindowMs); hashU16(hash, ef.baselineTauMs); hashU16(hash, ef.gainTauMs);
-    hashFloat(hash, ef.frequency); hashFloat(hash, ef.q); hashFloat(hash, ef.smoothing);
-    hashFloat(hash, ef.baseline); hashFloat(hash, ef.gain);
-}
-
-void hashProfileModulation(uint32_t &hash,
-                           const ProfileModulationExtension &modulation) {
-    // Hash the sanitized semantic payload in its persistence order. The CRC
-    // is derived data and raw struct bytes could include layout padding.
-    hashU16(hash, modulation.version);
-    for (const ProfileSlotModSettings &slot : modulation.slots) {
-        hashU16(hash, slot.argPacked);
-        for (const SlotLfoLane &lane : slot.lfo) {
-            hashByte(hash, lane.flags);
-            hashByte(hash, static_cast<uint8_t>(lane.amount));
-        }
-    }
-}
-
-// Device-owned digest over the normalized slot arena and the semantic profile
-// snapshots written by persistActiveProfileSnapshot(). The host checksum
-// remains only a correlation token.
-String appliedStateChecksum() {
-    uint32_t hash = 2166136261UL; // FNV-1a, stable and small enough for Teensy.
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        hashByte(hash, configManager.getPotChannel(i));
-        hashByte(hash, configManager.getPotCCNumber(i));
-    }
-    for (const MIDISlot &slot : configManager.getSlots()) hashSlot(hash, slot);
-    const ProfileData profile = captureProfileSnapshot();
-    const auto *profileBytes = reinterpret_cast<const uint8_t *>(&profile);
-    for (size_t i = 0; i < sizeof(profile); ++i) hashByte(hash, profileBytes[i]);
-    hashProfileModulation(hash, captureProfileModulation());
-    hashByte(hash, g_activeProfile);
-    hashByte(hash, configManager.getARGEnable());
-    hashByte(hash, configManager.getARGMethod());
-    hashByte(hash, configManager.getEnvelopeA());
-    hashByte(hash, configManager.getEnvelopeB());
-    hashByte(hash, configManager.getMode());
-    hashByte(hash, configManager.getEfIdleFloor());
-    hashByte(hash, static_cast<uint8_t>(configManager.getLedMode()));
-    float filterFrequency = 0.0f;
-    float filterQ = 0.0f;
-    StorageBackend *storage = ConfigManager::getStorageBackend();
-    storage->readBytes(EEPROM_FILTER_FREQ, &filterFrequency, sizeof(filterFrequency));
-    storage->readBytes(EEPROM_FILTER_Q, &filterQ, sizeof(filterQ));
-    hashFloat(hash, filterFrequency);
-    hashFloat(hash, filterQ);
-    hashByte(hash, envelopeFollowers.empty()
-                       ? static_cast<uint8_t>(EnvelopeFollower::LINEAR)
-                       : static_cast<uint8_t>(envelopeFollowers.front().getFilterType()));
-    for (float baseline : envelopeConfig.baselines) hashFloat(hash, baseline);
-    hashByte(hash, g_usbMidiOutEnabled ? 1 : 0);
-    char hex[9] = {0};
-    snprintf(hex, sizeof(hex), "%08lx", static_cast<unsigned long>(hash));
-    return String(hex);
-}
 
 int readIntField(JsonObject obj, const char *primary, const char *alternate, int fallback) {
     if (!obj.isNull() && obj.containsKey(primary)) {
@@ -943,89 +839,6 @@ void applyLedMode(JsonObject ledObj) {
     ledAnimator.setMode(newMode);
 }
 
-void emitBulkIngestError(const String &ingestError, uint32_t hint) {
-    DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error, nullptr);
-    if (ingestError == "overflow") {
-        emitBulkError("overflow", "config payload too large", hint);
-    } else if (ingestError == "orphan") {
-        emitBulkError("orphan", "chunk missing frame start", hint);
-    } else if (ingestError == "timeout") {
-        emitBulkError("timeout", "incomplete config upload expired", hint);
-    } else {
-        emitBulkError("ingest", "failed to stage chunk", hint);
-    }
-}
-
-bool parseBulkConfigDocument(StaticJsonDocument<Utility::kMaxBulkConfigSize> &doc) {
-    doc.clear();
-    DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
-    if (err) {
-        DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
-                                                  nullptr);
-        emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
-        bulkConfigAssembler.reset();
-        return false;
-    }
-    return true;
-}
-
-bool resolveBulkApplyIdentity(JsonDocument &doc, BulkApplyIdentity &identity) {
-    identity.sequence = doc["seq"].as<uint32_t>();
-    if (identity.sequence == 0) {
-        identity.sequence = bulkConfigAssembler.sequenceHint();
-    }
-
-    const char *configId = doc["config_id"] | nullptr;
-    if (!configId || configId[0] == '\0') {
-        configId = doc["checksum"] | nullptr;
-    }
-
-    const String &checksumHint = bulkConfigAssembler.checksumHint();
-    if ((!configId || configId[0] == '\0') && checksumHint.length() > 0) {
-        identity.configId = checksumHint;
-    } else if (configId) {
-        identity.configId = configId;
-    } else {
-        identity.configId = "";
-    }
-
-    if (identity.sequence == 0) {
-        identity.sequence = lastAckSequence + 1;
-    }
-
-    if (identity.configId.length() == 0) {
-        DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
-                                                  nullptr);
-        emitBulkError("checksum", "missing checksum/config_id", identity.sequence);
-        bulkConfigAssembler.reset();
-        return false;
-    }
-
-    return true;
-}
-
-bool emitDuplicateBulkAckIfNeeded(const BulkApplyIdentity &identity) {
-    if (identity.sequence != lastAckSequence || lastAckChecksum != identity.configId) {
-        return false;
-    }
-
-    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence,
-                                   lastAppliedChecksum.c_str(), lastStorageGeneration));
-    bulkConfigAssembler.reset();
-    return true;
-}
-
-void commitBulkApplyAck(const BulkApplyIdentity &identity) {
-    lastAckSequence = identity.sequence;
-    lastAckChecksum = identity.configId;
-    lastAppliedChecksum = appliedStateChecksum();
-    lastStorageGeneration = ConfigManager::getStorageBackend()->generation();
-    DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Acked,
-                                              identity.configId.c_str());
-    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence,
-                                   lastAppliedChecksum.c_str(), lastStorageGeneration));
-    bulkConfigAssembler.reset();
-}
 
 bool applySlotDefinitions(JsonArray slotsJson, uint32_t seq, bool &anySlotPayloadSpecified) {
     anySlotPayloadSpecified = false;
@@ -1238,8 +1051,25 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 }
 } // namespace
 
+bool applyConfigJsonObject(JsonObject config, uint32_t sequence) {
+    return applyConfigObject(config, sequence);
+}
+
+bool parseConfigJsonPayload(const String &payload, uint32_t sequence, JsonDocument &document) {
+    document.clear();
+    DeserializationError error = deserializeJson(document, payload);
+    if (!error) return true;
+
+    DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
+                                              nullptr);
+    emitBulkError("parse", error.c_str(), sequence);
+    return false;
+}
+
 #if defined(UNIT_TEST)
-String testOnlyAppliedStateChecksum() { return appliedStateChecksum(); }
+String testOnlyAppliedStateChecksum() {
+    return ConfigApplyDigest::computeAppliedStateChecksum();
+}
 #endif
 
 bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
@@ -1285,66 +1115,4 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
         return parseMIDIType(typeNameField.as<const char *>(), type);
     }
     return false;
-}
-
-void handleSetAllBulkCommand(const String &command) {
-    String chunk = command.substring(8);
-    if (chunk.length() == 0) {
-        return;
-    }
-
-    serviceBulkConfigAssemblerTimeout();
-
-    String ingestError;
-    if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
-        emitBulkIngestError(ingestError, bulkConfigAssembler.sequenceHint());
-        return;
-    }
-
-    if (!bulkConfigAssembler.complete()) {
-        return;
-    }
-
-    auto &doc = bulkApplyDoc;
-    if (!parseBulkConfigDocument(doc)) {
-        return;
-    }
-
-    BulkApplyIdentity identity;
-    if (!resolveBulkApplyIdentity(doc, identity)) {
-        return;
-    }
-
-    if (emitDuplicateBulkAckIfNeeded(identity)) {
-        return;
-    }
-
-    JsonObject configObj = doc["config"].as<JsonObject>();
-    if (!applyConfigObject(configObj, identity.sequence)) {
-        DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
-                                                  identity.configId.c_str());
-        bulkConfigAssembler.reset();
-        return;
-    }
-
-    commitBulkApplyAck(identity);
-}
-
-void handleAbortSetAllBulkCommand(const String &command) {
-    (void)command;
-    const bool aborted = bulkConfigAssembler.inProgress();
-    const uint32_t sequence = bulkConfigAssembler.sequenceHint();
-    bulkConfigAssembler.reset();
-    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"ABORT_SET_ALL\","
-               "\"aborted\":%s,\"seq\":%lu}\n",
-               aborted ? "true" : "false", static_cast<unsigned long>(sequence));
-}
-
-void serviceBulkConfigAssemblerTimeout() {
-    if (!bulkConfigAssembler.expired(millis())) {
-        return;
-    }
-    const uint32_t staleSequence = bulkConfigAssembler.sequenceHint();
-    bulkConfigAssembler.reset();
-    emitBulkIngestError("timeout", staleSequence);
 }

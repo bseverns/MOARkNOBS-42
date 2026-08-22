@@ -3,13 +3,12 @@
 
 #include <Arduino.h>
 
-// ProtocolSimpleHandlers is the direct GET/SET handler family.
+// ProtocolSimpleHandlers is the direct read-handler family.
 //
 // These handlers serve the narrow host lanes that do not need the heavier
 // profile/scene/bulk-config machinery. In practice that means:
 // - identity/config export reads
 // - live runtime inspection reads
-// - direct live-control writes
 // - a few deprecated compatibility shims still kept for older tools
 
 namespace ProtocolSimpleHandlers {
@@ -39,17 +38,6 @@ void handleGetNoteDynamicsCommand(const String &command);
 void handleGetUsbMidiCommand(const String &command);
 void handleMidiTestCommand(const String &command);
 
-// Direct live-control writes.
-void handleSetArgMethodCommand(const String &command);
-void handleSetArpCommand(const String &command);
-void handleSetClockCommand(const String &command);
-void handleSetEfCommand(const String &command);
-void handleSetJitterCommand(const String &command);
-void handleSetLedCommand(const String &command);
-void handleSetNoteDynamicsCommand(const String &command);
-void handleSetPotCommand(const String &command);
-void handleSetSlotValueCommand(const String &command);
-void handleSetUsbMidiCommand(const String &command);
 } // namespace ProtocolSimpleHandlers
 
 #endif // MN42_PROTOCOL_SIMPLE_HANDLERS_H

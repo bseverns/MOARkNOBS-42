@@ -16,23 +16,25 @@ If you are already standing inside `src/protocol/`, read these files in order:
 1. [Protocol.cpp](Protocol.cpp)
 2. [../../include/protocol/ProtocolDispatch.h](../../include/protocol/ProtocolDispatch.h)
 3. [ProtocolDispatch.cpp](ProtocolDispatch.cpp)
-4. [../../include/protocol/ConfigJsonApply.h](../../include/protocol/ConfigJsonApply.h)
+4. [ConfigBulkTransport.cpp](ConfigBulkTransport.cpp)
 5. [ConfigJsonApply.cpp](ConfigJsonApply.cpp)
-6. [ProtocolSimpleHandlers.cpp](ProtocolSimpleHandlers.cpp)
-7. [ProtocolErrors.cpp](ProtocolErrors.cpp)
-8. [ManifestReport.cpp](ManifestReport.cpp)
-9. [ProfileCommands.cpp](ProfileCommands.cpp)
-10. [ProfileSetHandler.cpp](ProfileSetHandler.cpp)
-11. [ProfileMacroHandlers.cpp](ProfileMacroHandlers.cpp)
-12. [SceneCommands.cpp](SceneCommands.cpp)
-13. [SceneStorage.cpp](SceneStorage.cpp)
+6. [ConfigApplyDigest.cpp](ConfigApplyDigest.cpp)
+7. [ProtocolSimpleHandlers.cpp](ProtocolSimpleHandlers.cpp)
+8. [ProtocolLiveControlHandlers.cpp](ProtocolLiveControlHandlers.cpp)
+9. [ProtocolErrors.cpp](ProtocolErrors.cpp)
+10. [ManifestReport.cpp](ManifestReport.cpp)
+11. [ProfileCommands.cpp](ProfileCommands.cpp)
+12. [ProfileSetHandler.cpp](ProfileSetHandler.cpp)
+13. [ProfileMacroHandlers.cpp](ProfileMacroHandlers.cpp)
+14. [SceneCommands.cpp](SceneCommands.cpp)
+15. [SceneStorage.cpp](SceneStorage.cpp)
 
 That order preserves the machine shape:
 
 - top-level protocol execution
 - command routing
-- bulk config apply
-- simple direct handlers
+- bulk transport, transactional apply, and applied-state digest
+- direct reads and live-control writes
 - error formatting
 - manifest/report emission
 - profile slot lifecycle
