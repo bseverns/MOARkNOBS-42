@@ -75,10 +75,15 @@ function defaultValueForSchema(schema) {
 // Per-field debounce keeps sliders and number inputs from flooding immediate patches.
 function debounce(fn, delay) {
   let timer;
-  return (...args) => {
+  const debounced = (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => fn(...args), delay);
   };
+  debounced.cancel = () => {
+    clearTimeout(timer);
+    timer = undefined;
+  };
+  return debounced;
 }
 
 // Build stable DOM ids from schema paths for labels and test selectors.
@@ -133,6 +138,7 @@ export class FormRenderer {
   // Render each configured schema section into its target container.
   renderSections() {
     if (!this.schema) return;
+    this.cancelRenderedFieldDebounces();
     this.fields.clear();
     this.sections.forEach((section) => {
       const target = section.target;
@@ -399,7 +405,11 @@ export class FormRenderer {
       control.addEventListener('change', listener);
       control.addEventListener('input', listener);
     }
-    this.fields.set(path, { element, set: setter || (() => {}) });
+    this.fields.set(path, { element, set: setter || (() => {}), cancel: update.cancel });
+  }
+
+  cancelRenderedFieldDebounces() {
+    for (const control of this.fields.values()) control.cancel?.();
   }
 
   isControlActive(control) {
@@ -449,6 +459,7 @@ export class FormRenderer {
   }
 
   clearPendingPatches() {
+    this.cancelRenderedFieldDebounces();
     for (const timer of this._patchSchedule.values()) {
       clearTimeout(timer);
     }

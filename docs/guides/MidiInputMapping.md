@@ -21,6 +21,9 @@ Schema 9 adds an optional `midiInputBindings` array with up to 16 routes:
 `port` may be `din`, `usb`, or `any`. The first implementation supports CC7
 input with `absolute`, `momentary`, and `toggle` modes. Continuous routes use
 soft pickup by default; `jump` applies the first received value immediately.
+Toggle routes advance their internal on/off state only after the destination
+accepts the proposed write. A rejected edge therefore retries the same value
+on the next rising edge instead of inverting a change the machine never made.
 
 ## Destinations
 

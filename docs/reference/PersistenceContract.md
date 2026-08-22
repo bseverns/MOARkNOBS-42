@@ -1,6 +1,6 @@
 # Generation-Backed Persistence Contract
 
-> **Doc class:** Contract doc. This page defines the current schema-8 durable configuration layout and commit guarantees.
+> **Doc class:** Contract doc. This page defines the current schema-9 durable configuration layout and commit guarantees.
 
 MOARkNOBS-42 uses a transactional LittleFS-backed virtual storage region. The current firmware exposes 49,152 bytes, and the manifest reports both that capacity and the bytes required by the compiled scene layout. Hosts must treat `persistence.status != "ready"` as a write-safety failure.
 
@@ -49,7 +49,7 @@ After durable Apply, firmware returns `applied_checksum` and `storage_generation
 
 The current digest includes slots, profiles, per-slot ARG configuration, both fixed LFO lanes per slot, operating and LED modes, filters, envelope baselines, active profile, and USB MIDI state. LFO flags and signed amounts are hashed as canonical semantic fields; derived extension CRCs and object padding are excluded. It is a device-owned receipt, not yet a portable serialization checksum: host implementations must not reproduce it by hashing compiler object representations.
 
-Schema migration is cumulative. In particular, a direct schema-6 to schema-8 boot converts the embedded historical slot layouts in profiles, the macro, and every scene before creating empty schema-8 modulation-extension blocks. Existing ARG, macro, and scene values are preserved; newly introduced fixed LFO lanes default to disabled.
+Schema migration is cumulative. In particular, a direct schema-6 to schema-8 boot converts the embedded historical slot layouts in profiles, the macro, and every scene before creating empty schema-8 modulation-extension blocks. Existing ARG, macro, and scene values are preserved; newly introduced fixed LFO lanes default to disabled. Schema 8 to schema 9 is explicitly layout-preserving: slots, profile settings, modulation blocks, macros, scenes, and downstream bytes remain in place, legacy modulation-v1 records decode through their existing compatibility path, and only the stored configuration version is promoted after validation.
 
 The storage-region map and schema-6/schema-7 tail-relocation arithmetic are shared with the hardware-free `native_persistence` test lane. That lane also executes profile-modulation ARG/LFO sanitization, compact packing, and CRC coverage over semantic slot bytes. These executable calculations guard current layout drift, but they do not replace the separate requirement for a frozen byte image captured from genuine schema-6 firmware.
 

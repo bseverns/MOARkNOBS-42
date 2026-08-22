@@ -160,6 +160,30 @@ struct LegacySceneRecordV6Fixture {
     LegacyConfigStateV6Fixture state{};
 };
 
+struct __attribute__((packed)) LegacyProfileModulationV1Fixture {
+    uint16_t version = 0x0001;
+    uint16_t crc = 0;
+    ProfileSlotModSettings slots[NUM_SLOTS]{};
+};
+
+uint16_t fixtureModulationCrcUpdate(uint16_t crc, uint8_t data) {
+    crc ^= data;
+    for (uint8_t i = 0; i < 8; ++i) {
+        crc = (crc & 1) ? static_cast<uint16_t>((crc >> 1) ^ 0xA001)
+                        : static_cast<uint16_t>(crc >> 1);
+    }
+    return crc;
+}
+
+uint16_t fixtureLegacyModulationCrc(const LegacyProfileModulationV1Fixture &record) {
+    const auto *bytes = reinterpret_cast<const uint8_t *>(&record);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = offsetof(LegacyProfileModulationV1Fixture, slots); i < sizeof(record); ++i) {
+        crc = fixtureModulationCrcUpdate(crc, bytes[i]);
+    }
+    return crc;
+}
+
 uint16_t fixtureSceneCrcUpdate(uint16_t crc, uint8_t data) {
     crc ^= static_cast<uint16_t>(data) << 8;
     for (uint8_t i = 0; i < 8; ++i) {
@@ -438,6 +462,78 @@ void test_schema7_migration_failure_does_not_promote_config_version() {
     TEST_ASSERT_EQUAL_UINT8(
         static_cast<uint8_t>(ConfigManager::MigrationResult::WriteFailure),
         static_cast<uint8_t>(cfg.getLastMigrationResult()));
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_schema8_migration_preserves_slots_profiles_modulation_and_downstream_data() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+
+    MIDISlot savedSlot{};
+    savedSlot.type = MIDIMessageType::CC;
+    savedSlot.midiChannel = 7;
+    savedSlot.data1 = 74;
+    savedSlot.active = true;
+    savedSlot.arpNote = 48;
+    cfg.saveSlot(0, savedSlot);
+
+    ProfileData savedProfile{};
+    savedProfile.led.brightness = 93;
+    savedProfile.slots[5].midiChannel = 12;
+    TEST_ASSERT_TRUE(cfg.saveProfileSettings(2, savedProfile));
+
+    LegacyProfileModulationV1Fixture legacyModulation{};
+    SlotARGConfig arg{};
+    arg.enabled = 1;
+    arg.method = ARGMethod::XORR;
+    arg.sourceA = 4;
+    arg.sourceB = 2;
+    legacyModulation.slots[5].argPacked = packProfileSlotArg(arg);
+    legacyModulation.slots[5].lfo[1].setEnabled(true);
+    legacyModulation.slots[5].lfo[1].setMode(ModCombineMode::Scale);
+    legacyModulation.slots[5].lfo[1].amount = -37;
+    legacyModulation.crc = fixtureLegacyModulationCrc(legacyModulation);
+    storage.writeBytes(EEPROM_PROFILE_MODULATION_START(2), &legacyModulation,
+                       sizeof(legacyModulation));
+
+    constexpr size_t sentinelAddress = SceneStorage::kRequiredStorageBytes + 23U;
+    storage.update(static_cast<int>(sentinelAddress), 0xD7);
+    const uint16_t schema8 = 0x0008;
+    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema8, sizeof(schema8));
+
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    TEST_ASSERT_EQUAL_UINT8(
+        static_cast<uint8_t>(ConfigManager::MigrationResult::Success),
+        static_cast<uint8_t>(cfg.getLastMigrationResult()));
+    uint16_t storedVersion = 0;
+    storage.readBytes(EEPROM_CONFIG_VERSION, &storedVersion, sizeof(storedVersion));
+    TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, storedVersion);
+    TEST_ASSERT_EQUAL_UINT8(7, cfg.getSlot(0).midiChannel);
+    TEST_ASSERT_EQUAL_UINT8(74, cfg.getSlot(0).data1);
+    TEST_ASSERT_TRUE(cfg.getSlot(0).active);
+
+    ProfileData restoredProfile{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(2, restoredProfile));
+    TEST_ASSERT_EQUAL_UINT8(93, restoredProfile.led.brightness);
+    TEST_ASSERT_EQUAL_UINT8(12, restoredProfile.slots[5].midiChannel);
+
+    ProfileModulationExtension restoredModulation{};
+    TEST_ASSERT_TRUE(cfg.loadProfileModulation(2, restoredModulation));
+    const SlotARGConfig restoredArg =
+        unpackProfileSlotArg(restoredModulation.slots[5].argPacked);
+    TEST_ASSERT_TRUE(restoredArg.enabled);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ARGMethod::XORR),
+                            static_cast<uint8_t>(restoredArg.method));
+    TEST_ASSERT_EQUAL_UINT8(4, restoredArg.sourceA);
+    TEST_ASSERT_EQUAL_UINT8(2, restoredArg.sourceB);
+    TEST_ASSERT_TRUE(restoredModulation.slots[5].lfo[1].enabled());
+    TEST_ASSERT_EQUAL_INT8(-37, restoredModulation.slots[5].lfo[1].amount);
+    TEST_ASSERT_EQUAL_UINT8(0, restoredModulation.midiInputBindingCount);
+    TEST_ASSERT_EQUAL_UINT8(0xD7, storage.read(static_cast<int>(sentinelAddress)));
 
     ConfigManager::setStorageBackend(nullptr);
 }

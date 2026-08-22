@@ -93,13 +93,14 @@ uint8_t MidiInputRouter::routeControlChange(MidiInputPort port, uint8_t channel,
         const auto mode = static_cast<MidiInputMode>(binding.mode);
         uint8_t candidate = mapValue(binding, value);
         bool shouldApply = true;
+        bool proposedToggleOn = state.toggleOn;
         if (mode == MidiInputMode::Momentary) {
             candidate = value == 0 ? binding.minValue : binding.maxValue;
         } else if (mode == MidiInputMode::Toggle) {
             shouldApply = value > 0 && (!state.hasPreviousInput || state.previousInput == 0);
             if (shouldApply) {
-                state.toggleOn = !state.toggleOn;
-                candidate = state.toggleOn ? binding.maxValue : binding.minValue;
+                proposedToggleOn = !state.toggleOn;
+                candidate = proposedToggleOn ? binding.maxValue : binding.minValue;
             }
         } else {
             shouldApply = pickupAllows(i, binding, candidate);
@@ -109,6 +110,7 @@ uint8_t MidiInputRouter::routeControlChange(MidiInputPort port, uint8_t channel,
         state.hasPreviousInput = true;
         if (shouldApply && apply_(static_cast<MachineParameterTarget>(binding.target),
                                   binding.targetIndex, candidate, port)) {
+            if (mode == MidiInputMode::Toggle) state.toggleOn = proposedToggleOn;
             state.lastApplied = candidate;
             state.hasLastApplied = true;
             ++applied;

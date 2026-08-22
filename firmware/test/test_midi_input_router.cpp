@@ -17,13 +17,14 @@ uint8_t writeCount = 0;
 uint8_t currentValue = 64;
 uint8_t midiCallbackCount = 0;
 MidiInputPort lastMidiPort = MidiInputPort::Any;
+bool acceptWrites = true;
 
 bool recordApply(MachineParameterTarget target, uint8_t index, uint8_t value,
                  MidiInputPort port) {
     lastWrite = {target, index, value, port};
     ++writeCount;
-    currentValue = value;
-    return true;
+    if (acceptWrites) currentValue = value;
+    return acceptWrites;
 }
 
 bool readCurrent(MachineParameterTarget, uint8_t, uint8_t &value) {
@@ -106,6 +107,7 @@ void test_midi_input_router_toggle_fires_only_on_rising_edges() {
     binding.maxValue = 100;
     router.setBindings(&binding, 1);
     writeCount = 0;
+    acceptWrites = true;
 
     TEST_ASSERT_EQUAL_UINT8(1, router.routeControlChange(MidiInputPort::Usb, 3, 20, 127));
     TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Usb, 3, 20, 127));
@@ -113,6 +115,26 @@ void test_midi_input_router_toggle_fires_only_on_rising_edges() {
     TEST_ASSERT_EQUAL_UINT8(1, router.routeControlChange(MidiInputPort::Usb, 3, 20, 127));
     TEST_ASSERT_EQUAL_UINT8(2, writeCount);
     TEST_ASSERT_EQUAL_UINT8(10, lastWrite.value);
+}
+
+void test_midi_input_router_toggle_retries_same_value_after_failed_apply() {
+    MidiInputRouter router;
+    router.setCallbacks(recordApply, readCurrent);
+    MidiInputBinding binding = bindingFor(22, MachineParameterTarget::SlotValue);
+    binding.mode = static_cast<uint8_t>(MidiInputMode::Toggle);
+    binding.minValue = 10;
+    binding.maxValue = 100;
+    router.setBindings(&binding, 1);
+    writeCount = 0;
+    acceptWrites = false;
+
+    TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Usb, 3, 22, 127));
+    TEST_ASSERT_EQUAL_UINT8(100, lastWrite.value);
+    TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Usb, 3, 22, 0));
+    acceptWrites = true;
+    TEST_ASSERT_EQUAL_UINT8(1, router.routeControlChange(MidiInputPort::Usb, 3, 22, 127));
+    TEST_ASSERT_EQUAL_UINT8(100, lastWrite.value);
+    TEST_ASSERT_EQUAL_UINT8(2, writeCount);
 }
 
 void test_midi_handler_forwards_only_plain_cc_with_origin() {

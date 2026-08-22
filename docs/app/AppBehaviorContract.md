@@ -45,6 +45,8 @@ prove rollback. The candidate stays visible until readback resolves the outcome.
 
 Profile, scene, macro-recall, and transport actions use their native command paths rather than masquerading as config
 diffs. Actions that can replace a dirty configuration draft must be blocked until the operator applies or discards it.
+Schema-rendered leaf edits may be debounced, but destroying or rebuilding a rendered control must cancel its pending
+edit. In particular, removing an array item is authoritative over timers owned by that item's former controls.
 
 The complete state model is [Configuration Transaction Model](../reference/ConfigurationTransactionModel.md).
 

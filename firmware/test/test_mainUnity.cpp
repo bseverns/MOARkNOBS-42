@@ -228,9 +228,11 @@ void test_midi_input_router_matches_port_channel_and_controller();
 void test_midi_input_router_soft_pickup_waits_for_crossing();
 void test_midi_input_router_soft_pickup_rearms_after_external_target_move();
 void test_midi_input_router_toggle_fires_only_on_rising_edges();
+void test_midi_input_router_toggle_retries_same_value_after_failed_apply();
 void test_midi_handler_forwards_only_plain_cc_with_origin();
 void test_schema7_migration_relocates_macro_and_scene_tail();
 void test_schema7_migration_failure_does_not_promote_config_version();
+void test_schema8_migration_preserves_slots_profiles_modulation_and_downstream_data();
 void test_config_mutation_during_stream_stays_valid();
 void test_seedbox_link_begin_sends_hello_and_identity_ping();
 void test_seedbox_link_hello_triggers_ack();
@@ -447,6 +449,7 @@ void setup() {
     RUN_TEST(test_midi_input_router_soft_pickup_waits_for_crossing);
     RUN_TEST(test_midi_input_router_soft_pickup_rearms_after_external_target_move);
     RUN_TEST(test_midi_input_router_toggle_fires_only_on_rising_edges);
+    RUN_TEST(test_midi_input_router_toggle_retries_same_value_after_failed_apply);
     RUN_TEST(test_midi_handler_forwards_only_plain_cc_with_origin);
     RUN_TEST(test_parameter_decoders_are_isolated_per_channel);
     RUN_TEST(test_send_sysex);
@@ -474,6 +477,7 @@ void setup() {
     RUN_TEST(test_profile_modulation_round_trip_preserves_arg_and_lfo_lanes);
     RUN_TEST(test_schema7_migration_relocates_macro_and_scene_tail);
     RUN_TEST(test_schema7_migration_failure_does_not_promote_config_version);
+    RUN_TEST(test_schema8_migration_preserves_slots_profiles_modulation_and_downstream_data);
     RUN_TEST(test_config_mutation_during_stream_stays_valid);
     RUN_TEST(test_seedbox_link_begin_sends_hello_and_identity_ping);
     RUN_TEST(test_seedbox_link_hello_triggers_ack);

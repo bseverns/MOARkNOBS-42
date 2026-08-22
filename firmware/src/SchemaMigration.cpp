@@ -605,6 +605,23 @@ void ConfigManager::wipeSlotRegion() {
 
 FLASHMEM ConfigManager::MigrationResult
 ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
+    if (storedVersion == 0x0008) {
+        // Schema 9 extends the existing per-profile modulation record without
+        // moving any storage regions. Keep schema-8 slots, profiles, legacy-v1
+        // modulation blocks, and downstream records in place; the modulation
+        // loader upgrades v1 records when they are read.
+        MIDISlot first{};
+        storageGet(static_cast<int>(EEPROM_SLOT_BASE), first);
+        if (!slotLooksSane(first)) return MigrationResult::VerificationFailure;
+
+        const uint16_t currentVersion = CONFIG_VERSION;
+        if (!storagePutVerified(EEPROM_CONFIG_VERSION, currentVersion)) {
+            return MigrationResult::VerificationFailure;
+        }
+        slots.fill({});
+        return MigrationResult::Success;
+    }
+
     if (storedVersion != kLegacyConfigVersion && storedVersion != 0x0004 &&
         storedVersion != 0x0006 && storedVersion != 0x0007) {
         wipeSlotRegion();

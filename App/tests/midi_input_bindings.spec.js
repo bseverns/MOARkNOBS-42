@@ -39,3 +39,34 @@ test('MIDI input bindings can be added, edited, and removed as staged profile co
   await inputSection.getByRole('button', { name: 'Remove MIDI Input Bindings 1' }).click();
   await expect(inputSection.locator('details')).toHaveCount(0);
 });
+
+test('removing a MIDI input binding cancels its pending field edit', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect' }).click();
+
+  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  await inputSection.locator('.schema-array-add').click();
+  const binding = inputSection.locator('details').first();
+  await binding.locator('summary').first().click();
+
+  // Dispatch the edit and removal in one browser task so the 150 ms field
+  // debounce cannot settle before the rendered control is destroyed.
+  await binding.evaluate((detail) => {
+    const destination = detail.querySelector('input[type="text"]');
+    destination.value = 'arp.swing';
+    destination.dispatchEvent(new Event('input', { bubbles: true }));
+    detail.querySelector('.schema-array-remove').click();
+  });
+
+  await page.waitForTimeout(250);
+  await expect(inputSection.locator('details')).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => window.__MN42_RUNTIME.getState().staged.midiInputBindings))
+    .toEqual([]);
+});

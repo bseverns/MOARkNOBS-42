@@ -13,13 +13,14 @@ struct AppliedWrite {
 AppliedWrite writes[4]{};
 uint8_t writeCount = 0;
 uint8_t currentValue = 64;
+bool acceptWrites = true;
 
 bool recordApply(MachineParameterTarget target, uint8_t index, uint8_t value,
                  MidiInputPort port) {
     if (writeCount < 4) writes[writeCount] = {target, index, value, port};
     ++writeCount;
-    currentValue = value;
-    return true;
+    if (acceptWrites) currentValue = value;
+    return acceptWrites;
 }
 
 bool readCurrent(MachineParameterTarget, uint8_t, uint8_t &value) {
@@ -44,6 +45,7 @@ void test_router_matches_port_channel_and_controller() {
     binding.port = static_cast<uint8_t>(MidiInputPort::Din);
     router.setBindings(&binding, 1);
     writeCount = 0;
+    acceptWrites = true;
 
     TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Usb, 3, 74, 90));
     TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Din, 2, 74, 90));
@@ -104,6 +106,26 @@ void test_router_toggle_fires_only_on_rising_edges() {
     TEST_ASSERT_EQUAL_UINT8(1, router.routeControlChange(MidiInputPort::Usb, 3, 20, 127));
     TEST_ASSERT_EQUAL_UINT8(2, writeCount);
     TEST_ASSERT_EQUAL_UINT8(10, writes[1].value);
+}
+
+void test_router_toggle_retries_same_value_after_failed_apply() {
+    MidiInputRouter router;
+    router.setCallbacks(recordApply, readCurrent);
+    MidiInputBinding binding = bindingFor(22, MachineParameterTarget::SlotValue);
+    binding.mode = static_cast<uint8_t>(MidiInputMode::Toggle);
+    binding.minValue = 10;
+    binding.maxValue = 100;
+    router.setBindings(&binding, 1);
+    writeCount = 0;
+    acceptWrites = false;
+
+    TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Usb, 3, 22, 127));
+    TEST_ASSERT_EQUAL_UINT8(100, writes[0].value);
+    TEST_ASSERT_EQUAL_UINT8(0, router.routeControlChange(MidiInputPort::Usb, 3, 22, 0));
+    acceptWrites = true;
+    TEST_ASSERT_EQUAL_UINT8(1, router.routeControlChange(MidiInputPort::Usb, 3, 22, 127));
+    TEST_ASSERT_EQUAL_UINT8(100, writes[1].value);
+    TEST_ASSERT_EQUAL_UINT8(2, writeCount);
 }
 
 void test_router_supports_multiple_destinations_for_one_source() {
