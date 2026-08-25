@@ -135,12 +135,15 @@ function createField(
   return { wrapper, input };
 }
 
-function createGroup(title, description, className) {
-  const group = document.createElement('fieldset');
+function createGroup(title, description, className, id) {
+  const group = document.createElement('section');
   group.className = `midi-binding-group ${className}`;
-  const legend = document.createElement('legend');
-  legend.textContent = title;
-  group.appendChild(legend);
+  group.setAttribute('role', 'group');
+  const heading = document.createElement('h4');
+  heading.id = domId(id);
+  heading.textContent = title;
+  group.setAttribute('aria-labelledby', heading.id);
+  group.appendChild(heading);
   const copy = document.createElement('p');
   copy.className = 'midi-binding-group-copy';
   copy.textContent = description;
@@ -257,7 +260,8 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
     const sourceGroup = createGroup(
       'Incoming message',
       'Choose the port, channel, and CC number this route listens for.',
-      'midi-binding-source'
+      'midi-binding-source',
+      `${itemPath}.source-group`
     );
     const sourceFields = document.createElement('div');
     sourceFields.className = 'midi-binding-field-grid midi-binding-source-grid';
@@ -340,7 +344,8 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
     const destinationGroup = createGroup(
       'Destination',
       'Send the normalized value to one slot or an internal performance parameter.',
-      'midi-binding-destination'
+      'midi-binding-destination',
+      `${itemPath}.destination-group`
     );
     ({ input: destinationInput } = createField(renderer, {
       path: `${itemPath}.destination`,
@@ -356,7 +361,8 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
     const responseGroup = createGroup(
       'Response',
       'Set continuous or button behavior, then constrain the outgoing MIDI-value range.',
-      'midi-binding-response'
+      'midi-binding-response',
+      `${itemPath}.response-group`
     );
     const responseFields = document.createElement('div');
     responseFields.className = 'midi-binding-field-grid midi-binding-response-grid';

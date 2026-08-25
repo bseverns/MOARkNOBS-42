@@ -149,6 +149,47 @@ test('MIDI input binding editor presents grouped targets and keeps output range 
   ]);
 });
 
+test('MIDI input binding groups contain their controls at the desktop review width', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1356, height: 1000 });
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  await inputSection.getByRole('button', { name: 'Add binding' }).click();
+
+  const containment = await inputSection.locator('.midi-binding-card').evaluate((card) => {
+    const source = card.querySelector('.midi-binding-source');
+    const destination = card.querySelector('.midi-binding-destination');
+    const sourceGrid = card.querySelector('.midi-binding-source-grid');
+    const sourceRect = source.getBoundingClientRect();
+    const destinationRect = destination.getBoundingClientRect();
+    const fields = [...sourceGrid.querySelectorAll('.midi-binding-field')];
+    return {
+      groupsDoNotOverlap: sourceRect.right <= destinationRect.left,
+      copyFits: source.querySelector('.midi-binding-group-copy').scrollWidth <= source.clientWidth,
+      gridFits: sourceGrid.scrollWidth <= sourceGrid.clientWidth,
+      fieldsFit: fields.every((field) => {
+        const fieldRect = field.getBoundingClientRect();
+        return fieldRect.left >= sourceRect.left && fieldRect.right <= sourceRect.right;
+      })
+    };
+  });
+
+  expect(containment).toEqual({
+    groupsDoNotOverlap: true,
+    copyFits: true,
+    gridFits: true,
+    fieldsFit: true
+  });
+});
+
 test('MIDI input binding editor collapses to one usable column on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {

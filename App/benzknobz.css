@@ -3049,16 +3049,21 @@ label select:focus,
 }
 
 .midi-binding-group {
+  display: grid;
+  align-content: start;
+  gap: 10px;
   min-width: 0;
+  max-width: 100%;
   margin: 0;
   padding: 12px;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xs);
   background: rgba(0, 0, 0, 0.16);
 }
 
-.midi-binding-group legend {
-  padding-inline: 5px;
+.midi-binding-group h4 {
+  margin: 0;
   color: var(--text-value);
   font-size: 0.76rem;
   font-weight: 700;
@@ -3067,10 +3072,13 @@ label select:focus,
 }
 
 .midi-binding-group-copy {
-  margin: 0 0 10px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
   color: var(--color-muted);
   font-size: 0.74rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .midi-binding-response {
@@ -3080,11 +3088,17 @@ label select:focus,
 .midi-binding-field-grid {
   display: grid;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.midi-binding-source-grid,
+.midi-binding-source-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .midi-binding-response-grid {
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .midi-binding-field {
@@ -3092,6 +3106,8 @@ label select:focus,
   align-content: start;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .midi-binding-field .control-label {
