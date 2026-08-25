@@ -1,75 +1,91 @@
-# One Signal Path
+# Who Controls This Slot?
 
-This page follows one value through MN42. It is deliberately small.
+A physical knob and a slot value are related, but they are not the same thing.
 
-## One Pot Becomes One MIDI Message
+The knob is one source. The slot is the firmware-owned destination that resolves configured behavior and emits MIDI or another routed result. Understanding MN42 starts with asking what is allowed to move that destination now.
 
-A physical control moves.
+## Path One: The Slot Reacts
 
-Firmware reads the control, maps the raw value into MIDI range, and sends the slot's configured MIDI behavior.
+For a reactive slot, the performer's hand establishes a physical baseline. Sound and time can shape the resolved output around it.
 
-For a CC slot, that means:
-
-```text
-control movement -> slot value -> MIDI CC
+```mermaid
+flowchart LR
+  Hand[Hand<br/>physical pot] --> Baseline[Slot baseline]
+  SignalA[Signal A<br/>envelope follower] --> ARG[EF / ARG shaping]
+  SignalB[Signal B<br/>optional second follower] --> ARG
+  ARG --> Resolver[Documented destination mode]
+  Baseline --> Resolver
+  Time[Time<br/>LFO route] --> Resolver
+  Resolver --> Output[Resolved slot output]
+  Output --> MIDI[MIDI / routed exit]
 ```
 
-The slot decides channel and message shape.
+The exact relationship is configured rather than implied:
 
-## One Envelope Follower Becomes Modulation
+- EF can add, subtract, replace, scale, or move around center.
+- ARG combines two follower signals before the EF contribution reaches the destination.
+- LFO routes can replace a value, contribute through fixed-lane modes, or target an internal modulation bus.
+- transport-facing output is rate-limited and coalesced so modulation does not become an unbounded event queue.
 
-An envelope follower watches signal level.
+Multiple writers can be musically useful, but they are not silently declared equivalent. The modulation matrix reports route modes and warns about shared writers so the performer can see the relationship being created.
 
-The slot can use that follower as a modulation source. The EF settings decide how the level is shaped, smoothed, and folded into the outgoing slot value.
+## Path Two: Another Machine Takes Over
 
-```text
-signal level -> EF -> slot modulation -> MIDI value
+Incoming MIDI follows a narrower path because takeover must remain unambiguous.
+
+```mermaid
+sequenceDiagram
+  participant M as External MIDI
+  participant S as Eligible direct CC slot
+  participant P as Physical pot
+  M->>S: Establish remote value
+  P-->>S: Move below remote value; no jump
+  P-->>S: Cross remote value
+  S->>S: Physical control resumes ownership
 ```
 
-ARG can combine two followers before the slot receives the result.
+With soft pickup:
 
-## One LFO Route Becomes Output
+1. An incoming CC establishes the virtual slot value.
+2. Firmware keeps the physical pot from immediately snapping it back.
+3. The performer moves the pot toward the remote value.
+4. When the pot crosses that value, physical control resumes smoothly.
 
-An LFO produces a changing value.
+The binding belongs to the profile and runs in firmware over DIN or USB without the App or Bridge attached. Supported machine-level destinations can also receive incoming MIDI, but they do not use the slot takeover gesture.
 
-A route decides where that value goes:
+## Why These Paths Are Separate
 
-- internal runtime bus
-- MIDI CC
-- slot value
-- OSC mirror
+Current firmware accepts slot takeover only for active, direct, unmodulated CC slots. It rejects note, NRPN/RPN, SysEx, and independently modulated slot baselines rather than guessing how remote ownership should interact with another resolver.
 
-```text
-LFO -> route transform -> destination
-```
+So the accurate model is not “every source controls every slot at once.” It is:
 
-Route depth, signed amount, and range determine how far the value moves.
+- MN42 offers several explicit control relationships;
+- each relationship has a visible mode and eligibility boundary;
+- profiles preserve the relationship;
+- the performer can reason about who or what is moving the result.
 
-## One App Apply Becomes Firmware Config
+That constraint is part of the instrument's legibility, not a missing UI shortcut.
 
-The App keeps staged edits separate from live device state.
+## Who Controls Configuration?
 
-```text
-edit in browser -> staged config -> Apply -> firmware ACK -> live config
-```
-
-If Apply fails or the checksum does not match, the App does not pretend the write worked.
-
-## One Bridge Session Moves State
-
-The Bridge can sit between browser and device.
-
-It talks to firmware, caches manifest/schema/config state, exposes a structured session to the App, and can also route OSC or host MIDI.
+Performance values and saved configuration use different authority lanes.
 
 ```text
-browser/App -> Bridge session -> device line protocol -> firmware
+edit in App -> staged config -> Apply -> firmware ACK/readback -> live config
 ```
 
-Bridge performance writes and staged firmware config writes are separate lanes. That distinction is part of the instrument.
+The App does not declare a staged edit live until the device verifies it. The Bridge can carry that structured session while separately routing host MIDI and OSC. A successful host route is not evidence that a staged device configuration was applied.
+
+## Try It
+
+- For reactive composition, begin with one pot plus one EF. Add ARG or an LFO only after the first contribution is obvious.
+- For takeover, bind one external CC to one eligible direct slot, enable soft pickup, then deliberately cross the remote value with the physical pot.
+- Use Stage to watch movement, Configure to make the everyday mapping, and Lab to inspect exact route and contribution evidence.
 
 ## Where To Read Next
 
-- [Object Card](../getting-started/ObjectCard.md)
-- [Configure Without Recompiling](../getting-started/ConfigureWithoutRecompiling.md)
+- [Why MN42](../getting-started/WhyMN42.md)
 - [Reactive Control Guide](../guides/ReactiveControlGuide.md)
+- [Reactive Modulation Matrix](../guides/ReactiveModulationMatrix.md)
+- [MIDI Input Mapping](../guides/MidiInputMapping.md)
 - [Modulation Matrix Contract](../reference/ModulationMatrixContract.md)

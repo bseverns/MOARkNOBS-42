@@ -12,9 +12,9 @@ hide:
 
 ![Front view of the MOARkNOBS-42 board showing the full control surface, display area, and hardware layout.](assets/board/moarF.png){ .hero-image }
 
-MOARkNOBS-42 is a documented performance instrument for artists, builders, and instrument hackers who want a control surface they can actually understand. It combines the physical board, open firmware, a browser configurator, profile recall, an OSC / virtual MIDI bridge path, and a public paper trail for how the whole system behaves.
+MOARkNOBS-42 is a reactive performance instrument where a hand, a sound, time, or another MIDI device can move a configured destination. The musical work is deciding how those sources cooperate, replace one another, or hand control back to the performer.
 
-It is designed less like a sealed appliance and more like an instrument whose logic stays visible.
+Its open hardware, firmware, browser App, profiles, Bridge, and evidence trail keep those unusual relationships visible instead of sealing them inside a preset.
 
 For the whole object-to-software picture in one glance, read the [System Map](getting-started/SystemMap.md).
 Teaching a newcomer? Throw them into [Learner Paths](learn/LearnerPaths.md) so they can chase one signal at a time.
@@ -27,6 +27,12 @@ Teaching a newcomer? Throw them into [Learner Paths](learn/LearnerPaths.md) so t
 </div>
 
 </div>
+
+## Control is the instrument
+
+A knob can establish a baseline. Envelope followers and ARG can let the environment shape a reactive slot. An LFO can add time. On eligible direct CC slots, incoming MIDI can establish a remote value and soft pickup lets the performer physically cross it to take control back without a jump.
+
+These are explicit, bounded behaviors rather than one vague “modulation” feature. [Who Controls This Slot?](learn/OneSignalPath.md) shows the reactive-composition and external-takeover paths side by side. [Why MN42](getting-started/WhyMN42.md) explains why that model matters musically.
 
 ## Validated host surfaces
 
@@ -71,8 +77,11 @@ If you want the short outsider-friendly version first, read [Why MN42](getting-s
 
 ## Why it feels different
 
-Many controllers are designed to disappear behind presets, hidden mappings, or sealed software stacks. MOARkNOBS-42 goes the other direction.
+Many controllers are designed to disappear behind presets, hidden mappings, or sealed software stacks. MOARkNOBS-42 goes the other direction: it makes value ownership and contribution part of the performance.
 
+- A physical baseline can be shaped by sound and time through documented route modes.
+- Profile-owned incoming MIDI can control eligible destinations without the App or Bridge attached.
+- Soft pickup lets the performer's hand resume control without snapping the value.
 - The hardware, firmware, configurator, and bridge are documented as one legible system.
 - The instrument is open enough to rebuild, audit, and remix rather than merely consume.
 - The docs are part of the instrument, not a last-minute appendix.
@@ -98,7 +107,11 @@ The goal is not mass-market smoothness. The goal is an instrument whose control 
 
 - **Profiles and recall**
 
-  Profile slots `A` through `D` let you save, load, reset, and back up working states instead of rebuilding a setup live.
+  Profile slots `A` through `D` preserve working states, including reactive behavior and incoming MIDI bindings, instead of requiring a live rebuild.
+
+- **Incoming MIDI takeover**
+
+  Firmware-owned CC routes let other machines control supported destinations, with Continuous, Momentary, Toggle, range, and takeover behavior stored in the profile.
 
 - **OSC / virtual MIDI bridge**
 

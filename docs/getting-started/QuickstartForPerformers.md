@@ -24,9 +24,9 @@ Use the browser configurator when you want direct USB setup, profile management,
 
 Use **Stage** mode at a gig. It keeps connection state, firmware identity, active profile, power safety, slot activity, envelope levels, scene recall, and the documented panic-baseline help visible without exposing raw schema forms or lab panels.
 
-Use **Basic** or **Advanced** mode when preparing mappings. Basic keeps everyday slot mapping visible; Advanced restores the full bench with EF/ARG/filter/LED editors, import/export, monitor, scope, MIDI monitor, and debug surfaces.
+Use **Configure** or **Lab** when preparing mappings. Configure keeps everyday slot mapping visible; Lab restores the full bench with EF/ARG/filter/LED editors, import/export, monitor, scope, MIDI monitor, and debug surfaces.
 
-Use **Advanced** tools for debugging. Treat those as bench/lab surfaces, not the normal show screen.
+Use **Lab** tools for debugging. Treat those as bench surfaces, not the normal show screen.
 
 Start here:
 

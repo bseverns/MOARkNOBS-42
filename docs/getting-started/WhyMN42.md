@@ -1,66 +1,59 @@
 # Why MN42
 
-MOARkNOBS-42 is distinctive because it is not only a controller surface.
+MOARkNOBS-42 is a performance instrument for deciding what gets to move a control.
 
-It is a hardware instrument with a public, teachable ecosystem around it:
+A performer's hand can establish a value. Sound can disturb it through envelope followers. Two signals can be combined through ARG. Time can move it through an LFO. For eligible direct CC slots and machine-level parameters, another MIDI device can take control; soft pickup lets the performer cross that remote value and take the slot back without a jump.
 
-- hardware you can inspect and rebuild
-- firmware whose behavior is documented rather than mystified
-- a browser configurator for setup, monitoring, and profile work
-- a bridge for OSC and DAW-facing virtual MIDI workflows
-- a docs layer that treats explanation as part of the instrument itself
+That shifting relationship between body, environment, time, and other machines is the musical reason MN42 exists.
 
-## More than a generic control box
+## Control is a relationship
 
-Many MIDI controllers are sold as surfaces first and systems second.
+MN42 is not a bank of knobs with modulation added around the edges. Its 42 slots are places where control relationships can be configured, recalled, observed, and performed.
 
-MN42 is better understood as a documented control system. The physical interface matters, but so do:
+Two paths make the idea concrete:
 
-- how profiles are stored and recalled
-- how the configurator stages and applies changes
-- how the bridge exposes OSC and virtual MIDI
-- how the repo explains what is verified and what still needs validation
+- **Reactive composition:** a physical baseline can be shaped by EF/ARG behavior and LFO routes according to their documented add, subtract, replace, scale, or centered semantics.
+- **External takeover:** profile-owned incoming MIDI can write an eligible direct, unmodulated CC slot or a supported machine parameter. Soft pickup prevents the physical pot from snapping the value back until it crosses the externally established value.
 
-That combination is what makes it feel different.
+Those paths are related, but they are not one universal arbitration engine. Current firmware deliberately rejects ambiguous incoming-MIDI targets such as independently modulated slot baselines. The constraint keeps the musical result explainable.
 
-## Legibility is a feature
+Read [Who Controls This Slot?](../learn/OneSignalPath.md) for the visual version, then [Reactive Control Guide](../guides/ReactiveControlGuide.md) and [MIDI Input Mapping](../guides/MidiInputMapping.md) for the two deeper paths.
 
-One of the project's strongest design choices is that it tries to stay legible.
+## Legibility makes the behavior playable
 
-That means:
+Unusual control relationships are useful only if a performer can understand and recover them.
 
-- the docs explain the signal path
-- the validation docs explain what counts as proven
-- the support docs explain what is and is not promised
-- the source and hardware documentation remain available for people who want to go deeper
+MN42 keeps that logic visible through:
 
-For some users that is overkill. For the right user, it is the reason the instrument is worth caring about.
+- open hardware and firmware that can be inspected and rebuilt;
+- a browser App with separate Stage, Configure, and Lab surfaces;
+- profiles that keep reactive settings and incoming MIDI routes with the device;
+- a local Bridge that separates host routing from instrument configuration;
+- contracts that define exact behavior instead of asking the UI to invent it;
+- evidence documents that distinguish a demonstrated path from a general claim.
 
-## Profiles, configurator, and bridge are part of the instrument
+Openness is therefore not the whole thesis. It is what makes this reactive instrument teachable, auditable, and trustworthy.
 
-The physical board is only one layer of the studio built by the machine.
+## More than a sealed controller
 
-The repo also supports:
+Many controllers hide value ownership inside presets, host mappings, or companion software. MN42 makes the movement itself inspectable:
 
-- a browser configurator for connection, monitoring, staged edits, and profile management
-- on-device profiles that let working states be recalled intentionally
-- a bridge path for OSC hosts and DAW-facing virtual MIDI use cases
+- what established the baseline;
+- which reactive sources contributed;
+- where a route exits;
+- when external MIDI owns a virtual pot;
+- when the performer's hand has taken it back;
+- what is live now versus staged for Apply.
 
-So the instrument is not just the control panel. It is the control panel plus the software and docs that make the panel understandable.
-
-## Open, but not vague
-
-MN42 is open in the practical sense: you can inspect the repo, study the design, and remix parts of the stack under the stated licenses (this project was built on the backs of giants).
-
-Just as important, the repo tries not to be vague about what is current, what is supported, and what is still unverified.
+The physical surface, firmware, App, Bridge, profiles, and documentation are parts of one instrument because each helps answer those questions.
 
 ## Who this matters to
 
-MN42 makes the most sense for people who want one or more of these things:
+MN42 makes the most sense for:
 
-- a performance instrument that does not hide its wiring logic
-- a controller ecosystem that can be taught, audited, and rebuilt
-- a small-batch object with artist-run character rather than generic consumer positioning
-- a documented path into deeper technical understanding
+- experimental musicians who want control movement to become compositional material;
+- sound and media artists working across audio, MIDI, OSC, and physical gesture;
+- educators who want modulation, takeover, and state authority to remain visible;
+- instrument hackers who want to audit, rebuild, or alter the system without pretending unverified behavior is proven.
 
-If that sounds like you, the next step is probably [Quickstart for Performers](QuickstartForPerformers.md), [Quickstart for Builders](QuickstartForBuilders.md), or [Pilot Run / Artist Edition](../project/PilotRun.md).
+If that sounds like you, continue with [Who Controls This Slot?](../learn/OneSignalPath.md), [Quickstart for Performers](QuickstartForPerformers.md), or [Quickstart for Builders](QuickstartForBuilders.md).

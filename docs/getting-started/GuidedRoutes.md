@@ -38,7 +38,7 @@ Primary links:
 
 1. [System Map](SystemMap.md)
 2. [Why MN42](WhyMN42.md)
-3. [One Signal Path](../learn/OneSignalPath.md)
+3. [Who Controls This Slot?](../learn/OneSignalPath.md)
 4. [Glossary](../reference/Glossary.md)
 5. [Reactive Control Guide](../guides/ReactiveControlGuide.md)
 
@@ -81,7 +81,7 @@ Go deeper:
 Primary links:
 
 1. [Object Card](ObjectCard.md)
-2. [One Signal Path](../learn/OneSignalPath.md)
+2. [Who Controls This Slot?](../learn/OneSignalPath.md)
 3. [Configure Without Recompiling](ConfigureWithoutRecompiling.md)
 4. [Reactive Control Guide](../guides/ReactiveControlGuide.md)
 5. [Testing Story](../validation/TestingStory.md)

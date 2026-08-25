@@ -13,6 +13,7 @@ flowchart LR
   App[Browser App<br/>staged editor and monitor]
   Bridge[Structured Bridge<br/>host session and transports]
   Hosts[MIDI/OSC hosts<br/>DAWs, synths, tools]
+  ExternalMIDI[Other MIDI devices<br/>performance input]
   Evidence[Bench and release evidence]
 
   Performer --> Controls
@@ -22,6 +23,7 @@ flowchart LR
   App <--> Bridge
   Bridge <--> Firmware
   Firmware <--> Hosts
+  ExternalMIDI <--> Firmware
   Bridge --> Hosts
   Firmware --> Evidence
   App --> Evidence
@@ -34,6 +36,7 @@ flowchart LR
 - The **firmware** is the source of truth for persisted profile/config state and supported capabilities.
 - The **App** is the operator surface for staging, applying, monitoring, and profile work.
 - The **Bridge** gives desktop browsers structured access to device state and host transports.
+- **Incoming MIDI** is a profile-owned firmware performance lane. Supported CC routes keep working over DIN or USB without the App or Bridge attached.
 - The **contracts** define what the App, Bridge, and firmware promise to each other.
 - The **evidence docs** record what has actually been tested.
 
@@ -57,5 +60,5 @@ Use the evidence pages when readiness matters:
 
 - [Object Card](ObjectCard.md) for the physical definition.
 - [Configure Without Recompiling](ConfigureWithoutRecompiling.md) for what can be changed from the App/Bridge path.
-- [One Signal Path](../learn/OneSignalPath.md) for a compact teaching path through the system.
+- [Who Controls This Slot?](../learn/OneSignalPath.md) for the reactive-composition and external-takeover paths.
 - [Guided Routes](GuidedRoutes.md) if you want a role-based reading order.

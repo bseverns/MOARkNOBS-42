@@ -201,6 +201,10 @@ def main() -> None:
         guard_commands.extend(
             [
                 ("markdown links", ["python3", "tools/check_markdown_links.py", "--root", "."]),
+                (
+                    "public UI vocabulary",
+                    ["python3", "tools/check_public_ui_vocabulary.py", "--root", "."],
+                ),
                 ("wiki contract", ["python3", "tools/check_wiki_contract.py", "--root", "."]),
                 ("contract ledger", ["python3", "tools/check_contract_ledger.py", "--root", "."]),
                 (

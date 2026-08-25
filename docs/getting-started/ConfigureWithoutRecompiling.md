@@ -6,14 +6,15 @@ That does not make MN42 a generic no-code controller platform. The firmware stil
 
 ## Configuration Boundary Table
 
-| Area       | Configurable Without Recompile                                                        | Still Firmware/Contract Bound                                    |
-| ---------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Slots      | message type, channel, primary data field, active state, slot-local modulation fields | slot count, schema shape, supported message types                |
-| Profiles   | save, load, reset, import, export                                                     | EEPROM layout, profile count, firmware persistence behavior      |
-| EF         | assignment, follower-related slot settings, destination behavior where exposed        | envelope count, input hardware, firmware follower implementation |
-| ARG        | enable, method, sources                                                               | available methods and source count                               |
-| LFO routes | route type, target, amount/depth/range where supported                                | route count, target enum, output scheduler behavior              |
-| Bridge     | serial path, OSC/MIDI ports, host recipes, App-over-Bridge workflow                   | staged/live write boundaries and Bridge/device session contract  |
+| Area          | Configurable Without Recompile                                                        | Still Firmware/Contract Bound                                                       |
+| ------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Slots         | message type, channel, primary data field, active state, slot-local modulation fields | slot count, schema shape, supported message types                                   |
+| Profiles      | save, load, reset, import, export                                                     | EEPROM layout, profile count, firmware persistence behavior                         |
+| Incoming MIDI | source port/channel/CC, destination, interaction, output range, takeover             | binding capacity, supported message class, destination eligibility, takeover rules  |
+| EF            | assignment, follower-related slot settings, destination behavior where exposed        | envelope count, input hardware, firmware follower implementation                    |
+| ARG           | enable, method, sources                                                               | available methods and source count                                                  |
+| LFO routes    | route type, target, amount/depth/range where supported                                | route count, target enum, output scheduler behavior                                 |
+| Bridge        | serial path, OSC/MIDI ports, host recipes, App-over-Bridge workflow                   | staged/live write boundaries and Bridge/device session contract                     |
 
 ## Browser Configurator
 
@@ -46,6 +47,19 @@ The exact available fields depend on the current firmware manifest and schema.
 Profiles let the device store working states instead of rebuilding a setup from scratch. The App exposes profile workflows for saving, loading, resetting, importing, and exporting profile data.
 
 Use profiles for rehearsal states, show setups, and experiments you want to recover.
+
+## Incoming MIDI
+
+Incoming MIDI bindings are profile-owned firmware configuration, not Bridge host mappings. In Lab, use **Profile Performance → Incoming MIDI** to configure:
+
+- DIN, USB, or either input port;
+- MIDI channel and 7-bit CC number;
+- a supported slot or machine-level destination;
+- Continuous, Momentary, or Toggle interaction;
+- output minimum and maximum;
+- soft pickup or jump takeover for Continuous routes.
+
+The current implementation accepts only CC7 input. Slot destinations are intentionally limited to active, direct, unmodulated CC slots so external ownership and physical takeover remain unambiguous. See [MIDI Input Mapping](../guides/MidiInputMapping.md).
 
 ## EF Settings
 

@@ -39,7 +39,7 @@ Checklist:
 1. Pick `Max OSC Localhost` in the bridge console.
 2. Receive `/mn42/slots`, `/mn42/envelopes`, or `/mn42/telemetry/slots` in Max.
 3. If you send control back, keep it on `/mn42/cmd` or `/mn42/event/*`.
-4. Verify the bridge Advanced mode route traces match what the Max patch sees.
+4. Verify the Bridge **Diagnostics** route traces match what the Max patch sees.
 
 ### `touchosc-performance-local`
 

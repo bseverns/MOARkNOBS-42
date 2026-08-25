@@ -50,7 +50,7 @@ MIDIBox is compact enough that the repo reads like a learning artifact. It names
 
 MN42 should adapt:
 
-- keep [One Signal Path](../learn/OneSignalPath.md) as a compact teaching page
+- keep [Who Controls This Slot?](../learn/OneSignalPath.md) as a compact teaching page
 - add short "read this code next" links when docs introduce a subsystem
 - keep at least some pages small enough to read before opening source
 - explain why App Apply, Bridge session, firmware config, and modulation each exist

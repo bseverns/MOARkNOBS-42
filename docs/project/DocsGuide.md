@@ -20,7 +20,7 @@ Use these categories when deciding where a doc belongs:
 
 | Category  | Use it for                                      | First pages                                                                                                   |
 | --------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Learn     | concepts, vocabulary, and teaching paths        | [Why MN42](../getting-started/WhyMN42.md), [One Signal Path](../learn/OneSignalPath.md)                       |
+| Learn     | concepts, vocabulary, and teaching paths        | [Why MN42](../getting-started/WhyMN42.md), [Who Controls This Slot?](../learn/OneSignalPath.md)               |
 | Use       | performer/operator workflows                    | [Configurator Tour](../guides/Configurator.md), [Profile Workflow](../guides/ProfileWorkflow.md)              |
 | Build     | hardware, firmware, bring-up, flashing          | [Builder's Handbook](../getting-started/BuildersHandbook.md), [Bringup](../hardware-test/Bringup.md)          |
 | Prove     | tests, validation, release readiness, receipts  | [TESTING](../validation/TESTING.md), [Release Criteria](../release/ReleaseCriteria.md)                        |
@@ -80,11 +80,47 @@ Read in this order:
 
 1. [Object Card](../getting-started/ObjectCard.md)
 2. [Guided Routes](../getting-started/GuidedRoutes.md)
-3. [One Signal Path](../learn/OneSignalPath.md)
+3. [Who Controls This Slot?](../learn/OneSignalPath.md)
 4. [Glossary](../reference/Glossary.md)
 5. [Documentation Truth Map](../reference/DocumentationTruthMap.md)
 
 Then choose one lane: Learn, Use, Build, Prove, Reference, Project, or Archive.
+
+## Canonical Visuals And Behavior Media
+
+The repo keeps many useful fabrication views, bench photos, and diagnostic screenshots. Only the small set below should be treated as a current visual answer to “what does MN42 look like now?”
+
+| Canonical view | Maintained source | Current status |
+| --- | --- | --- |
+| Physical instrument hero | `docs/assets/board/moarF.png` | Current board view; not a claim of a finished enclosure or production unit |
+| Annotated physical surface | Not yet captured | Required; do not substitute a fabrication render and call it a finished instrument |
+| App Configure | `App/tests/visual-snapshots/configure-1440x1000.png` | Approved visual-regression baseline |
+| App Lab | `App/tests/visual-snapshots/lab-1920x1080.png` | Approved visual-regression baseline |
+| App Stage | `App/tests/visual-snapshots/stage-1440x1000.png` | Approved visual-regression baseline |
+| Bridge Monitor | `docs/images/bridge-stage-mode.png` | Recapture required; the committed image still shows the legacy Stage label |
+
+Other UI images are explanatory or historical unless a page explicitly identifies them as current. A canonical capture must record:
+
+- the surface and viewport;
+- capture date and source commit;
+- simulator versus attached hardware;
+- any profile, recipe, or staged state needed to reproduce it;
+- useful alt text that describes the information hierarchy rather than decorative color.
+
+The App's four approved PNGs are pixel assertions on the canonical macOS + pinned Chromium lane. Routine screenshot matrices remain diagnostic artifacts and do not become front-door imagery automatically.
+
+### First behavior video
+
+The first canonical behavior clip should document incoming-MIDI soft pickup on attached hardware:
+
+1. an external CC establishes the value of one eligible direct slot;
+2. the physical pot moves below that value without snapping the output;
+3. the pot crosses the remote value;
+4. physical control resumes.
+
+Capture the control surface and a visible value/output monitor in the same take. Record firmware identity, profile, MIDI source, destination slot, and source commit beside the clip. Label it **demonstration**, not validation, unless a matching receipt records the setup and expected result. Provide a caption or transcript.
+
+Until that attached-hardware take exists, [Who Controls This Slot?](../learn/OneSignalPath.md) is the canonical storyboard. A simulator-only clip must be labeled as simulator rehearsal and must not replace the hardware demonstration.
 
 ## Editing Rules
 

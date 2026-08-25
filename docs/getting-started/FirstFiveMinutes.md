@@ -9,7 +9,7 @@ Pick the sentence that sounds most like you. Do that path first. Ignore the rest
 **Who this is for:** curious visitors who want to understand the configurator before finding or building an instrument.
 
 1. Open the [hosted configurator](https://bseverns.github.io/MN42/).
-2. Switch to **Advanced**, then select **Start simulator** instead of connecting a serial device.
+2. Switch to **Lab**, then select **Start simulator** instead of connecting a serial device.
 3. Change one slot, inspect the staged diff, and apply it to the simulated device.
 
 The simulator proves the browser workflow, not physical controls, timing, MIDI wiring, or electrical behavior.
@@ -46,7 +46,7 @@ The simulator proves the browser workflow, not physical controls, timing, MIDI w
 
 1. Decide whether direct WebSerial is enough or whether you need the Bridge.
 2. Connect and wait for manifest/config data before editing.
-3. Use Basic mode for everyday slot mapping or Advanced mode for bench/lab controls.
+3. Use **Configure** for everyday slot mapping or **Lab** for exact bench controls.
 4. Stage edits, review the diff, apply, and wait for confirmation.
 5. Save the profile only after the device accepted the setup.
 
@@ -90,13 +90,13 @@ The simulator proves the browser workflow, not physical controls, timing, MIDI w
 
 1. Read the object card to learn what MN42 is and is not.
 2. Open the system map to see hardware, firmware, App, Bridge, and evidence as one system.
-3. Read one signal path so the slot/modulation model has a concrete shape.
+3. Read who controls a slot so the reactive and takeover paths have a concrete shape.
 4. Use the glossary only when terms get in the way.
 
 **Primary links:**
 
 - [Object Card](ObjectCard.md)
 - [System Map](SystemMap.md)
-- [One Signal Path](../learn/OneSignalPath.md)
+- [Who Controls This Slot?](../learn/OneSignalPath.md)
 
 **Caveat:** if pages disagree, use the [Documentation Truth Map](../reference/DocumentationTruthMap.md); history and planning pages do not define current behavior.

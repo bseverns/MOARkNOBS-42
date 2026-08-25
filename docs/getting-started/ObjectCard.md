@@ -25,6 +25,9 @@ The reactive sources include:
 - ARG pair math between envelope followers
 - LFO routes
 - live hardware control movement
+- profile-owned incoming MIDI for supported machine parameters and eligible direct, unmodulated CC slots
+
+These sources do not all participate through one universal resolver. Reactive composition and external-MIDI takeover have separate, documented eligibility and ownership semantics. See [Who Controls This Slot?](../learn/OneSignalPath.md).
 
 ## What Comes Out?
 
@@ -49,6 +52,7 @@ Many performance and mapping behaviors can be configured without recompiling fir
 - EF assignment and follower settings
 - ARG settings
 - LFO route targets and ranges
+- profile-owned incoming MIDI bindings, response modes, ranges, and takeover policy
 - bridge/session workflow settings
 
 See [Configure Without Recompiling](ConfigureWithoutRecompiling.md).

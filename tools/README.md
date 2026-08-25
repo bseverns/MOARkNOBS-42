@@ -28,6 +28,10 @@ and painfully honest.
 
 Run `python3 tools/check_docs_links.py` before you ship docs-heavy changes. It checks local Markdown links and heading anchors so learners don't fall through trapdoors.
 
+## Public UI Vocabulary Guard
+
+Run `python3 tools/check_public_ui_vocabulary.py --root .` to keep musician-facing front-door docs on the current App and Bridge names. The guard is deliberately scoped: historical records, compatibility tokens, recipe names, and deep contracts may still use words such as `advanced` or `stage` in other meanings.
+
 ## Bring Your Own Hacks
 
 Got a script that makes debugging less dull? Park it here with a README and keep dependencies light. No binaries, no mystery jars—just plain text mischief that others can remix.
