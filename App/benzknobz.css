@@ -2898,6 +2898,244 @@ label select:focus,
   align-self: flex-start;
 }
 
+.midi-binding-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.midi-binding-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.midi-binding-count strong {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.midi-binding-add,
+.midi-binding-remove {
+  margin-top: 0;
+}
+
+.midi-binding-add {
+  border-color: rgba(45, 226, 230, 0.42);
+  background: rgba(45, 226, 230, 0.1);
+  color: var(--color-accent);
+}
+
+.midi-binding-limit {
+  color: var(--color-warn);
+  font-size: 0.76rem;
+}
+
+.midi-binding-empty {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px dashed rgba(45, 226, 230, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.midi-binding-empty strong {
+  font-size: 0.9rem;
+}
+
+.midi-binding-empty span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.midi-binding-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.midi-binding-card {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.midi-binding-card[open] {
+  border-color: rgba(45, 226, 230, 0.34);
+  background: rgba(45, 226, 230, 0.035);
+}
+
+.midi-binding-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px 14px;
+  align-items: center;
+  min-height: 58px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.midi-binding-summary::-webkit-details-marker {
+  display: none;
+}
+
+.midi-binding-summary::before {
+  content: '›';
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.midi-binding-card[open] > .midi-binding-summary::before {
+  transform: rotate(90deg);
+}
+
+.midi-binding-route-number {
+  grid-column: 2;
+  color: var(--color-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.midi-binding-route-text {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+}
+
+.midi-binding-route-meta {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.midi-binding-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px 44px;
+}
+
+.midi-binding-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+  gap: 10px;
+}
+
+.midi-binding-group {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.midi-binding-group legend {
+  padding-inline: 5px;
+  color: var(--text-value);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.midi-binding-group-copy {
+  margin: 0 0 10px;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.midi-binding-response {
+  grid-column: 1 / -1;
+}
+
+.midi-binding-field-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.midi-binding-source-grid,
+.midi-binding-response-grid {
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+}
+
+.midi-binding-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.midi-binding-field .control-label {
+  color: var(--text-label);
+  font-size: 0.72rem;
+}
+
+.midi-binding-field input,
+.midi-binding-field select {
+  width: 100%;
+  min-height: 40px;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--text-value);
+  font-size: 0.9rem;
+}
+
+.midi-binding-field:focus-within .control-label {
+  color: var(--color-accent);
+}
+
+.midi-binding-field[data-inactive] {
+  opacity: 0.62;
+}
+
+.midi-binding-field-help {
+  color: var(--color-muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.midi-binding-remove {
+  justify-self: end;
+  border-color: rgba(255, 111, 145, 0.3);
+  color: var(--color-hot);
+}
+
+.midi-binding-fallback {
+  grid-column: 1 / -1;
+}
+
 .schema-section-body[data-empty-message]:empty {
   min-height: 38px;
   margin-top: 0.6rem;
@@ -3942,6 +4180,14 @@ footer {
   .compact-connect-actions {
     width: 100%;
   }
+
+  .midi-binding-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .midi-binding-response {
+    grid-column: auto;
+  }
 }
 
 @media (min-width: 1025px) and (max-width: 1560px) {
@@ -4017,6 +4263,29 @@ footer {
   .debug-log-bridge {
     width: 100%;
   }
+
+  .midi-binding-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .midi-binding-route-meta {
+    grid-column: 2;
+    grid-row: auto;
+    justify-self: start;
+  }
+
+  .midi-binding-route-text {
+    white-space: normal;
+  }
+
+  .midi-binding-body {
+    padding-left: 14px;
+  }
+
+  .midi-binding-source-grid,
+  .midi-binding-response-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 520px) {
@@ -4032,6 +4301,20 @@ footer {
   }
 
   .performer-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .midi-binding-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .midi-binding-add {
+    width: 100%;
+  }
+
+  .midi-binding-source-grid,
+  .midi-binding-response-grid {
     grid-template-columns: 1fr;
   }
 }

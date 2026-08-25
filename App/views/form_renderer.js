@@ -6,6 +6,7 @@ import {
   formatArgMethodLabel,
   formatEfFilterLabel
 } from '../lib/tuning_catalog.js';
+import { buildMidiInputBindings } from './midi_input_bindings_renderer.js';
 
 // Schema-to-controls glue. The JSON schema is the boss; this file just turns it
 // into boring inputs and sends tiny patches back to the runtime.
@@ -125,6 +126,9 @@ export class FormRenderer {
     this.debounceMs = debounceMs;
     this.schema = null;
     this.fields = new Map();
+    this.midiBindingOpenItems = new Set();
+    this.defaultValueForSchema = defaultValueForSchema;
+    this.getValueAt = getValueAt;
     // Per-path timers coalesce rapid UI edits into one outbound patch per field.
     this._patchSchedule = new Map();
   }
@@ -221,6 +225,10 @@ export class FormRenderer {
 
   // Render array items as expandable repeated sections.
   buildArray(basePath, schema, value, container) {
+    if (basePath === 'midiInputBindings') {
+      buildMidiInputBindings(this, basePath, schema, value, container);
+      return;
+    }
     const items = Array.isArray(value) ? value : [];
     const count = Math.max(items.length, schema.minItems ?? 0);
     for (let index = 0; index < count; index += 1) {

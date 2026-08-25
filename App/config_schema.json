@@ -403,30 +403,69 @@
         "properties": {
           "source": {
             "type": "object",
+            "title": "Incoming message",
+            "description": "The MIDI port, channel, and Control Change number this route listens for.",
             "required": ["port", "type", "channel", "number"],
             "properties": {
-              "port": { "type": "string", "enum": ["any", "din", "usb"], "default": "any" },
-              "type": { "type": "string", "enum": ["cc7"], "default": "cc7" },
-              "channel": { "type": "integer", "minimum": 1, "maximum": 16, "default": 1 },
-              "number": { "type": "integer", "minimum": 0, "maximum": 127, "default": 0 }
+              "port": {
+                "type": "string",
+                "title": "Input port",
+                "enum": ["any", "din", "usb"],
+                "default": "any"
+              },
+              "type": {
+                "type": "string",
+                "title": "Message",
+                "enum": ["cc7"],
+                "default": "cc7"
+              },
+              "channel": {
+                "type": "integer",
+                "title": "MIDI channel",
+                "minimum": 1,
+                "maximum": 16,
+                "default": 1
+              },
+              "number": {
+                "type": "integer",
+                "title": "CC number",
+                "minimum": 0,
+                "maximum": 127,
+                "default": 0
+              }
             },
             "additionalProperties": false
           },
           "destination": {
             "type": "string",
+            "title": "Control target",
             "default": "slot.0.value",
             "description": "Stable machine parameter name or slot.N.value for N=0..41.",
             "pattern": "^(slot\\.([0-9]|[1-3][0-9]|4[01])\\.value|arp\\.(swing|gate)|note\\.(velocity_shift|probability)|jitter\\.(depth|smoothness))$"
           },
-          "mode": { "type": "string", "enum": ["absolute", "momentary", "toggle"], "default": "absolute" },
+          "mode": {
+            "type": "string",
+            "title": "Interaction",
+            "description": "Continuous maps every CC value; Momentary and Toggle treat the CC as a button.",
+            "enum": ["absolute", "momentary", "toggle"],
+            "default": "absolute"
+          },
           "outputRange": {
             "type": "array",
+            "title": "Output range",
+            "description": "The minimum and maximum normalized MIDI values sent to the destination.",
             "default": [0, 127],
             "minItems": 2,
             "maxItems": 2,
             "items": { "type": "integer", "minimum": 0, "maximum": 127 }
           },
-          "pickup": { "type": "string", "enum": ["soft", "jump"], "default": "soft" }
+          "pickup": {
+            "type": "string",
+            "title": "Takeover",
+            "description": "For Continuous mode, Soft waits until the incoming value meets the current target; Jump applies immediately.",
+            "enum": ["soft", "jump"],
+            "default": "soft"
+          }
         },
         "additionalProperties": false
       }

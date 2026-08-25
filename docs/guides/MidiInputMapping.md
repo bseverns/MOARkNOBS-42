@@ -63,5 +63,11 @@ then Apply the staged configuration. `GET_CONFIG`/`SET_ALL` and
 `GET_PROFILE`/`SET_PROFILE` use the same authoritative JSON codec, so profile
 exports round-trip the bindings without a second representation.
 
+The binding editor groups each route into Incoming message, Destination, and
+Response. Destinations are selected by operator-facing name while the App
+continues to stage the canonical machine path. Collapsed routes summarize the
+port, channel, CC, target, interaction, and range. Output minimum and maximum
+remain ordered in the editor so an invalid range cannot be staged accidentally.
+
 The Bridge's historical CC-number-to-slot adapter remains a host compatibility
 path. It is not the authority for the device-owned mappings described here.
