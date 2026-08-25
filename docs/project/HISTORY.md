@@ -6,9 +6,17 @@ This file tells the development story of MOARkNOBS-42: why the repo sprawled, wh
 
 ## Short Version
 
+## Short Version
+
 MOARkNOBS-42 started in late 2024 as an attempt to build more instruments, learn MIDI deeply, and push microcontroller work past one-function sketches. Through 2025 it became a real Teensy-based MIDI controller project with a PCB, display, EEPROM-backed configuration, envelope followers, arpeggiator behavior, WebSerial telemetry, and an expanding test harness.
 
-By early 2026, the center of gravity moved from "can the firmware do this?" to "can the whole instrument prove this?" Firmware, App, Bridge, docs, release tooling, and bench evidence started being treated as one product surface. The current repo posture is a hardware-test package, not a beta, public, or fabrication-ready release.
+By early 2026, the center of gravity moved from "can the firmware do this?" to "can the whole instrument prove this?" Firmware, App, Bridge, docs, release tooling, and bench evidence started being treated as one product surface. Through the spring, prototype fabrication and release hardening forced the repository to separate verified behavior from plans, simulations, and optimistic assumptions.
+
+By summer 2026, a second shift was underway: the question was no longer only whether the system was powerful or provable, but whether a musician could understand and inhabit it. The App, Bridge, hardware controls, documentation, recovery flows, and modulation systems increasingly converged around operator roles and a more legible performance model.
+
+By August 2026, incoming MIDI joined physical gesture, envelope followers, ARG relationships, and LFO motion as a device-owned control source. Soft takeover, origin-aware routing, profile persistence, and musician-facing App work made an older implication explicit: MN42 is not only a surface that sends control. It is a surface where several sources can make claims on the same musical state and the performer can arbitrate among them.
+
+The current repo posture remains evidence-driven: current support, release, fabrication, and hardware claims belong in contract and evidence docs rather than in this history.
 
 The useful arc is:
 
@@ -17,6 +25,8 @@ The useful arc is:
 - **Fall 2025:** CI, diagnostics, docs, teaching structure, and bridge/test discipline.
 - **Winter 2025 to early 2026:** browser configurator, LFOs, macro/scene storage, and safer live recovery.
 - **March to May 2026:** release hardening, prototype fabrication handoff, contract cleanup, Node 24 bridge path, and evidence-driven release gates.
+- **June to July 2026:** system convergence, musician-facing ergonomics, documentation hierarchy, and clearer App/Bridge operator roles.
+- **August 2026:** device-owned incoming control, schema/persistence closure, and an increasingly explicit control-arbitration model.
 
 ## How to Read This History
 
@@ -24,6 +34,7 @@ The useful arc is:
 - **Treat "Turning point" callouts as the story spine.** They mark moments where the project changed shape, not just moments where code landed.
 - **Use commit references as trailheads.** Short hashes and tags are included where they already existed in the old history; missing hashes are labeled with durable topic names instead of volatile placeholders.
 - **Read reflections as diary fragments.** The italic sections keep the first-person design voice, grouped away from the factual bullets so the page scans without losing its pulse.
+- **Let later phases reinterpret earlier work without rewriting it.** A feature may enter history once as engineering and matter again later when several features reveal a larger instrument idea; the later phase should record that change in meaning rather than pretending the meaning was obvious from the start.
 - **Use contract docs for current truth.** This page remembers the path. It does not define today's protocol, support boundary, release status, or test requirements.
 
 ## Completed History
@@ -167,42 +178,70 @@ Spring 2026 is the "prove it" season. The project tightens export provenance, te
 - _This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more "does the whole instrument tell the same story when you actually use it?"_
 - _The release path stopped being "build some zips" and became "prove the source, prove the host, and prove the outward-facing binaries are treated like evidence artifacts instead of internal scraps."_
 
+### Phase 7: System Convergence and Operator Legibility (June - July 2026)
+
+Early summer is less about adding another subsystem than making the existing ones belong to the same instrument. The repo already has firmware depth, browser editing, Bridge routing, hardware controls, tests, and a dense documentation library; the work increasingly turns toward deciding what each surface is *for* and how a performer should encounter it.
+
+- **June - July 2026:** Documentation is reorganized around fewer first doors instead of fewer total pages. Learn, Use, Build, Prove, Reference, Project, and Archive become reader-facing lanes, while contract, evidence, orientation, planning, and historical truth remain explicitly distinct. [VERIFY TRAILHEAD: documentation compaction / truth-map commits]
+- **June - July 2026:** Performer and learner routes become more intentional: First Five Minutes, Musician-First guidance, signal-path teaching, reactive-control guides, and role-based quickstarts increasingly translate firmware behavior into musician decisions instead of mirroring source-tree structure. [VERIFY TRAILHEAD]
+- **June - July 2026:** The App and Bridge are treated more clearly as different operator surfaces over the same machine. The App owns instrument configuration and performance-facing state; the Bridge increasingly reads as the host/session/routing environment around the instrument rather than a second configurator. [VERIFY TRAILHEAD]
+- **June - July 2026:** LFO, ARG, EF, display, profile, scene, panic, and on-device control work keeps moving toward reachability: important behavior should be observable and recoverable from the panel or a musician-facing software surface rather than existing only because the firmware supports it. [VERIFY TRAILHEAD]
+- **June - July 2026:** App/Bridge simulator, screenshot, documentation, and operator-evidence surfaces mature enough that interface behavior can be rehearsed without confusing simulator proof for hardware proof. [VERIFY TRAILHEAD]
+
+> **Turning point:** The project stops asking whether every subsystem is powerful enough and starts asking whether a musician can understand the whole instrument without understanding every subsystem.
+
+**Reflections from this stretch**
+
+- _Realizing that hiding complexity is far different and more complex than simply deleting it._
+- _The machine should explain itself while it is operated without the endless tiny-screen menu dive._
+- _A lot of work is going into distinguishing the instrument from the backstage plumbing around it._
+- _Documentation hierarchy and UI hierarchy are versions of the same design problem - CIs will save._
+
+### Phase 8: Control Ecology and the Surface of Arbitration (August 2026)
+
+August makes a long-running musical idea explicit in the architecture. Physical controls, envelope followers, ARG relationships, and LFOs already gave the machine several ways to move state. Device-owned incoming MIDI adds another actor: another machine can now make a claim on an MN42 parameter without requiring the App or Bridge to remain attached.
+
+- **August 2026:** Schema 9 adds profile-owned incoming MIDI bindings. DIN and USB CC input can target direct slot values and selected machine parameters through a device-owned parameter-routing layer rather than a host-side mapping shim. [`8fc3d74` and follow-ups]
+- **August 2026:** Incoming control gains explicit interaction semantics: absolute, momentary, and toggle behavior; bounded ranges; soft takeover; validation; and origin-aware output suppression. Physical controls can reclaim externally injected state by crossing the remote value instead of snapping immediately back to the pot's old position. [`8fc3d74`, `894bc08`, follow-ups]
+- **August 2026:** MIDI binding state becomes part of profile persistence. Legacy modulation records migrate forward, config digests include binding semantics, profile/config import-export share the authoritative representation, and migration regressions are expanded rather than assuming old EEPROM state will survive by luck. [`894bc08`, `9a4ba78`]
+- **August 2026:** Persistence hardening closes older boot/profile edge cases discovered during the schema work: configuration is hydrated before active-profile restoration, all schema-8 profile copies are promoted deliberately, ARG housekeeping runs during migration, and profile selection refuses partial transitions when the basic mapping cannot load. [`9a4ba78`]
+- **August 2026:** The browser configurator moves toward a clearer musician-facing hierarchy. Stage, Configure, and Lab become distinct jobs instead of progressively larger versions of the same form; Configure translates reactive behavior into Source, Character, Response, Amount, and Direction while Lab preserves exact firmware fields. [VERIFY TRAILHEAD: App surface commits after `9a4ba78`]
+- **August 2026:** The incoming-MIDI editor presents routes as Incoming message -> Destination -> Response rather than exposing the nested schema directly. Browser intent is staged synchronously while outbound live patches remain debounced, keeping UI simplification aligned with the same staged/apply authority model used elsewhere. [`5fa44d0`, `db423a0`, `7ad20fe`]
+- **August 2026:** The emerging interaction model becomes easier to name: the hand, time, environmental signal, algorithmic combination, and another machine can all participate in the same performance state. The interesting behavior is no longer only modulation; it is the performer's ability to allow, combine, resist, or reclaim those influences.
+
+> **Turning point:** MN42 stops being only a surface that sends control and becomes a place where control is negotiated. The hand, incoming signal, time, algorithms, and other machines can all act on instrument state; performance increasingly consists of deciding how those claims coexist.
+And I turned 40.
+
+**Reflections from this stretch**
+
+- _I prefer cooperation amongst my machines. The more shared-load, the better and routing control dynamics from the composer would be optimal._
+- _Testing in my current studio is somewhat more difficult than it has been in the past._
+- _The browser-surfaces may have started as an addendum or requisite evil, but they've really grown on me._
+- _MN42 wants to expose that stability is only temporary and structure is a nice idea._
+
 ## Current Repository Shape
 
 This is an orientation snapshot, not a contract. For current status, use [Repository Contents](RepositoryContents.md), [Release Boundary Index](../release/ReleaseBoundaryIndex.md), and [TESTING](../validation/TESTING.md).
 
 - `firmware/`: Teensy 4.0 PlatformIO project with modular firmware managers, Unity tests, and hardware/system test runners.
 - `hardware/`: current hardware references, substitutions, parts rationale, and current-build notes. Historical PCB source exports are not the same thing as a public fabrication-ready hardware package.
-- `App/`: browser configurator with Playwright coverage, runtime kernel, BenzKnobz view layer, simulator support, and WebSerial plus Bridge paths.
-- `bridge/`: unsigned desktop Bridge CLI/server for serial, OSC, MIDI, and browser-served workflows.
+- `App/`: browser instrument surface with Stage / Configure / Lab roles, Playwright coverage, a schema-driven runtime, simulator support, direct WebSerial plus structured Bridge paths, and guarded staged/apply behavior.
+- `bridge/`: desktop host/session layer for serial, OSC, MIDI, structured App transport, routing health, and operator diagnostics; it protects device truth without becoming a second instrument configurator.
 - `docs/`: MkDocs source for learning, use, build, proof, reference, project, and archive material.
 - `tools/`: guardrails for contract sync, release readiness, documentation checks, and repo health.
 
-## Planned Roadmap
+## Where Planning Continues
 
-This section is deliberately separate from completed history. It records direction, not shipped truth.
+Earlier versions of this history also carried a live roadmap. That made sense while the project and its documentation were still being assembled together, but it also made a historical page go stale whenever release, packaging, or operator plans changed.
 
-### Bridge Packaging Rollout
+Current plans now live with the current project and release documents rather than here:
 
-- Keep the first distribution wave focused on desktop users: macOS (`arm64` and `x64`), Windows (`x64`), and Linux (`x64`).
-- Continue the `pkg` versus `nexe` bake-off. `pkg` remains the likely default path for speed and ecosystem fit; `nexe` stays as fallback if native module embedding needs deeper control.
-- Resolve bundling blockers around `serialport` native artifacts, static asset inclusion, runtime config paths, and license payload colocation.
-- Target installer workflows that do not require non-technical users to install Node or npm: signed `.pkg`/`.dmg` for macOS, MSI for Windows, and `.deb` plus AppImage options for Linux.
-- Build toward channel-based signed updates with stable/beta lanes, in-app version checks, and rollback to last-known-good after failed health checks.
-- Keep the release gates explicit: `G1` reproducible cross-platform builds, `G2` installer QA on clean machines, `G3` staged auto-update dogfood, and `G4` public release with operator docs and recovery playbook.
+- [Pilot Run / Artist Edition](PilotRun.md)
+- [Release Boundary Index](../release/ReleaseBoundaryIndex.md)
+- [Release Criteria](../release/ReleaseCriteria.md)
+- [Release Guide](../release/ReleaseGuide.md)
+- [Bridge Docs Map](../bridge/BridgeDocsMap.md)
+- [Documentation Compaction Plan](DocumentationCompactionPlan.md)
+- [TODO](TODO.md)
 
-### Hardware-Test to Beta Evidence
-
-- Continue turning bench receipts into dated evidence instead of broad claims.
-- Keep hardware-in-the-loop checks honest about what board, power profile, host OS, browser, and Bridge path were actually used.
-- Avoid widening public support language until release criteria and validation docs have the proof to back it.
-
-### Operator Experience
-
-- Keep reducing the gap between performer language and protocol language without hiding the protocol.
-- Continue polishing profile, macro, scene, and panic-recovery flows around real hardware behavior.
-- Make "download, install, connect" boringly reliable for performers who should never have to think about JavaScript tooling just to use the Bridge.
-
-**Roadmap reflection**
-
-- _Goal: make the setup feel boringly reliable without sanding off the handmade instrument underneath._
+This page records what happened and why the project changed shape. Planning pages record what might happen next.

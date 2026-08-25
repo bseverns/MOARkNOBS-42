@@ -114,8 +114,10 @@ function createField(
   if (help) {
     const helpElement = document.createElement('small');
     helpElement.className = 'midi-binding-field-help';
+    helpElement.id = `${domId(path)}-help`;
     helpElement.textContent = help;
     wrapper.appendChild(helpElement);
+    input.setAttribute('aria-describedby', helpElement.id);
   }
 
   renderer.bindInput(
@@ -258,7 +260,7 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
     groups.className = 'midi-binding-groups';
 
     const sourceGroup = createGroup(
-      'Incoming message',
+      'Incoming CC',
       'Choose the port, channel, and CC number this route listens for.',
       'midi-binding-source',
       `${itemPath}.source-group`
@@ -287,9 +289,11 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
       routeText.textContent = `${port} · Ch ${channel} · CC ${number} → ${destination}`;
       routeMeta.textContent = `${mode} · ${minimum}–${maximum}`;
       if (pickupInput) {
+        const pickupActive = (modeInput?.value ?? binding?.mode) === 'absolute';
+        pickupInput.disabled = !pickupActive;
         pickupInput.closest('.midi-binding-field')?.toggleAttribute(
           'data-inactive',
-          (modeInput?.value ?? binding?.mode) !== 'absolute'
+          !pickupActive
         );
       }
     };
@@ -303,15 +307,6 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
       onInput: refreshSummary
     }));
     sourceFields.appendChild(portInput.closest('.midi-binding-field'));
-
-    const messageField = createField(renderer, {
-      path: `${itemPath}.source.type`,
-      schema: sourceProperties.type ?? { type: 'string', enum: ['cc7'] },
-      value: source.type,
-      label: 'Message',
-      options: MESSAGE_OPTIONS
-    });
-    sourceFields.appendChild(messageField.wrapper);
 
     ({ input: channelInput } = createField(renderer, {
       path: `${itemPath}.source.channel`,
@@ -330,6 +325,22 @@ export function buildMidiInputBindings(renderer, basePath, schema, value, contai
       onInput: refreshSummary
     }));
     sourceFields.appendChild(numberInput.closest('.midi-binding-field'));
+    const messageSchema = sourceProperties.type ?? { type: 'string', enum: ['cc7'] };
+    if ((messageSchema.enum?.length ?? 0) > 1) {
+      const messageOptions = messageSchema.enum.map((value) =>
+        MESSAGE_OPTIONS.find((option) => option.value === value) ?? { value, label: value }
+      );
+      const messageField = createField(renderer, {
+        path: `${itemPath}.source.type`,
+        schema: messageSchema,
+        value: source.type,
+        label: 'Message',
+        options: messageOptions
+      });
+      sourceFields.appendChild(messageField.wrapper);
+    } else {
+      sourceGroup.dataset.deviceConfigPath = `${itemPath}.source.type`;
+    }
     sourceGroup.appendChild(sourceFields);
     appendFallbackProperties(
       renderer,

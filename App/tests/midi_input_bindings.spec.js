@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+async function openIncomingMidi(page) {
+  await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
+  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  await expect(inputSection).toBeVisible();
+  return inputSection;
+}
+
 test('MIDI input bindings can be added, edited, and removed as staged profile config', async ({
   page
 }) => {
@@ -12,7 +19,7 @@ test('MIDI input bindings can be added, edited, and removed as staged profile co
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect' }).click();
 
-  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  const inputSection = await openIncomingMidi(page);
   await inputSection.locator('.schema-array-add').click();
 
   const binding = inputSection.locator('details').first();
@@ -54,7 +61,7 @@ test('removing a MIDI input binding cancels its pending field edit', async ({ pa
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect' }).click();
 
-  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  const inputSection = await openIncomingMidi(page);
   await inputSection.locator('.schema-array-add').click();
   const binding = inputSection.locator('details').first();
 
@@ -84,7 +91,7 @@ test('rerendering an array preserves a synchronously staged select edit', async 
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect' }).click();
 
-  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  const inputSection = await openIncomingMidi(page);
   await inputSection.locator('.schema-array-add').click();
   const binding = inputSection.locator('details').first();
 
@@ -112,15 +119,26 @@ test('MIDI input binding editor presents grouped targets and keeps output range 
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect' }).click();
 
-  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  const inputSection = await openIncomingMidi(page);
   await expect(inputSection.locator('.midi-binding-count')).toHaveText('0 of 16 bindings');
   await inputSection.getByRole('button', { name: 'Add binding' }).click();
 
   const binding = inputSection.locator('.midi-binding-card').first();
-  await expect(binding.getByRole('group', { name: 'Incoming message' })).toBeVisible();
+  await expect(binding.getByRole('group', { name: 'Incoming CC' })).toBeVisible();
   await expect(binding.getByRole('group', { name: 'Destination' })).toBeVisible();
   await expect(binding.getByRole('group', { name: 'Response' })).toBeVisible();
+  await expect(binding.getByLabel('Message')).toHaveCount(0);
   await expect(binding.getByLabel('Control target').locator('optgroup')).toHaveCount(2);
+
+  const takeover = binding.getByLabel('Takeover');
+  await expect(takeover).toBeEnabled();
+  await expect(takeover).toHaveValue('soft');
+  await binding.getByLabel('Interaction').selectOption('momentary');
+  await expect(takeover).toBeDisabled();
+  await expect(takeover).toHaveValue('soft');
+  await binding.getByLabel('Interaction').selectOption('absolute');
+  await expect(takeover).toBeEnabled();
+  await expect(takeover).toHaveValue('soft');
 
   await binding.getByLabel('Output maximum').fill('40');
   await binding.getByLabel('Output minimum').fill('72');
@@ -161,7 +179,7 @@ test('MIDI input binding groups contain their controls at the desktop review wid
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect' }).click();
-  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  const inputSection = await openIncomingMidi(page);
   await inputSection.getByRole('button', { name: 'Add binding' }).click();
 
   const containment = await inputSection.locator('.midi-binding-card').evaluate((card) => {
@@ -172,7 +190,11 @@ test('MIDI input binding groups contain their controls at the desktop review wid
     const destinationRect = destination.getBoundingClientRect();
     const fields = [...sourceGrid.querySelectorAll('.midi-binding-field')];
     return {
-      groupsDoNotOverlap: sourceRect.right <= destinationRect.left,
+      groupsDoNotOverlap:
+        sourceRect.right <= destinationRect.left ||
+        destinationRect.right <= sourceRect.left ||
+        sourceRect.bottom <= destinationRect.top ||
+        destinationRect.bottom <= sourceRect.top,
       copyFits: source.querySelector('.midi-binding-group-copy').scrollWidth <= source.clientWidth,
       gridFits: sourceGrid.scrollWidth <= sourceGrid.clientWidth,
       fieldsFit: fields.every((field) => {
@@ -200,7 +222,7 @@ test('MIDI input binding editor collapses to one usable column on a phone', asyn
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect' }).click();
-  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  const inputSection = await openIncomingMidi(page);
   await inputSection.getByRole('button', { name: 'Add binding' }).click();
 
   const sourceGrid = inputSection.locator('.midi-binding-source-grid');
@@ -213,4 +235,25 @@ test('MIDI input binding editor collapses to one usable column on a phone', asyn
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
   ).toBe(true);
+});
+
+test('Incoming MIDI is profile-owned and not part of the selected-slot workspace', async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect' }).click();
+
+  const incomingPanel = page.locator('[data-performance-panel="incoming"]');
+  await expect(incomingPanel).toBeHidden();
+  await openIncomingMidi(page);
+  await expect(incomingPanel).toBeVisible();
+  await expect(incomingPanel.locator('h3')).toHaveText('Incoming MIDI');
+  await expect(page.locator('#form #midi-input-form')).toHaveCount(0);
+  await expect(page.locator('#profile-performance-panels #midi-input-form')).toHaveCount(1);
 });

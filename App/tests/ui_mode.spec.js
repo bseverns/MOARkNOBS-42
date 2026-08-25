@@ -93,7 +93,7 @@ test.describe('UI mode', () => {
     await expect(page.locator('#profile-download')).toBeVisible();
     await expect(page.locator('#profile-upload')).toBeVisible();
 
-    const ccInput = page.locator('.slot-editor label:has-text("CC/Note number") input').first();
+    const ccInput = page.locator('.slot-editor label:has-text("CC number") input').first();
     await ccInput.fill('45');
     await ccInput.dispatchEvent('change');
 

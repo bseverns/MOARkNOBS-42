@@ -30,7 +30,7 @@ test('changing a browser-only slot label does not dirty staged firmware config',
   await bootSimulator(page);
 
   const labelInput = page
-    .locator('.slot-editor label:has-text("Slot label (browser only)") input')
+    .locator('.slot-editor label:has-text("Slot label") input')
     .first();
   await labelInput.fill('Verse cue');
   await labelInput.dispatchEvent('change');
@@ -52,4 +52,11 @@ test('slot UI does not advertise unsupported browser pickup behavior', async ({ 
   await expect(page.locator('#slots .takeover')).toHaveCount(0);
   await expect(page.locator('#slots .slot-button button')).toHaveCount(0);
   expect(await page.evaluate(() => window.__MN42_RUNTIME.setPotGuard)).toBeUndefined();
+});
+
+test('Configure keeps browser presentation metadata out of slot behavior', async ({ page }) => {
+  await bootSimulator(page);
+
+  await expect(page.getByText('Knob sends MIDI badge', { exact: false })).toHaveCount(0);
+  await expect(page.getByLabel('Slot label')).toBeVisible();
 });

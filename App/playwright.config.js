@@ -7,6 +7,7 @@ const useSystemChrome = process.env.PLAYWRIGHT_SYSTEM_CHROME === '1';
 
 export default defineConfig({
   testDir: './tests',
+  snapshotPathTemplate: '{testDir}/visual-snapshots/{arg}{ext}',
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 2 : 0,

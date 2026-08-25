@@ -85,7 +85,7 @@ test('Configure places live EF and resolved slot evidence beside tuning', async 
 test('Configure can stage the pre-Apply state without issuing an immediate device write', async ({ page }) => {
   await bootConfigureSimulator(page);
   const original = await page.evaluate(() => window.__MN42_RUNTIME.getState().live.slots[0].data1);
-  const dataInput = page.locator('.slot-editor label:has-text("CC/Note number") input').first();
+  const dataInput = page.locator('.slot-editor label:has-text("CC number") input').first();
   await dataInput.fill(String(original + 7));
   await dataInput.dispatchEvent('change');
   await page.locator('#apply').click();

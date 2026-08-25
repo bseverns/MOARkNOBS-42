@@ -58,16 +58,21 @@ configuration Apply/profile-save path. Incoming performance values are runtime
 state and never cause one EEPROM write per MIDI message. Legacy profile
 modulation records migrate with an empty binding table.
 
-In the App's Advanced view, use **MIDI Input Bindings** to add or remove routes,
-then Apply the staged configuration. `GET_CONFIG`/`SET_ALL` and
+In the App's Lab view, open **Profile Performance → Incoming MIDI** to add or
+remove routes, then Apply the staged configuration. The workspace is profile-owned rather than part of
+**Selected Slot** because a route may target any slot or a machine-level performance parameter.
+`GET_CONFIG`/`SET_ALL` and
 `GET_PROFILE`/`SET_PROFILE` use the same authoritative JSON codec, so profile
 exports round-trip the bindings without a second representation.
 
-The binding editor groups each route into Incoming message, Destination, and
-Response. Destinations are selected by operator-facing name while the App
+The binding editor groups each route into Incoming CC, Destination, and Response.
+Since the current firmware accepts only 7-bit Control Change routes, message type
+is stated rather than presented as a one-option selector. Destinations are selected by operator-facing name while the App
 continues to stage the canonical machine path. Collapsed routes summarize the
 port, channel, CC, target, interaction, and range. Output minimum and maximum
 remain ordered in the editor so an invalid range cannot be staged accidentally.
+Takeover is available only for Continuous interaction. Switching to Momentary or
+Toggle disables that control without discarding the route's staged takeover value.
 
 The Bridge's historical CC-number-to-slot adapter remains a host compatibility
 path. It is not the authority for the device-owned mappings described here.

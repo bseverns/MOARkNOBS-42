@@ -363,17 +363,6 @@
               <div class="schema-section-body" data-schema-target="slots"></div>
             </section>
           </div>
-          <section class="schema-section" id="midi-input-form" data-ui-tier="advanced"
-            data-device-config-root="midiInputBindings">
-            <header>
-              <h3>MIDI Input Bindings</h3>
-              <p class="microcopy">Create up to 16 profile-owned routes. Pick an incoming CC, choose its target,
-                then set its behavior and range. Changes stay staged until Apply.</p>
-            </header>
-            <div class="schema-section-body" data-schema-target="midiInputBindings" data-schema-apply="staged"
-              data-empty-message="No MIDI input bindings in this profile."
-              aria-label="No MIDI input bindings in this profile."></div>
-          </section>
           <div class="ef-modulation-cluster" data-ui-tier="advanced">
             <fieldset id="ef-assignment-card" data-device-config-root="efSlots">
               <legend>Envelope Assignments</legend>
@@ -407,7 +396,8 @@
             <header class="profile-performance-header">
               <div>
                 <h2 id="profile-performance-title">Profile Performance</h2>
-                <p class="microcopy">Edit profile-wide arpeggiator behavior, LFO generators, and route assignments. Per-slot roots and fixed LFO lanes stay in Selected Slot.</p>
+                <p class="microcopy">Edit profile-wide arpeggiator behavior, LFO routing, and the incoming MIDI
+                  authority granted to other machines. Per-slot controls stay in Selected Slot.</p>
               </div>
               <span class="lane-tag" data-runtime-lane="staged">Profile A–D</span>
             </header>
@@ -416,6 +406,8 @@
                 aria-pressed="true">Profile Arp</button>
               <button type="button" class="performance-tab" data-performance-tab="lfo"
                 aria-pressed="false">Profile LFO &amp; Routes</button>
+              <button type="button" class="performance-tab" data-performance-tab="incoming"
+                aria-pressed="false">Incoming MIDI</button>
             </div>
             <div id="profile-performance-panels"></div>
           </section>
@@ -824,6 +816,21 @@
               </p>
             </section>
           </div>
+        </div>
+
+        <div class="performance-panel" data-performance-panel="incoming" data-ui-tier="advanced">
+          <section class="schema-section incoming-midi-workspace" id="midi-input-form"
+            data-device-config-root="midiInputBindings">
+            <header>
+              <span class="zone-eyebrow">External control authority</span>
+              <h3>Incoming MIDI</h3>
+              <p class="microcopy">Create up to 16 profile-owned routes. Pick an incoming CC, choose its target,
+                then set its behavior and range. Changes stay staged until Apply.</p>
+            </header>
+            <div class="schema-section-body" data-schema-target="midiInputBindings"
+              data-schema-apply="staged" data-empty-message="No incoming MIDI routes in this profile."
+              aria-label="No incoming MIDI routes in this profile."></div>
+          </section>
         </div>
       </aside>
 

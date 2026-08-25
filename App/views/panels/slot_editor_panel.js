@@ -7,6 +7,29 @@ import {
   formatEfFilterLabel
 } from '../../lib/tuning_catalog.js';
 
+const SLOT_DATA1_PRESENTATION = Object.freeze({
+  CC: {
+    label: 'CC number',
+    help: 'The Control Change number this knob sends.'
+  },
+  Note: {
+    label: 'Note number',
+    help: 'The MIDI note identity used when this slot sends notes.'
+  },
+  ProgramChange: {
+    label: 'Program number',
+    help: 'The program number recalled when this knob triggers Program Change.'
+  },
+  NRPN: {
+    label: 'NRPN parameter',
+    help: 'The stored 7-bit parameter component used by the firmware for NRPN selection.'
+  },
+  RPN: {
+    label: 'RPN parameter',
+    help: 'The stored 7-bit parameter component used by the firmware for RPN selection.'
+  }
+});
+
 export function createSlotEditorPanel({
   runtime,
   localManifest,
@@ -173,23 +196,26 @@ export function createSlotEditorPanel({
         }
       )
     );
-    basics.appendChild(
-      makeNumber(
-        'CC/Note number',
-        slot.data1 ?? 0,
-        0,
-        127,
-        1,
-        (value) => stageSlotField(slotState.selected, 'data1', value),
-        {
-          help: 'The controller number or note number this knob targets.',
-          configPaths: 'slots.*.data1'
-        }
-      )
-    );
+    const data1Presentation = SLOT_DATA1_PRESENTATION[slot.type];
+    if (data1Presentation) {
+      basics.appendChild(
+        makeNumber(
+          data1Presentation.label,
+          slot.data1 ?? 0,
+          0,
+          127,
+          1,
+          (value) => stageSlotField(slotState.selected, 'data1', value),
+          {
+            help: data1Presentation.help,
+            configPaths: 'slots.*.data1'
+          }
+        )
+      );
+    }
     basics.appendChild(
       makeText(
-        'Slot label (browser only)',
+        'Slot label',
         slot.label ?? '',
         'Verse / build / drop cues',
         (value) => runtime.setLocalSlotMeta(slotState.selected, { label: value }),
@@ -223,14 +249,6 @@ export function createSlotEditorPanel({
         !!slot.active,
         (value) => stageSlotField(slotState.selected, 'active', value),
         { configPaths: 'slots.*.active' }
-      )
-    );
-    basics.appendChild(
-      makeToggle(
-        'Knob sends MIDI badge (browser only)',
-        !!slot.pot,
-        (value) => runtime.setLocalSlotMeta(slotState.selected, { pot: value }),
-        { help: glossary.browserLocal }
       )
     );
     if (slot.type === 'SysEx') {

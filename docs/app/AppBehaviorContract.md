@@ -60,6 +60,14 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
   account for every slot-schema leaf.
 
+Lab presents profile-owned incoming MIDI routes as the **Incoming MIDI** tab in **Profile Performance**, beside the
+profile arpeggiator and LFO/routes tabs. It must not place those routes inside **Selected Slot**: a route can target any
+slot or a machine-level performance parameter and travels with its profile.
+
+The selected-slot Mapping tab names `data1` according to the chosen outgoing message: **CC number**, **Note number**,
+**Program number**, **NRPN parameter**, or **RPN parameter**. It omits that control for OFF, Pitch Bend, Aftertouch,
+Mod Wheel, and SysEx; SysEx exposes its template instead. Hiding the control does not clear the staged `data1` value.
+
 Envelope detection mode is slot-owned (`slots[].ef.mode`). Two slots may share one physical follower assignment while
 keeping different Peak, RMS, Gate, or Follower settings. The top-level `envelopeMode` value is a legacy
 compatibility/OLED label; changing it must not rewrite any slot's detector mode.
@@ -70,8 +78,9 @@ change the authority or write semantics of the underlying state.
 ## Device-backed and browser-local state
 
 Device-backed controls must be advertised by the manifest/schema or a documented live protocol lane. Browser-only slot
-labels and MIDI badges remain local metadata and must not be serialized as device configuration. Optional display
-metadata sent to the Bridge remains advisory and cannot affect routing authority.
+labels remain local metadata and must not be serialized as device configuration. Legacy browser-local MIDI-badge
+metadata may still be read, but Configure does not expose it as instrument behavior. Optional display metadata sent to
+the Bridge remains advisory and cannot affect routing authority.
 
 Import stages configuration locally. Export saves the current candidate, including unsent edits. Profile A–D actions,
 scene actions, macro actions, and live controls remain capability-gated so older firmware fails closed.
@@ -92,6 +101,11 @@ Controls require visible labels, keyboard operation, logical focus order, and no
 surface supports arrow-key navigation and documented coarse/fine adjustment. Dialogs and status announcements must
 remain usable without relying on pointer interaction or color alone.
 
+Because the current incoming route schema supports only 7-bit Control Change, the route editor labels the source group
+**Incoming CC** and does not render a one-option message-type selector. If the negotiated schema advertises multiple
+message types, that field becomes a selector. Takeover remains stored for each route but is disabled and unfocusable
+unless Interaction is Continuous, because it has no runtime effect for Momentary or Toggle routes.
+
 ## Verification
 
 Run:
@@ -103,8 +117,10 @@ npm --prefix App run test:architecture
 
 Playwright exercises the real runtime/view modules through the stable `benzknobz.html` harness, including simulator,
 schema validation, staged diff, Apply/receipt failures, uncertainty recovery, migration blocking, profiles, and the
-mode surfaces. `lab_config_coverage.spec.js` derives its expected roots and slot leaves from the canonical schema, then
-checks that Lab marks every one and preserves independent slot EF modes through Apply/readback. The architecture guard
+mode surfaces. A small approved snapshot set protects the top-level Configure, Lab, Stage, and open Incoming MIDI
+hierarchies; routine screenshot artifacts remain diagnostic rather than approved baselines. `lab_config_coverage.spec.js`
+derives its expected roots and slot leaves from the canonical schema, then checks that Lab marks every one and preserves
+independent slot EF modes through Apply/readback. The architecture guard
 rejects coordinator imports that bypass the public layers and policy-shaped code that would pull schema constraints,
 transaction semantics, or device capability decisions back into the two composition roots. Operator-facing hardware
 claims additionally require receipts under `docs/bench/app/`.

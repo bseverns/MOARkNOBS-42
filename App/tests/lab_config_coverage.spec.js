@@ -74,6 +74,9 @@ test('Lab exposes every device configuration root and the legacy mode stays sepa
 
   expect(actualRoots).toEqual(expectedRoots);
   for (const root of expectedRoots) {
+    if (root === 'midiInputBindings') {
+      await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
+    }
     await expect(page.locator(`[data-device-config-root="${root}"]`)).toBeVisible();
   }
 
@@ -92,6 +95,10 @@ test('Lab exposes every device configuration root and the legacy mode stays sepa
 test('Lab selected-slot editor covers every slot schema leaf', async ({ page }) => {
   await bootLabSimulator(page);
   const covered = new Set();
+
+  // The default CC mapping exposes data1. SysEx intentionally replaces that
+  // field with its template, so collect both meaningful mapping states.
+  await collectSlotPaths(page, covered);
 
   await page.evaluate(() => {
     const runtime = window.__MN42_RUNTIME;
