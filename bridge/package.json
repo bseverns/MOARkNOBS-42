@@ -7,7 +7,7 @@
     "start": "node mn42_bridge_server.js",
     "start:cli": "node mn42_bridge.js",
     "test:cli": "node ../tools/require_node_24.js && node test/node_version_preflight.test.js && node test/mn42_bridge.test.js && node test/test_missing_port.js && node test/config_file.test.js",
-    "test:device-session": "node ../tools/require_node_24.js && node test/apply_transaction_writer.test.js && node test/device_session.test.js",
+    "test:device-session": "node ../tools/require_node_24.js && node test/packaged_schema_authority.test.js && node test/apply_transaction_writer.test.js && node test/device_session.test.js",
     "test:app-contract": "node ../tools/require_node_24.js && node test/schema_export_contract.test.js && node test/app_contract.test.js",
     "test:simulator": "node ../tools/require_node_24.js && node test/simulator.test.js",
     "test:transport": "node ../tools/require_node_24.js && node test/outbound_midi_mappings.test.js && node test/serial_ingress.test.js && node test/serial_to_osc.test.js && node test/serial_large_payload.test.js && node test/osc_to_serial.test.js && node test/cmd_validation.test.js && node test/feedback_loop_guard.test.js && node test/translation_trace.test.js && node test/typed_event_layer.test.js && node test/roundtrip_metrics.test.js && node test/serial_close_reconnect.test.js && node test/midi_transport.test.js",

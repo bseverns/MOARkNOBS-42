@@ -26,6 +26,7 @@ const APP_RUNTIME_FILES = [
   path.join('lib', 'mini-ajv.js'),
   path.join('lib', 'add-formats.js'),
   path.join('lib', 'constants.js'),
+  path.join('lib', 'tuning_catalog.js'),
   path.join('runtime', 'config_normalize.js'),
   path.join('runtime', 'config_identity.js'),
   path.join('runtime', 'patch_reconcile.js'),
@@ -57,6 +58,23 @@ function transpileEsmToCjs(source) {
   let output = source;
 
   output = output.replace(
+    /^export\s+\{([^}]+)\}\s+from\s+['"](.+)['"];?$/gm,
+    (_, names, specifier) => {
+      const bindings = names
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .map((name) => {
+          const [importedName, exportedName = importedName] = name.split(/\s+as\s+/);
+          namedExports.add(exportedName);
+          return importedName === exportedName
+            ? importedName
+            : `${importedName}: ${exportedName}`;
+        });
+      return `const { ${bindings.join(', ')} } = require('${specifier}');`;
+    },
+  );
+  output = output.replace(
     /^import\s+\{([^}]+)\}\s+from\s+['"](.+)['"];?$/gm,
     (_, names, specifier) => `const {${names}} = require('${specifier}');`,
   );
@@ -80,10 +98,10 @@ function transpileEsmToCjs(source) {
     },
   );
   output = output.replace(
-    /^export function\s+([A-Za-z0-9_$]+)\s*\(/gm,
-    (_, name) => {
+    /^export\s+(async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/gm,
+    (_, asyncKeyword = '', name) => {
       namedExports.add(name);
-      return `function ${name}(`;
+      return `${asyncKeyword}function ${name}(`;
     },
   );
   output = output.replace(

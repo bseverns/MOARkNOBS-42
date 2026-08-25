@@ -164,14 +164,21 @@ async function main() {
       '/api/presets must expose packaged known-good recipes',
     );
 
-    const sessionPayload = serialPort
-      ? await waitForSessionWarmState(baseUrl)
-      : (await requestJson(`${baseUrl}/api/device/session?warm=1`)).payload;
+    const sessionResult = serialPort
+      ? { response: null, payload: await waitForSessionWarmState(baseUrl) }
+      : await requestJson(`${baseUrl}/api/device/session?warm=1`);
+    const sessionPayload = sessionResult.payload;
     assert(sessionPayload, '/api/device/session?warm=1 must return JSON');
     assert(
       sessionPayload?.session?.schema &&
         sessionPayload.session.schema.type === 'object',
-      'warmed device session must expose bundled schema authority',
+      `warmed device session must expose bundled schema authority${
+        sessionPayload?.error
+          ? `: ${sessionPayload.error}`
+          : sessionResult.response && !sessionResult.response.ok
+            ? ` (HTTP ${sessionResult.response.status})`
+            : ''
+      }`,
     );
     assert(
       typeof sessionPayload?.session?.schemaSource === 'string',
