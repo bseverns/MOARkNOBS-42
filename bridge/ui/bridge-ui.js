@@ -86,6 +86,8 @@ const importCustomSetupsInput = document.getElementById(
 const outboundMidiMappingsInput = document.getElementById('outbound-midi-mappings');
 const outboundMidiMappingStatus = document.getElementById('outbound-midi-mapping-status');
 const midiTelemetryModeSelect = document.getElementById('midi-telemetry-mode');
+const setupMidiRouteSummary = document.getElementById('setup-midi-route-summary');
+const setupOscRouteSummary = document.getElementById('setup-osc-route-summary');
 
 const routeHeartbeatNodes = {
   deviceOsc: document.getElementById('route-device-osc'),
@@ -483,6 +485,21 @@ function formValues() {
   };
 }
 
+function renderSetupRoutingSummary() {
+  const values = formValues();
+  const midiPort = values.midiLabel || 'unselected MIDI port';
+  const midiDestination = values.midiDestinationName || 'MIDI destination';
+  const oscDestination = values.oscDestinationName || 'OSC destination';
+  const oscHost = values.oscHost || 'unselected host';
+  const oscPort = Number.isFinite(values.oscPort) ? values.oscPort : '-';
+  if (setupMidiRouteSummary) {
+    setupMidiRouteSummary.textContent = `${midiPort} → ${midiDestination}`;
+  }
+  if (setupOscRouteSummary) {
+    setupOscRouteSummary.textContent = `MN42 → ${oscDestination} · ${oscHost}:${oscPort}`;
+  }
+}
+
 function populateForm(values) {
   if (!values || typeof values !== 'object') return;
   for (const [key, value] of Object.entries(values)) {
@@ -505,6 +522,7 @@ function populateForm(values) {
       outboundMidiMappingsInput.value = JSON.stringify(values.outboundMidiMappings, null, 2);
     }
   }
+  renderSetupRoutingSummary();
 }
 
 function formatWhen(isoString) {
@@ -700,7 +718,7 @@ function renderStateJson(state) {
       ? [
           `Performance setup: ${setup.name}`,
           setup.suggestedDeviceProfile
-            ? `suggested device profile: ${setup.suggestedDeviceProfile}`
+            ? `advisory MN42 profile: ${setup.suggestedDeviceProfile}`
             : '',
           setup.notes || '',
         ].filter(Boolean)
@@ -743,7 +761,7 @@ function renderMappingPreview() {
   if (!mappingPreview) return;
   const mapping = mappingFormValue();
   if (!mapping.id || !Number.isInteger(mapping.controller) || !mapping.address) {
-    mappingPreview.textContent = 'No mapping ready yet.';
+    mappingPreview.textContent = 'No route ready yet.';
     return;
   }
   mappingPreview.textContent = `${mapping.id}: MIDI Ch ${
@@ -796,7 +814,7 @@ function observeMappingLearnRoutes(routes = []) {
   finishMappingLearn(
     `Captured channel ${learned.channel}, CC ${learned.controller}, value ${
       learned.value ?? 'unknown'
-    }. Choose or type an OSC address, then review the mapping.`,
+    }. Choose or type an OSC address, then review the route.`,
   );
 }
 
@@ -843,7 +861,7 @@ function renderMappingList() {
     const cell = document.createElement('td');
     cell.colSpan = 5;
     cell.style.textAlign = 'center';
-    cell.textContent = 'No mappings configured yet.';
+    cell.textContent = 'No active custom routes.';
     row.appendChild(cell);
     mappingListBody.appendChild(row);
     return;
@@ -879,7 +897,7 @@ function renderMappingList() {
     btn.addEventListener('click', async () => {
       const index = parseInt(btn.dataset.index, 10);
       const mapping = consoleState.midiToOscMappings[index];
-      if (!window.confirm(`Remove mapping “${mapping?.id || index + 1}”?`)) {
+      if (!window.confirm(`Remove route “${mapping?.id || index + 1}”?`)) {
         return;
       }
       try {
@@ -889,9 +907,9 @@ function renderMappingList() {
           ),
         );
         summaryStatus.textContent =
-          'Mapping removed without restarting routing.';
+          'Route removed and no longer active. Routing was not restarted.';
       } catch (error) {
-        summaryStatus.textContent = `Mapping removal failed: ${error.message}`;
+        summaryStatus.textContent = `Route removal failed: ${error.message}`;
       }
     });
   });
@@ -1547,7 +1565,7 @@ function bindEvents() {
     } → ${mapping.address} (${mapping.valueMode})`;
     if (
       !window.confirm(
-        `Add this live mapping without restarting routing?\n\n${preview}`,
+        `Add this live route without restarting routing?\n\n${preview}`,
       )
     ) {
       return;
@@ -1557,10 +1575,10 @@ function bindEvents() {
       addMappingForm.reset();
       renderMappingPreview();
       mappingLearnStatus.textContent =
-        'Mapping added and active. Routing was not restarted.';
-      summaryStatus.textContent = 'MIDI-to-OSC mapping added live.';
+        'Route added and active. Routing was not restarted.';
+      summaryStatus.textContent = 'MIDI-to-OSC route added live.';
     } catch (error) {
-      mappingLearnStatus.textContent = `Mapping add failed: ${error.message}`;
+      mappingLearnStatus.textContent = `Route add failed: ${error.message}`;
     }
   });
 
@@ -1648,6 +1666,7 @@ function bindEvents() {
     consoleState.loadedCustomSetupId = '';
     customSetupNotice = '';
     saveConfig(formValues());
+    renderSetupRoutingSummary();
     renderCustomSetupStatus();
   });
 
@@ -1659,11 +1678,11 @@ function bindEvents() {
         outboundMidiMappings: parsed,
       });
       consoleState.outboundMidiMappings = normalized?.outboundMidiMappings || [];
-      outboundMidiMappingStatus.textContent = `${consoleState.outboundMidiMappings.length} valid outbound mapping${consoleState.outboundMidiMappings.length === 1 ? '' : 's'} staged.`;
+      outboundMidiMappingStatus.textContent = `${consoleState.outboundMidiMappings.length} valid outbound MIDI route${consoleState.outboundMidiMappings.length === 1 ? '' : 's'} ready for the next Bridge start.`;
       hostFormDirty = true;
       saveConfig(formValues());
     } catch (error) {
-      outboundMidiMappingStatus.textContent = `Mapping JSON is not valid: ${error.message}`;
+      outboundMidiMappingStatus.textContent = `Route JSON is not valid: ${error.message}`;
     }
   });
   midiTelemetryModeSelect?.addEventListener('change', () => {

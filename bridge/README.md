@@ -27,7 +27,7 @@ Open <http://127.0.0.1:8787/> if the server does not open it automatically. Then
 1. Choose the serial port and confirm the OSC/MIDI destinations.
 2. Start the Bridge and wait for the device session to report ready.
 3. Move one hardware control and confirm a Device/OSC/MIDI route heartbeat.
-4. Select **Open configurator** when you need profile or mapping edits.
+4. Select **Open configurator** when you need instrument configuration edits.
 
 The HTTP server binds to loopback by default. Every launch creates a random control token and opens a tokenized URL;
 treat it as a local credential. Public-interface HTTP requires the explicit `--unsafe-network-http` option and your own

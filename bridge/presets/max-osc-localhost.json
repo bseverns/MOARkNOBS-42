@@ -33,6 +33,6 @@
   "manualValidationChecklist": [
     "Receive /mn42/slots in Max and confirm 42 integers arrive",
     "Send one /mn42/cmd payload back to the bridge and confirm it reaches the serial lane",
-    "Inspect Advanced mode for raw serial and route trace parity"
+    "Inspect Diagnostics for raw serial and route trace parity"
   ]
 }

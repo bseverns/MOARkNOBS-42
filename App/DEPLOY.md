@@ -10,7 +10,7 @@ Use the canonical App validation command under Node 24:
 npm --prefix App run ci
 ```
 
-That command runs interaction and viewport screenshots, contract synchronization, simulator protocol checks, the deployment build, and the deployment smoke check.
+That command runs interaction and viewport screenshots, contract synchronization, simulator protocol checks, the deployment build, and the deployment smoke check. The four approved pixel baselines use macOS system fonts and Playwright's pinned Chromium; non-macOS runs skip only those four comparisons while continuing to run the rest of the suite.
 
 The deployment artifact is generated at `dist/app/`. It contains:
 

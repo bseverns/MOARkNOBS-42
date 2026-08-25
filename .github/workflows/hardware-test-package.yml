@@ -103,7 +103,7 @@ jobs:
         run: npm --prefix bridge run ci
 
   app:
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -113,19 +113,7 @@ jobs:
           cache-dependency-path: App/package-lock.json
       - name: Install app dependencies
         run: npm --prefix App ci --no-audit --no-fund
-      - name: Show system Chrome
-        shell: bash
-        run: |
-          set -euo pipefail
-          if command -v google-chrome >/dev/null 2>&1; then
-            google-chrome --version
-          elif command -v google-chrome-stable >/dev/null 2>&1; then
-            google-chrome-stable --version
-          else
-            echo "System Chrome not found on runner." >&2
-            exit 1
-          fi
+      - name: Install pinned Chromium
+        run: npx --prefix App playwright install chromium
       - name: Run app tests
-        env:
-          PLAYWRIGHT_SYSTEM_CHROME: "1"
         run: npm --prefix App run ci

@@ -6,7 +6,7 @@
 
 | Path | Entry point | Purpose |
 | --- | --- | --- |
-| Browser console | `npm --prefix bridge start` | Setup, Stage/Advanced status, passive soundcheck, and App launch |
+| Browser console | `npm --prefix bridge start` | Setup, Routing, Monitor/Diagnostics status, passive soundcheck, and App launch |
 | CLI | `node bridge/mn42_bridge.js …` | Lowest-level line-oriented routing lane |
 | App over Bridge | Console **Open configurator** / `/app/` | Structured configuration while OSC/MIDI remain active |
 | Raw debug | `/ws` | Newline serial compatibility and live RPC debugging |
@@ -26,7 +26,7 @@ Both entry points accept `--config path/to/settings.json`. Explicit flags overri
 - outbound telemetry policy: `midiTelemetryMode`, `outboundMidiMappings`
 
 Start from `bridge/settings.example.json`. Browser-console Performance Setups are browser-local operator data: loading
-one stages form values and never starts routing or changes a firmware profile.
+one creates pending setup changes in the form and never starts routing or changes an MN42 profile.
 
 ## OSC workflow
 
@@ -73,8 +73,9 @@ Current custom mappings are additive and intentionally narrow:
 - `address` is the user OSC address
 - `valueMode` is `raw` (`0..127`) or `normalized` (`0.0..1.0`)
 
-The browser console can passively learn the next CC and preview a mapping. It excludes reserved `/mn42/*` addresses.
-Adding or removing a mapping updates routing without restarting serial, MIDI, or OSC transports.
+The browser console can passively learn the next CC and preview a route. It excludes reserved `/mn42/*` addresses.
+Adding or removing a route updates active routing without restarting serial, MIDI, or OSC transports. Routes loaded from
+a Performance Setup remain pending setup changes until the Bridge is deliberately started with those form values.
 
 ## CLI reference
 

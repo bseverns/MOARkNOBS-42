@@ -41,7 +41,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -109,7 +110,9 @@ button:disabled {
   border-color: var(--error);
 }
 
-input {
+input,
+select,
+textarea {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--edge);
@@ -117,6 +120,11 @@ input {
   background: var(--control);
   color: inherit;
   padding: 0.64rem 0.75rem;
+}
+
+textarea {
+  min-height: 6.5rem;
+  resize: vertical;
 }
 
 .checkbox-line {
@@ -344,6 +352,7 @@ dt {
   gap: 0.65rem;
 }
 
+.routing-details,
 .advanced-setup {
   display: grid;
   gap: 0.65rem;
@@ -353,10 +362,12 @@ dt {
   background: rgba(255, 255, 255, 0.28);
 }
 
+.routing-details[open],
 .advanced-setup[open] {
   gap: 0.65rem;
 }
 
+.routing-details summary,
 .advanced-setup summary {
   cursor: pointer;
   font-weight: 800;
@@ -365,8 +376,66 @@ dt {
   font-size: 0.78rem;
 }
 
+.routing-details > * + *,
 .advanced-setup > * + * {
   margin-top: 0.65rem;
+}
+
+.setup-step-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.25rem 0 0;
+}
+
+.setup-step-heading span {
+  display: inline-grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.resolved-routing {
+  padding: 0.85rem;
+  border: 1px solid rgba(56, 42, 26, 0.14);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.resolved-routing h3 {
+  margin: 0 0 0.65rem;
+}
+
+.resolved-routing dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.resolved-routing dl div {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+.resolved-routing dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.resolved-routing dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
 }
 
 .grid-two {

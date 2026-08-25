@@ -16,7 +16,7 @@
       <p class="summary">
         Default path: choose device, choose host recipe, start the bridge, open the App, then download a
         snapshot if something fails. Raw serial and WebSocket debugging still exist, but they stay in
-        Advanced where they belong.
+        Diagnostics where they belong.
       </p>
       <ol class="first-run-path" aria-label="First-run path">
         <li><strong>Choose device</strong><span>Pick the detected serial port.</span></li>
@@ -42,9 +42,9 @@
       <p class="status-line" id="summary-status" aria-live="polite">Bridge idle.</p>
       <nav class="mode-tabs" aria-label="Console modes">
         <button class="mode-tab is-active" data-mode="setup" type="button">Setup</button>
-        <button class="mode-tab" data-mode="mappings" type="button">Mappings</button>
-        <button class="mode-tab" data-mode="stage" type="button">Stage</button>
-        <button class="mode-tab" data-mode="advanced" type="button">Advanced</button>
+        <button class="mode-tab" data-mode="mappings" type="button">Routing</button>
+        <button class="mode-tab" data-mode="stage" type="button">Monitor</button>
+        <button class="mode-tab" data-mode="advanced" type="button">Diagnostics</button>
       </nav>
     </header>
 
@@ -52,79 +52,95 @@
       <h2 id="setup-heading" class="sr-only">Setup mode</h2>
       <section class="panel-grid" aria-label="Setup panels">
         <section class="panel" aria-labelledby="connection-heading">
-          <h2 id="connection-heading">Connection setup</h2>
+          <h2 id="connection-heading">Connect and route</h2>
           <form id="bridge-form">
+            <h3 class="setup-step-heading"><span>1</span> Where is MN42?</h3>
             <label for="serial-name">Serial port</label>
             <input id="serial-name" name="serialName" list="serial-port-list" autocomplete="off" required />
             <datalist id="serial-port-list"></datalist>
             <p class="hint">Choose a detected port or type one manually.</p>
 
-            <label for="midi-label">MIDI port label</label>
-            <input id="midi-label" name="midiLabel" value="MN42 Bridge" list="midi-port-list" autocomplete="off" />
-            <datalist id="midi-port-list"></datalist>
-            <p class="hint">Match the host loopback port you actually intend to use.</p>
+            <h3 class="setup-step-heading"><span>2</span> Where should it go?</h3>
+            <label for="preset-select">Host recipe</label>
+            <select id="preset-select" name="presetSelect"></select>
+            <p class="hint" id="recipe-summary">Pick the host path first. The console will resolve its expected
+              MIDI and OSC destinations.</p>
 
-            <label for="midi-destination-name">MIDI destination name</label>
-            <input id="midi-destination-name" name="midiDestinationName" value="MIDI destination"
-              maxlength="80" placeholder="e.g. Ableton" />
+            <section class="resolved-routing" aria-labelledby="resolved-routing-heading">
+              <h3 id="resolved-routing-heading">Resolved routing</h3>
+              <dl>
+                <div><dt>MIDI</dt><dd id="setup-midi-route-summary">MN42 Bridge → MIDI destination</dd></div>
+                <div><dt>OSC</dt><dd id="setup-osc-route-summary">MN42 → OSC destination · 127.0.0.1:9000</dd></div>
+              </dl>
+            </section>
 
-            <label for="osc-host">OSC host</label>
-            <input id="osc-host" name="oscHost" value="127.0.0.1" autocomplete="off" />
+            <details class="routing-details">
+              <summary>Edit routing details</summary>
+              <p class="hint">Use these fields only when the selected recipe does not match this computer.</p>
 
-            <label for="osc-destination-name">OSC destination name</label>
-            <input id="osc-destination-name" name="oscDestinationName" value="OSC destination"
-              maxlength="80" placeholder="e.g. TouchDesigner" />
+              <label for="midi-label">MIDI port label</label>
+              <input id="midi-label" name="midiLabel" value="MN42 Bridge" list="midi-port-list" autocomplete="off" />
+              <datalist id="midi-port-list"></datalist>
+              <p class="hint">Match the host loopback port you actually intend to use.</p>
 
-            <div class="grid-two">
-              <div>
-                <label for="osc-port">OSC send port</label>
-                <input id="osc-port" name="oscPort" type="number" min="1" step="1" value="9000" />
-              </div>
-              <div>
-                <label for="osc-listen">OSC listen port</label>
-                <input id="osc-listen" name="oscListen" type="number" min="1" step="1" value="9000" />
-              </div>
-            </div>
+              <label for="midi-destination-name">MIDI destination name</label>
+              <input id="midi-destination-name" name="midiDestinationName" value="MIDI destination"
+                maxlength="80" placeholder="e.g. Ableton" />
 
-            <label for="osc-bind">OSC bind address</label>
-            <input id="osc-bind" name="oscBind" value="127.0.0.1" autocomplete="off" />
+              <label for="osc-host">OSC host</label>
+              <input id="osc-host" name="oscHost" value="127.0.0.1" autocomplete="off" />
 
-            <details class="advanced-setup">
-              <summary>Advanced setup: guard and timing controls</summary>
-              <p class="hint">Leave these at defaults unless a host recipe or bench note tells you to change them.</p>
-
-              <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
-              <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
-
-              <label for="alert-suppression-ms">Alert suppression window (ms)</label>
-              <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
-
-              <label class="checkbox-line" for="allow-feedback-loops">
-                <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
-                Allow feedback loops (disable MIDI echo suppression)
-              </label>
+              <label for="osc-destination-name">OSC destination name</label>
+              <input id="osc-destination-name" name="oscDestinationName" value="OSC destination"
+                maxlength="80" placeholder="e.g. TouchDesigner" />
 
               <div class="grid-two">
                 <div>
-                  <label for="rt-p95-target-ms">RT p95 target (ms)</label>
-                  <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
+                  <label for="osc-port">OSC send port</label>
+                  <input id="osc-port" name="oscPort" type="number" min="1" step="1" value="9000" />
                 </div>
                 <div>
-                  <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
-                  <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1"
-                    value="5" />
+                  <label for="osc-listen">OSC listen port</label>
+                  <input id="osc-listen" name="oscListen" type="number" min="1" step="1" value="9000" />
                 </div>
               </div>
+
+              <label for="osc-bind">OSC bind address</label>
+              <input id="osc-bind" name="oscBind" value="127.0.0.1" autocomplete="off" />
+
+              <details class="advanced-setup">
+                <summary>Guard and timing controls</summary>
+                <p class="hint">Leave these at defaults unless a host recipe or bench note tells you to change them.</p>
+
+                <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
+                <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
+
+                <label for="alert-suppression-ms">Alert suppression window (ms)</label>
+                <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
+
+                <label class="checkbox-line" for="allow-feedback-loops">
+                  <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
+                  Allow feedback loops (disable MIDI echo suppression)
+                </label>
+
+                <div class="grid-two">
+                  <div>
+                    <label for="rt-p95-target-ms">RT p95 target (ms)</label>
+                    <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
+                  </div>
+                  <div>
+                    <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
+                    <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1"
+                      value="5" />
+                  </div>
+                </div>
+              </details>
             </details>
           </form>
         </section>
 
         <section class="panel" aria-labelledby="recipe-heading">
-          <h2 id="recipe-heading">Choose host recipe</h2>
-          <label for="preset-select">Recipe</label>
-          <select id="preset-select" name="presetSelect"></select>
-          <p class="hint" id="recipe-summary">Pick the host path first. The console will prefill expected OSC/MIDI
-            settings; only adjust fields when your local host differs.</p>
+          <h2 id="recipe-heading">Recipe details &amp; saved setups</h2>
           <div class="recipe-block">
             <h3>Requirements</h3>
             <ul id="recipe-requirements" class="ports-list"></ul>
@@ -146,7 +162,7 @@
             <label for="custom-setup-name">Performance Setup name</label>
             <input id="custom-setup-name" maxlength="80" placeholder="e.g. Friday show — Ableton" />
 
-            <label for="custom-setup-profile">Suggested device profile (optional)</label>
+            <label for="custom-setup-profile">Suggested MN42 profile (advisory)</label>
             <input id="custom-setup-profile" maxlength="80" placeholder="e.g. Performance A" />
 
             <label for="custom-setup-notes">Setup notes (optional)</label>
@@ -190,7 +206,7 @@
     </section>
 
     <section class="mode-view" data-mode-view="mappings" aria-labelledby="mappings-heading" hidden>
-      <h2 id="mappings-heading" class="sr-only">Mappings mode</h2>
+      <h2 id="mappings-heading" class="sr-only">Routing mode</h2>
       <section class="panel" aria-labelledby="outbound-midi-heading">
         <h2 id="outbound-midi-heading">Device telemetry → MIDI</h2>
         <p class="hint">Legacy compatibility emits slots as channel 1 CCs and envelopes as channel 2 CCs. Mapped
@@ -198,16 +214,16 @@
         <label for="midi-telemetry-mode">Outbound MIDI mode</label>
         <select id="midi-telemetry-mode" name="midiTelemetryMode" form="bridge-form">
           <option value="legacy">Legacy compatibility</option>
-          <option value="mapped">Configured mappings</option>
+          <option value="mapped">Configured routes</option>
         </select>
-        <label for="outbound-midi-mappings">Outbound mapping JSON</label>
+        <label for="outbound-midi-mappings">Outbound route JSON</label>
         <textarea id="outbound-midi-mappings" rows="8" spellcheck="false">[]</textarea>
-        <p class="hint">Each mapping uses <code>source</code> (<code>slots</code> or <code>envelopes</code>),
+        <p class="hint">Each route uses <code>source</code> (<code>slots</code> or <code>envelopes</code>),
           zero-based <code>sourceIndex</code>, MIDI <code>channel</code> 1–16, and <code>controller</code> 0–127.</p>
-        <p id="outbound-midi-mapping-status" class="hint" aria-live="polite">No custom outbound mappings staged.</p>
+        <p id="outbound-midi-mapping-status" class="hint" aria-live="polite">No pending outbound MIDI routes.</p>
       </section>
       <section class="panel mapping-learn-panel" aria-labelledby="mapping-learn-heading">
-        <h2 id="mapping-learn-heading">Learn a MIDI → OSC mapping</h2>
+        <h2 id="mapping-learn-heading">Learn a MIDI → OSC route</h2>
         <p class="hint">This listener is passive: it observes the next inbound MIDI CC and recent OSC output
           addresses. It does not send a MIDI, OSC, or device command.</p>
         <div class="mapping-learn-grid">
@@ -227,11 +243,11 @@
               Built-in /mn42/* addresses are reserved for their documented payloads.</p>
           </div>
         </div>
-        <p id="mapping-preview" class="mapping-preview" aria-live="polite">No mapping ready yet.</p>
+        <p id="mapping-preview" class="mapping-preview" aria-live="polite">No route ready yet.</p>
       </section>
       <section class="panel-grid">
         <section class="panel" aria-labelledby="mapping-list-heading">
-          <h2 id="mapping-list-heading">Current mapping draft</h2>
+          <h2 id="mapping-list-heading">Active custom routes</h2>
           <table class="mapping-table">
             <thead>
               <tr>
@@ -246,15 +262,15 @@
               <!-- Dynamically populated -->
             </tbody>
           </table>
-          <p class="hint">Add/remove actions apply live. Mappings loaded from a Performance Setup remain a form draft until
-            the Bridge is started with that setup. They are additive: the CC still follows its existing typed OSC and
+          <p class="hint">Add/remove actions update active routing immediately. Routes loaded from a Performance Setup are
+            pending setup changes until the Bridge is started with that setup. They are additive: the CC still follows its existing typed OSC and
             device-control lanes.</p>
         </section>
 
         <section class="panel" aria-labelledby="add-mapping-heading">
-          <h2 id="add-mapping-heading">Review and add mapping</h2>
+          <h2 id="add-mapping-heading">Review and add route</h2>
           <form id="add-mapping-form">
-            <label for="map-id">Mapping ID</label>
+            <label for="map-id">Route ID</label>
             <input id="map-id" name="id" placeholder="e.g. master-filter" required />
 
             <div class="grid-two">
@@ -278,7 +294,7 @@
             </select>
 
             <div class="actions">
-              <button type="submit">Confirm and add mapping</button>
+              <button type="submit">Confirm and add route</button>
             </div>
           </form>
         </section>
@@ -286,8 +302,8 @@
     </section>
 
     <section class="mode-view" data-mode-view="stage" aria-labelledby="stage-heading" hidden>
-      <h2 id="stage-heading" class="sr-only">Stage mode</h2>
-      <section class="panel-grid" aria-label="Stage panels">
+      <h2 id="stage-heading" class="sr-only">Monitor mode</h2>
+      <section class="panel-grid" aria-label="Monitor panels">
         <section class="panel" aria-labelledby="stage-status-heading">
           <h2 id="stage-status-heading">Connection health</h2>
           <div class="stage-card-grid" id="stage-summary-cards">
@@ -436,8 +452,8 @@
     </section>
 
     <section class="mode-view" data-mode-view="advanced" aria-labelledby="advanced-heading" hidden>
-      <h2 id="advanced-heading" class="sr-only">Advanced mode</h2>
-      <section class="panel-grid" aria-label="Advanced panels">
+      <h2 id="advanced-heading" class="sr-only">Diagnostics mode</h2>
+      <section class="panel-grid" aria-label="Diagnostics panels">
         <section class="panel" aria-labelledby="runtime-heading">
           <h2 id="runtime-heading">Runtime status</h2>
           <dl class="status-grid" id="runtime-status">
@@ -521,7 +537,7 @@
         </section>
 
         <section class="panel" aria-labelledby="mapping-heading">
-          <h2 id="mapping-heading">Mappings and guards</h2>
+          <h2 id="mapping-heading">Active routes and guards</h2>
           <pre id="mapping-output" class="log-output compact-log" aria-live="off"></pre>
         </section>
 
@@ -547,7 +563,7 @@
       </section>
     </section>
   </main>
-  <script src="./operator-state.js"></script>
+  <script src="./operator_state.js"></script>
   <script type="module" src="./bridge-ui.js"></script>
 </body>
 

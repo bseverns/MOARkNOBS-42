@@ -18,23 +18,23 @@ Inspected surfaces: `bridge/README.md`, `bridge/ui/`, `bridge/lib/http_bridge_se
 
 - Setup shows Start bridge, Stop bridge, Refresh ports, Download snapshot, and Open configurator.
 - Stop bridge remains visible in every mode, is visually distinct, and requires confirmation before disconnecting routing.
-- Reset metrics and Clear alerts are Advanced-only; clearing alerts requires confirmation.
-- Setup tabs: Setup, Mappings, Stage, Advanced.
-- Connection setup: serial port, MIDI port label, OSC host, OSC send/listen ports, OSC bind.
+- Reset metrics and Clear alerts are Diagnostics-only; clearing alerts requires confirmation.
+- Console tabs: Setup, Routing, Monitor, Diagnostics.
+- Setup leads with the serial port and host recipe; resolved MIDI/OSC destinations remain visible while raw route fields stay behind `Edit routing details`.
 - Known-good recipe picker, requirements, and validation checklist.
 - Browser-local named Performance Setups with explicit load, overwrite/delete confirmation, and versioned JSON import/export.
 - Detected serial and MIDI port lists.
 
-## Controls That Should Be Advanced-Only
+## Controls That Should Be Diagnostics-Only
 
 - MIDI feedback guard window.
 - Alert suppression window.
 - Allow feedback loops.
 - RT p95 target and RT jitter p95 target.
-- Raw mapping fields remain a power-user surface, while Mappings mode now leads with passive MIDI learn, recent OSC destinations, and an explicit preview/confirmation step.
+- Raw route JSON remains a power-user surface, while Routing leads with passive MIDI learn, recent OSC destinations, and an explicit preview/confirmation step.
 - Raw serial/debug lane, route traces, state JSON, and detailed runtime counters.
 
-The source already keeps most diagnostics in Advanced mode. The setup form still exposed guard/timing controls before the operator had even started; that was the biggest first-run friction.
+The source keeps evidence-heavy controls in Diagnostics. Setup now hides raw host addressing and guard/timing controls until the operator deliberately opens the routing-details disclosure.
 
 ## Missing "Choose Recipe" Affordances
 
@@ -44,7 +44,7 @@ The source already keeps most diagnostics in Advanced mode. The setup form still
 
 ## Missing Recovery/Snapshot Affordances
 
-- `Download snapshot` exists globally and in Stage mode.
+- `Download snapshot` exists globally and in Monitor.
 - The snapshot API includes runtime, power-safety, and Bridge state metadata.
 - The UI did not explain early enough that snapshot export is the support/evidence move when startup fails.
 - There is no dedicated Bridge-console panic button, by design; deeper recovery remains in the App.
@@ -58,5 +58,7 @@ The source already keeps most diagnostics in Advanced mode. The setup form still
   4. Open App.
   5. Download snapshot if something fails.
 - Added local-only security copy to the default screen.
-- Moved setup guard/timing fields into an `Advanced setup` disclosure so the simple path is dominant while advanced controls remain available.
+- Made Setup recipe-first, added a resolved routing summary, and moved raw host fields plus guard/timing controls behind `Edit routing details`.
 - Added browser-local named Performance Setups. Loading remains write-free until the operator deliberately starts the Bridge, and personal setups remain distinct from evidence-backed bundled recipes and firmware profiles.
+- Renamed the visible console roles to Setup, Routing, Monitor, and Diagnostics while preserving internal mode identifiers and transport contracts.
+- Reserved `Draft state` for the genuine staged device-configuration lane; host routing is described as active immediately or pending the next Bridge start.

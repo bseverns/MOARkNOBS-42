@@ -118,7 +118,9 @@ npm --prefix App run test:architecture
 Playwright exercises the real runtime/view modules through the stable `benzknobz.html` harness, including simulator,
 schema validation, staged diff, Apply/receipt failures, uncertainty recovery, migration blocking, profiles, and the
 mode surfaces. A small approved snapshot set protects the top-level Configure, Lab, Stage, and open Incoming MIDI
-hierarchies; routine screenshot artifacts remain diagnostic rather than approved baselines. `lab_config_coverage.spec.js`
+hierarchies. Because the App deliberately uses native system UI and monospace font stacks, those approved images run on
+the canonical macOS + pinned Playwright Chromium CI lane; other platforms skip only these four pixel assertions and
+still run the remaining App suite. Routine screenshot artifacts remain diagnostic rather than approved baselines. `lab_config_coverage.spec.js`
 derives its expected roots and slot leaves from the canonical schema, then checks that Lab marks every one and preserves
 independent slot EF modes through Apply/readback. The architecture guard
 rejects coordinator imports that bypass the public layers and policy-shaped code that would pull schema constraints,

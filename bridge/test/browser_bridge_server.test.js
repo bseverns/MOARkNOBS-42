@@ -1001,37 +1001,48 @@ async function run() {
   );
   assert.match(
     consoleHtml,
-    /Advanced setup: guard and timing controls/,
-    'console should keep guard and timing controls available behind advanced setup',
+    /Edit routing details[\s\S]*Guard and timing controls/,
+    'console should keep raw routing and timing controls behind setup disclosures',
   );
   assert.match(
     consoleHtml,
     /Config export[\s\S]*Device truth[\s\S]*Draft state/,
-    'Stage should expose validation and authority state in operator language',
+    'Monitor should expose validation and authority state in operator language',
   );
   assert.match(
     consoleHtml,
-    /operator-state\.js[\s\S]*bridge-ui\.js/,
+    /operator_state\.js[\s\S]*bridge-ui\.js/,
     'console should load tested operator-state classification before its UI runtime',
+  );
+  const operatorStateResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/operator_state.js' }),
+    operatorStateResponse,
+  );
+  assert.equal(operatorStateResponse.statusCode, 200);
+  assert.match(
+    operatorStateResponse.body.toString('utf8'),
+    /MN42BridgeOperatorState/,
+    'console should serve the operator-state runtime it references',
   );
   assert.match(
     consoleHtml,
     /Routing heartbeat[\s\S]*Performance setup:[\s\S]*OSC destination · OSC[\s\S]*MIDI destination · MIDI/,
-    'Stage should expose named passive routing destinations',
+    'Monitor should expose named passive routing destinations',
   );
   assert.match(
     consoleHtml,
     /Start passive soundcheck/,
-    'Stage should expose a write-free guided soundcheck',
+    'Monitor should expose a write-free guided soundcheck',
   );
   assert.match(
     consoleHtml,
-    /Learn a MIDI → OSC mapping[\s\S]*Listen for MIDI CC[\s\S]*Recently observed custom address[\s\S]*Confirm and add mapping/,
-    'Mappings should expose a guided passive learn and explicit review flow',
+    /Learn a MIDI → OSC route[\s\S]*Listen for MIDI CC[\s\S]*Recently observed custom address[\s\S]*Confirm and add route/,
+    'Routing should expose a guided passive learn and explicit review flow',
   );
   assert.match(
     consoleHtml,
-    /My Performance Setups[\s\S]*separate from firmware[\s\S]*Suggested device profile[\s\S]*Save current[\s\S]*Load selected[\s\S]*Export JSON[\s\S]*Import JSON/,
+    /My Performance Setups[\s\S]*separate from firmware[\s\S]*Suggested MN42 profile \(advisory\)[\s\S]*Save current[\s\S]*Load selected[\s\S]*Export JSON[\s\S]*Import JSON/,
     'Setup should expose browser-local Performance Setups with portable JSON',
   );
   assert.match(
@@ -1042,7 +1053,22 @@ async function run() {
   assert.match(
     consoleHtml,
     /id="reset-metrics" data-console-modes="advanced"[\s\S]*id="clear-alerts" data-console-modes="advanced"/,
-    'diagnostic reset and acknowledgement actions should stay in Advanced',
+    'diagnostic reset and acknowledgement actions should stay in Diagnostics',
+  );
+  assert.match(
+    consoleHtml,
+    /Setup[\s\S]*Routing[\s\S]*Monitor[\s\S]*Diagnostics/,
+    'console should name each surface by its operator role',
+  );
+  assert.match(
+    consoleHtml,
+    /Where is MN42\?[\s\S]*Where should it go\?[\s\S]*Resolved routing/,
+    'Setup should lead with device and host recipe choices before raw routing details',
+  );
+  assert.match(
+    consoleHtml,
+    /Active custom routes[\s\S]*update active routing immediately[\s\S]*pending setup changes/,
+    'Routing should distinguish active custom routes from pending setup changes',
   );
 
   const mappingResponse = makeRes();

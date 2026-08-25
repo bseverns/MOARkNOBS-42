@@ -23,7 +23,7 @@
   },
   "expectedTelemetry": [
     "TouchOSC meters update from /mn42/slots and /mn42/envelopes",
-    "The bridge console keeps active-alert count visible in Stage mode"
+    "The bridge console keeps active-alert count visible in Monitor"
   ],
   "manualValidationChecklist": [
     "Verify the host firewall only exposes this lane on the trusted LAN",

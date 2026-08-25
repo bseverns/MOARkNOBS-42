@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+// These approved images intentionally use the App's native system-ui and
+// ui-monospace stacks. Keep one canonical rendering platform rather than
+// weakening the pixel threshold to accommodate unrelated OS font rasterizers.
+test.beforeEach(() => {
+  test.skip(
+    process.platform !== 'darwin',
+    'Approved App visual baselines use macOS system fonts and pinned Chromium.'
+  );
+});
+
 const SNAPSHOT_OPTIONS = {
   animations: 'disabled',
   caret: 'hide',
