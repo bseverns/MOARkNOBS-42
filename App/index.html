@@ -346,7 +346,7 @@
                 data-ui-tier="advanced">Slot LFO</button>
             </div>
           </header>
-          <div id="form">
+          <div id="form" data-device-config-root="slots">
             <section class="schema-section" id="ef-form" data-ui-tier="advanced">
               <header>
                 <h3>EF Followers</h3>
@@ -363,7 +363,8 @@
               <div class="schema-section-body" data-schema-target="slots"></div>
             </section>
           </div>
-          <section class="schema-section" id="midi-input-form" data-ui-tier="advanced">
+          <section class="schema-section" id="midi-input-form" data-ui-tier="advanced"
+            data-device-config-root="midiInputBindings">
             <header>
               <h3>MIDI Input Bindings</h3>
               <p class="microcopy">Map DIN or USB CCs into slot values and performance parameters. Routes follow the active profile.</p>
@@ -373,22 +374,31 @@
               aria-label="No MIDI input bindings in this profile."></div>
           </section>
           <div class="ef-modulation-cluster" data-ui-tier="advanced">
-            <fieldset id="ef-assignment-card">
+            <fieldset id="ef-assignment-card" data-device-config-root="efSlots">
               <legend>Envelope Assignments</legend>
-              <p class="microcopy">Click slot chips to assign or unassign each follower. One follower can stalk multiple slots.</p>
+              <p class="microcopy">Click slot chips to assign or unassign each follower. One follower can stalk multiple slots; each assigned slot keeps its own Detection mode under Selected Slot &gt; Envelope.</p>
               <div class="ef-grid"></div>
             </fieldset>
-            <fieldset id="filter-settings" class="schema-section" data-schema-section="filter">
+            <fieldset id="filter-settings" class="schema-section" data-schema-section="filter"
+              data-device-config-root="filter">
               <legend>Filter</legend>
               <div class="schema-section-body" data-schema-target="filter"
                 data-empty-message="No filter controls reported by current schema."
                 aria-label="No filter controls reported by current schema."></div>
             </fieldset>
-            <fieldset id="arg-settings" class="schema-section" data-schema-section="arg">
+            <fieldset id="arg-settings" class="schema-section" data-schema-section="arg"
+              data-device-config-root="arg">
               <legend>ARG Pair</legend>
               <div class="schema-section-body" data-schema-target="arg"
                 data-empty-message="No ARG controls reported by current schema."
                 aria-label="No ARG controls reported by current schema."></div>
+            </fieldset>
+            <fieldset id="envelope-mode-settings" class="schema-section"
+              data-schema-section="envelopeMode" data-device-config-root="envelopeMode">
+              <legend>Legacy Envelope Display</legend>
+              <div class="schema-section-body" data-schema-target="envelopeMode"
+                data-empty-message="No envelope response control reported by current schema."
+                aria-label="No envelope response control reported by current schema."></div>
             </fieldset>
           </div>
           <section id="profile-performance-workspace" class="profile-performance-workspace"
@@ -479,7 +489,8 @@
               Connect to inspect USB MIDI output state.
             </p>
           </section>
-          <fieldset id="led-settings" class="schema-section staged-boundary" data-schema-section="led" data-ui-modes="advanced">
+          <fieldset id="led-settings" class="schema-section staged-boundary" data-schema-section="led"
+            data-device-config-root="led" data-ui-modes="advanced">
             <legend>LED Colors</legend>
             <div class="schema-section-body" data-schema-target="led"></div>
             <div id="led-grid" aria-live="polite"></div>

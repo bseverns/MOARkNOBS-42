@@ -274,6 +274,7 @@ export class FormRenderer {
   createField(path, schema, value, labelText) {
     const wrapper = document.createElement('div');
     wrapper.className = 'schema-control';
+    wrapper.dataset.deviceConfigPath = path;
     const label = document.createElement('label');
     const labelLine = document.createElement('span');
     labelLine.className = 'control-label';

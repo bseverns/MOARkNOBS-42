@@ -83,11 +83,15 @@ For a slot's `ef` object, `ef.index` is the envelope-follower assignment; the
 other `ef` fields describe that follower's settings and do not implicitly
 change the assignment. A bulk config with any per-slot `ef` object treats
 those payloads as explicitly specified when reconciling global filter state.
+Each `slots[i].ef.mode` is owned by that slot: assigning the same follower
+index to multiple slots does not couple their detection modes.
 
 `envelopeMode` accepts `LINEAR` (or an unrecognized/missing value),
 `EXPONENTIAL`, and `LOG`; `GET_CONFIG` reports those canonical labels. The
-firmware stages the active profile snapshot before committing storage. A
-snapshot-staging failure returns the `profile_snapshot` bulk error, while a
+top-level field is a legacy compatibility/OLED label and does not replace or
+override any slot's `ef.mode`. The firmware stages the active profile snapshot
+before committing storage. A snapshot-staging failure returns the
+`profile_snapshot` bulk error, while a
 failure to activate the durable generation returns `storage_commit`.
 
 ## Commands

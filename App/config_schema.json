@@ -449,6 +449,8 @@
     },
     "envelopeMode": {
       "type": "string",
+      "title": "Legacy envelope display mode",
+      "description": "Compatibility/OLED label only. Each slot keeps its own EF detection mode in Selected Slot > Envelope.",
       "enum": ["LINEAR", "EXPONENTIAL", "LOG"],
       "default": "LINEAR"
     }

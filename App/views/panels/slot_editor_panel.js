@@ -156,7 +156,7 @@ export function createSlotEditorPanel({
         slotTypeNames,
         slot.type,
         (value) => stageSlotField(slotState.selected, 'type', value),
-        { help: glossary.mapping }
+        { help: glossary.mapping, configPaths: 'slots.*.type' }
       )
     );
     basics.appendChild(
@@ -167,7 +167,10 @@ export function createSlotEditorPanel({
         16,
         1,
         (value) => stageSlotField(slotState.selected, 'midiChannel', value),
-        { help: 'Use channels 1 to 16 to match your synth or DAW track.' }
+        {
+          help: 'Use channels 1 to 16 to match your synth or DAW track.',
+          configPaths: 'slots.*.midiChannel'
+        }
       )
     );
     basics.appendChild(
@@ -178,7 +181,10 @@ export function createSlotEditorPanel({
         127,
         1,
         (value) => stageSlotField(slotState.selected, 'data1', value),
-        { help: 'The controller number or note number this knob targets.' }
+        {
+          help: 'The controller number or note number this knob targets.',
+          configPaths: 'slots.*.data1'
+        }
       )
     );
     basics.appendChild(
@@ -192,8 +198,14 @@ export function createSlotEditorPanel({
     );
     if (activeUiMode === 'advanced') {
       basics.appendChild(
-        makeNumber('Arp root note', slot.arpNote ?? 0, 0, 127, 1, (value) =>
-          stageSlotField(slotState.selected, 'arpNote', value)
+        makeNumber(
+          'Arp root note',
+          slot.arpNote ?? 0,
+          0,
+          127,
+          1,
+          (value) => stageSlotField(slotState.selected, 'arpNote', value),
+          { configPaths: 'slots.*.arpNote' }
         )
       );
       if (slot.type === 'Note') {
@@ -206,8 +218,11 @@ export function createSlotEditorPanel({
       }
     }
     basics.appendChild(
-      makeToggle('Enabled', !!slot.active, (value) =>
-        stageSlotField(slotState.selected, 'active', value)
+      makeToggle(
+        'Enabled',
+        !!slot.active,
+        (value) => stageSlotField(slotState.selected, 'active', value),
+        { configPaths: 'slots.*.active' }
       )
     );
     basics.appendChild(
@@ -228,7 +243,7 @@ export function createSlotEditorPanel({
             const normalised = normaliseSysexTemplate(value);
             stageSlotField(slotState.selected, 'sysexTemplate', normalised);
           },
-          { help: glossary.sysex }
+          { help: glossary.sysex, configPaths: 'slots.*.sysexTemplate' }
         )
       );
       const hint = document.createElement('p');
@@ -270,7 +285,10 @@ export function createSlotEditorPanel({
             stageSlotField(slotState.selected, 'efIndex', value);
             stageSlotEnvelopeField(slotState.selected, 'index', value);
           },
-          { help: glossary.ef }
+          {
+            help: glossary.ef,
+            configPaths: ['slots.*.efIndex', 'slots.*.ef.index']
+          }
         )
       );
       const currentFilter =
@@ -291,29 +309,54 @@ export function createSlotEditorPanel({
           {
             help: glossary.filter,
             formatOptionLabel: formatEfFilterLabel,
-            describeOption: describeEfFilter
+            describeOption: describeEfFilter,
+            configPaths: ['slots.*.ef.filter_index', 'slots.*.ef.filter_name']
           }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Tracking frequency control (legacy scale)', ef.frequency ?? 1000, 20, 5000, 1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'frequency', value)
+        makeNumber(
+          'Tracking frequency control (legacy scale)',
+          ef.frequency ?? 1000,
+          20,
+          5000,
+          1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'frequency', value),
+          { configPaths: 'slots.*.ef.frequency' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Resonance (Q)', ef.q ?? 0.707, 0, 10, 0.01, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'q', value)
+        makeNumber(
+          'Resonance (Q)',
+          ef.q ?? 0.707,
+          0.5,
+          4,
+          0.01,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'q', value),
+          { configPaths: 'slots.*.ef.q' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Oversample amount', ef.oversample ?? 4, 1, 32, 1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'oversample', value)
+        makeNumber(
+          'Oversample amount',
+          ef.oversample ?? 4,
+          1,
+          32,
+          1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'oversample', value),
+          { configPaths: 'slots.*.ef.oversample' }
         )
       );
       efFieldset.appendChild(makeDeckShortcut('Ctrl3 double', 'Cycle EF oversampling'));
       efFieldset.appendChild(
-        makeNumber('Smoothing', ef.smoothing ?? 0.2, 0, 1, 0.01, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'smoothing', value)
+        makeNumber(
+          'Smoothing',
+          ef.smoothing ?? 0.2,
+          0,
+          1,
+          0.01,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'smoothing', value),
+          { configPaths: 'slots.*.ef.smoothing' }
         )
       );
       const efModeName = resolveEfModeName(ef) ?? efModeNames[0];
@@ -329,79 +372,152 @@ export function createSlotEditorPanel({
           {
             help: 'Choose how the follower detects level before modulation.',
             formatOptionLabel: formatEfModeLabel,
-            describeOption: (value) => efModeDescriptions[value] ?? value
+            describeOption: (value) => efModeDescriptions[value] ?? value,
+            configPaths: 'slots.*.ef.mode'
           }
         )
       );
       if (efModeName === 'PEAK' || efModeName === 'FOLLOWER') {
         efFieldset.appendChild(
-          makeNumber('Attack time (ms)', ef.attackMs ?? 5, 1, 60000, 1, (value) =>
-            stageSlotEnvelopeField(slotState.selected, 'attackMs', value)
+          makeNumber(
+            'Attack time (ms)',
+            ef.attackMs ?? 5,
+            1,
+            60000,
+            1,
+            (value) => stageSlotEnvelopeField(slotState.selected, 'attackMs', value),
+            { configPaths: 'slots.*.ef.attackMs' }
           )
         );
         efFieldset.appendChild(
-          makeNumber('Release time (ms)', ef.releaseMs ?? 20, 1, 60000, 1, (value) =>
-            stageSlotEnvelopeField(slotState.selected, 'releaseMs', value)
+          makeNumber(
+            'Release time (ms)',
+            ef.releaseMs ?? 20,
+            1,
+            60000,
+            1,
+            (value) => stageSlotEnvelopeField(slotState.selected, 'releaseMs', value),
+            { configPaths: 'slots.*.ef.releaseMs' }
           )
         );
       }
       if (efModeName === 'RMS') {
         efFieldset.appendChild(
-          makeNumber('RMS window (ms)', ef.rmsWindowMs ?? 50, 1, 60000, 1, (value) =>
-            stageSlotEnvelopeField(slotState.selected, 'rmsWindowMs', value)
+          makeNumber(
+            'RMS window (ms)',
+            ef.rmsWindowMs ?? 50,
+            1,
+            60000,
+            1,
+            (value) => stageSlotEnvelopeField(slotState.selected, 'rmsWindowMs', value),
+            { configPaths: 'slots.*.ef.rmsWindowMs' }
           )
         );
       }
       if (efModeName === 'GATE') {
         efFieldset.appendChild(
-          makeNumber('Gate threshold', ef.gateThreshold ?? 16, 0, 127, 1, (value) =>
-            stageSlotEnvelopeField(slotState.selected, 'gateThreshold', value)
+          makeNumber(
+            'Gate threshold',
+            ef.gateThreshold ?? 16,
+            0,
+            127,
+            1,
+            (value) => stageSlotEnvelopeField(slotState.selected, 'gateThreshold', value),
+            { configPaths: 'slots.*.ef.gateThreshold' }
           )
         );
         efFieldset.appendChild(
-          makeNumber('Gate hysteresis', ef.gateHysteresis ?? 4, 0, 127, 1, (value) =>
-            stageSlotEnvelopeField(slotState.selected, 'gateHysteresis', value)
+          makeNumber(
+            'Gate hysteresis',
+            ef.gateHysteresis ?? 4,
+            0,
+            127,
+            1,
+            (value) => stageSlotEnvelopeField(slotState.selected, 'gateHysteresis', value),
+            { configPaths: 'slots.*.ef.gateHysteresis' }
           )
         );
       }
       efFieldset.appendChild(
-        makeToggle('Auto-baseline', !!ef.autoBaseline, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'autoBaseline', value)
+        makeToggle(
+          'Auto-baseline',
+          !!ef.autoBaseline,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'autoBaseline', value),
+          { configPaths: 'slots.*.ef.autoBaseline' }
         )
       );
       efFieldset.appendChild(
-        makeToggle('Auto-gain', !!ef.autoGain, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'autoGain', value)
+        makeToggle(
+          'Auto-gain',
+          !!ef.autoGain,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'autoGain', value),
+          { configPaths: 'slots.*.ef.autoGain' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Activity threshold', ef.activityThreshold ?? 4, 0, 127, 1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'activityThreshold', value)
+        makeNumber(
+          'Activity threshold',
+          ef.activityThreshold ?? 4,
+          0,
+          127,
+          1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'activityThreshold', value),
+          { configPaths: 'slots.*.ef.activityThreshold' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Baseline time constant (ms)', ef.baselineTauMs ?? 2000, 1, 60000, 1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'baselineTauMs', value)
+        makeNumber(
+          'Baseline time constant (ms)',
+          ef.baselineTauMs ?? 2000,
+          1,
+          60000,
+          1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'baselineTauMs', value),
+          { configPaths: 'slots.*.ef.baselineTauMs' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Gain time constant (ms)', ef.gainTauMs ?? 3000, 1, 60000, 1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'gainTauMs', value)
+        makeNumber(
+          'Gain time constant (ms)',
+          ef.gainTauMs ?? 3000,
+          1,
+          60000,
+          1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'gainTauMs', value),
+          { configPaths: 'slots.*.ef.gainTauMs' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Auto-gain target', ef.gainTarget ?? 102, 0, 127, 1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'gainTarget', value)
+        makeNumber(
+          'Auto-gain target',
+          ef.gainTarget ?? 102,
+          0,
+          127,
+          1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'gainTarget', value),
+          { configPaths: 'slots.*.ef.gainTarget' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Baseline offset', ef.baseline ?? 0, -10, 10, 0.1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'baseline', value)
+        makeNumber(
+          'Baseline offset',
+          ef.baseline ?? 0,
+          -10,
+          10,
+          0.1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'baseline', value),
+          { configPaths: 'slots.*.ef.baseline' }
         )
       );
       efFieldset.appendChild(
-        makeNumber('Gain', ef.gain ?? 1, 0, 8, 0.1, (value) =>
-          stageSlotEnvelopeField(slotState.selected, 'gain', value)
+        makeNumber(
+          'Gain',
+          ef.gain ?? 1,
+          0,
+          8,
+          0.1,
+          (value) => stageSlotEnvelopeField(slotState.selected, 'gain', value),
+          { configPaths: 'slots.*.ef.gain' }
         )
       );
       efFieldset.appendChild(
@@ -413,7 +529,8 @@ export function createSlotEditorPanel({
           {
             help: 'Choose how EF modulation combines with the base MIDI value.',
             formatOptionLabel: (value) =>
-              efDestinationOptions.find((option) => option.value === value)?.label ?? value
+              efDestinationOptions.find((option) => option.value === value)?.label ?? value,
+            configPaths: 'slots.*.ef.destination_mode'
           }
         )
       );
@@ -431,7 +548,7 @@ export function createSlotEditorPanel({
           'Enable combiner',
           !!arg.enabled,
           (value) => stageSlotArgField(slotState.selected, 'enabled', value),
-          { help: glossary.arg }
+          { help: glossary.arg, configPaths: 'slots.*.arg.enabled' }
         )
       );
       argFieldset.appendChild(
@@ -446,20 +563,33 @@ export function createSlotEditorPanel({
           },
           {
             formatOptionLabel: formatArgMethodLabel,
-            describeOption: describeArgMethod
+            describeOption: describeArgMethod,
+            configPaths: ['slots.*.arg.method', 'slots.*.arg.method_name']
           }
         )
       );
       argFieldset.appendChild(makeRecipeButtons('arg'));
       argFieldset.appendChild(makeDeckShortcut('Ctrl4 double', 'Toggle this slot’s ARG combiner'));
       argFieldset.appendChild(
-        makeNumber('Follower A', arg.sourceA ?? 0, 0, Math.max(0, efSlots - 1), 1, (value) =>
-          stageSlotArgField(slotState.selected, 'sourceA', value)
+        makeNumber(
+          'Follower A',
+          arg.sourceA ?? 0,
+          0,
+          Math.max(0, efSlots - 1),
+          1,
+          (value) => stageSlotArgField(slotState.selected, 'sourceA', value),
+          { configPaths: 'slots.*.arg.sourceA' }
         )
       );
       argFieldset.appendChild(
-        makeNumber('Follower B', arg.sourceB ?? 1, 0, Math.max(0, efSlots - 1), 1, (value) =>
-          stageSlotArgField(slotState.selected, 'sourceB', value)
+        makeNumber(
+          'Follower B',
+          arg.sourceB ?? 1,
+          0,
+          Math.max(0, efSlots - 1),
+          1,
+          (value) => stageSlotArgField(slotState.selected, 'sourceB', value),
+          { configPaths: 'slots.*.arg.sourceB' }
         )
       );
       if (activeEditorTab === 'arg') {
@@ -481,7 +611,10 @@ export function createSlotEditorPanel({
             `Enable LFO ${laneIndex + 1}`,
             lane.enabled,
             (value) => stageSlotLfoField(slotState.selected, laneIndex, 'enabled', value),
-            { help: `Fixed lane ${laneIndex + 1} always reads LFO ${laneIndex + 1}.` }
+            {
+              help: `Fixed lane ${laneIndex + 1} always reads LFO ${laneIndex + 1}.`,
+              configPaths: 'slots.*.lfo.*.enabled'
+            }
           )
         );
         card.appendChild(
@@ -496,7 +629,8 @@ export function createSlotEditorPanel({
               formatOptionLabel: (value) =>
                 lfoModeOptions.find((option) => option.value === value)?.label ?? value,
               describeOption: (value) =>
-                lfoModeOptions.find((option) => option.value === value)?.description ?? ''
+                lfoModeOptions.find((option) => option.value === value)?.description ?? '',
+              configPaths: 'slots.*.lfo.*.mode'
             }
           )
         );
@@ -508,7 +642,10 @@ export function createSlotEditorPanel({
             100,
             1,
             (value) => stageSlotLfoField(slotState.selected, laneIndex, 'amount', value),
-            { help: 'Signed depth. Negative values reverse the selected operation.' }
+            {
+              help: 'Signed depth. Negative values reverse the selected operation.',
+              configPaths: 'slots.*.lfo.*.amount'
+            }
           )
         );
         card.appendChild(makeRecipeButtons('lfo', laneIndex));
@@ -756,9 +893,10 @@ export function createSlotEditorPanel({
     options,
     current,
     onChange,
-    { help, formatOptionLabel, describeOption } = {}
+    { help, formatOptionLabel, describeOption, configPaths } = {}
   ) {
     const wrap = document.createElement('label');
+    markDeviceConfigPaths(wrap, configPaths);
     wrap.appendChild(makeControlLabel(labelText, help));
     const select = document.createElement('select');
     options.forEach((opt) => {
@@ -775,8 +913,17 @@ export function createSlotEditorPanel({
   }
 
   // Build a numeric input with keyboard-friendly coarse/fine stepping.
-  function makeNumber(labelText, current, min, max, step, onCommit, { help } = {}) {
+  function makeNumber(
+    labelText,
+    current,
+    min,
+    max,
+    step,
+    onCommit,
+    { help, configPaths } = {}
+  ) {
     const wrap = document.createElement('label');
+    markDeviceConfigPaths(wrap, configPaths);
     wrap.appendChild(makeControlLabel(labelText, help));
     const input = document.createElement('input');
     input.type = 'number';
@@ -792,8 +939,9 @@ export function createSlotEditorPanel({
   }
 
   // Build a text input wrapper used for labels and SysEx templates.
-  function makeText(labelText, current, placeholder, onCommit, { help } = {}) {
+  function makeText(labelText, current, placeholder, onCommit, { help, configPaths } = {}) {
     const wrap = document.createElement('label');
+    markDeviceConfigPaths(wrap, configPaths);
     wrap.appendChild(makeControlLabel(labelText, help));
     const input = document.createElement('input');
     input.type = 'text';
@@ -805,8 +953,9 @@ export function createSlotEditorPanel({
   }
 
   // Build a checkbox-based toggle control.
-  function makeToggle(labelText, current, onCommit, { help } = {}) {
+  function makeToggle(labelText, current, onCommit, { help, configPaths } = {}) {
     const wrap = document.createElement('label');
+    markDeviceConfigPaths(wrap, configPaths);
     wrap.className = 'toggle';
     const input = document.createElement('input');
     input.type = 'checkbox';
@@ -814,6 +963,14 @@ export function createSlotEditorPanel({
     input.onchange = () => onCommit(input.checked);
     wrap.append(input, makeControlLabel(labelText, help));
     return wrap;
+  }
+
+  // Mark the exact device-schema leaves owned by a hand-built selected-slot
+  // control. The Lab parity spec compares these markers with the negotiated
+  // slot schema so a newly configurable firmware field cannot stay invisible.
+  function markDeviceConfigPaths(element, paths) {
+    const values = (Array.isArray(paths) ? paths : [paths]).filter(Boolean);
+    if (values.length) element.dataset.deviceConfigPath = values.join(' ');
   }
 
   function parkNoteDynamicsCard() {

@@ -10,7 +10,7 @@
   the public runtime API; device truth and write policy must remain behind those dependencies.
 - `App/runtime/` owns manifest/schema negotiation, state normalization, validation, staged diffs, checksummed Apply,
   uncertainty/resynchronization, telemetry coalescing, and transport-specific behavior.
-- `App/config_schema.json` is the bundled schema 8 fallback. A compatible device-provided schema takes precedence.
+- `App/config_schema.json` is the bundled schema 9 fallback. A compatible device-provided schema takes precedence.
 - `App/benzknobz.css` defines shared visual tokens and mode presentation.
 
 The view must not invent device truth. Identity, capabilities, configuration, persistence actions, and power-safety
@@ -57,6 +57,12 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   levels, motion, and panic help.
 - **Configure** is the default everyday mapping and profile workspace.
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
+  Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
+  account for every slot-schema leaf.
+
+Envelope detection mode is slot-owned (`slots[].ef.mode`). Two slots may share one physical follower assignment while
+keeping different Peak, RMS, Gate, or Follower settings. The top-level `envelopeMode` value is a legacy
+compatibility/OLED label; changing it must not rewrite any slot's detector mode.
 
 The persisted compatibility values remain `stage`, `basic`, and `advanced`. A mode may hide complexity, but it must not
 change the authority or write semantics of the underlying state.
@@ -97,6 +103,8 @@ npm --prefix App run test:architecture
 
 Playwright exercises the real runtime/view modules through the stable `benzknobz.html` harness, including simulator,
 schema validation, staged diff, Apply/receipt failures, uncertainty recovery, migration blocking, profiles, and the
-mode surfaces. The architecture guard rejects coordinator imports that bypass the public layers and policy-shaped code
-that would pull schema constraints, transaction semantics, or device capability decisions back into the two composition
-roots. Operator-facing hardware claims additionally require receipts under `docs/bench/app/`.
+mode surfaces. `lab_config_coverage.spec.js` derives its expected roots and slot leaves from the canonical schema, then
+checks that Lab marks every one and preserves independent slot EF modes through Apply/readback. The architecture guard
+rejects coordinator imports that bypass the public layers and policy-shaped code that would pull schema constraints,
+transaction semantics, or device capability decisions back into the two composition roots. Operator-facing hardware
+claims additionally require receipts under `docs/bench/app/`.
