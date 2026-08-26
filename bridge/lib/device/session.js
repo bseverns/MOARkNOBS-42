@@ -147,6 +147,7 @@ function createDeviceSession({
   onStructuredEvent = () => {},
   nextSeq = () => 1,
   handshakeTimeoutMs = HANDSHAKE_TIMEOUT_MS,
+  preferChunkedConfigReads = false,
   loadAuthority = loadSchemaAuthority,
 } = {}) {
   if (typeof sendLine !== 'function') {
@@ -201,6 +202,15 @@ function createDeviceSession({
   let chunkedConfigRead = null;
   let uncertainReadbackTimer = null;
   let uncertainReadbackAttempts = 0;
+
+  function configReadCommand() {
+    // Keep the Bridge on the bounded single-line response by default. Current
+    // hardware can advertise chunked reads yet leave that stream incomplete,
+    // which saturates the serial lane and can hide a later Apply ACK.
+    return preferChunkedConfigReads && state.manifest?.capabilities?.chunked_reads?.config
+      ? 'GET_CONFIG_CHUNKED'
+      : 'GET_CONFIG';
+  }
   const applyWriter = createApplyTransactionWriter({
     writeApplyLine,
     abortBulkFrame,
@@ -227,7 +237,7 @@ function createDeviceSession({
   function requestUncertainReadback() {
     if (!uncertainApply || !state.connected) return;
     try {
-      sendLine(state.manifest?.capabilities?.chunked_reads?.config ? 'GET_CONFIG_CHUNKED' : 'GET_CONFIG');
+      sendLine(configReadCommand());
     } catch (error) {
       state.lastError = `Apply outcome unresolved: ${error.message || String(error)}`;
       emitState();
@@ -277,13 +287,22 @@ function createDeviceSession({
         'schema-wait': 'GET_SCHEMA',
         'config-wait': configRequestCommand,
       };
-      const retry = requestByState[waitingFor];
+      let retry = requestByState[waitingFor];
+      let alertCode = 'handshake_retry';
+      if (
+        waitingFor === 'config-wait' &&
+        configRequestCommand === 'GET_CONFIG_CHUNKED'
+      ) {
+        configRequestCommand = 'GET_CONFIG';
+        retry = configRequestCommand;
+        alertCode = 'chunked_config_fallback';
+      }
       if (retry && handshakeRetryCount < MAX_HANDSHAKE_RETRIES) {
         handshakeRetryCount += 1;
         state.lastError = `Handshake waiting for ${waitingFor}; retrying ${retry} (${handshakeRetryCount}/${MAX_HANDSHAKE_RETRIES})`;
         emitState();
         emitStructured('bridge.alert', {
-          code: 'handshake_retry',
+          code: alertCode,
           severity: 'warn',
           message: state.lastError,
         });
@@ -498,9 +517,7 @@ function createDeviceSession({
   function requestInitialConfig() {
     if (configRequested) return;
     configRequested = true;
-    configRequestCommand = state.manifest?.capabilities?.chunked_reads?.config
-      ? 'GET_CONFIG_CHUNKED'
-      : 'GET_CONFIG';
+    configRequestCommand = configReadCommand();
     state.handshakeState = 'config-wait';
     sendLine(configRequestCommand);
   }
@@ -939,7 +956,7 @@ function createDeviceSession({
         applyPending.awaitingReadback = true;
         applyPending.appliedChecksum = msg.applied_checksum;
         applyPending.storageGeneration = msg.storage_generation;
-        sendLine(state.manifest?.capabilities?.chunked_reads?.config ? 'GET_CONFIG_CHUNKED' : 'GET_CONFIG');
+        sendLine(configReadCommand());
         return;
       }
       const appliedAt = new Date().toISOString();

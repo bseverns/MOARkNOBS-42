@@ -83,6 +83,8 @@ function createHarness(options = {}) {
       };
     })(),
     loadAuthority: options.loadAuthority,
+    handshakeTimeoutMs: options.handshakeTimeoutMs,
+    preferChunkedConfigReads: options.preferChunkedConfigReads,
   });
 
   simulator.on('line', deliverLine);
@@ -245,6 +247,40 @@ async function run() {
     assert.equal(session.getState().handshakeState, 'timeout');
     assert.equal(
       alerts.some((entry) => entry.event === 'bridge.alert' && entry.payload?.code === 'handshake_timeout'),
+      true,
+    );
+  }
+
+  {
+    const harness = createHarness({
+      handshakeTimeoutMs: 10,
+      preferChunkedConfigReads: true,
+      simulator: {
+        manifest: {
+          capabilities: {
+            chunked_reads: { config: true },
+          },
+        },
+      },
+    });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    assert.equal(
+      harness.writtenLines.includes('GET_CONFIG_CHUNKED'),
+      true,
+      'a chunk-capable manifest should request the chunked config path first',
+    );
+    assert.equal(
+      harness.writtenLines.includes('GET_CONFIG'),
+      true,
+      'a stalled chunked config read should fall back to the bounded legacy response',
+    );
+    assert.equal(
+      harness.structuredEvents.some(
+        (entry) =>
+          entry.event === 'bridge.alert' &&
+          entry.payload?.code === 'chunked_config_fallback',
+      ),
       true,
     );
   }

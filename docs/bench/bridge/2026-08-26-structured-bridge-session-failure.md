@@ -1,5 +1,7 @@
 # Bridge Bench Summary: Structured Session
 
+> Historical diagnostic receipt. The authentication and chunked-read issues recorded here were resolved later the same day; see the [passing rerun](2026-08-26-structured-bridge-session-summary.md).
+
 Date: 2026-08-26
 Commit: 407c271709d363ce31a48798f9ab3c114bdf82f8
 Firmware git_sha: 407c2717
@@ -18,7 +20,7 @@ Raw log: logs/bridge-session-2026-08-26.log
 
 ## Result
 
-FAIL — runner authentication mismatch before device connection
+FAIL — runner authentication mismatch before device connection (subsequently resolved)
 
 ## Observed
 
@@ -30,7 +32,7 @@ FAIL — runner authentication mismatch before device connection
 ## Impact
 
 - This receipt does not prove or disprove Bridge-to-device behavior on the attached board.
-- The failure exposes drift between the token-protected Bridge server and `mn42_bridge_session_runner.js`, whose WebSocket URL is still constructed without the server token.
+- The failure exposed drift between the token-protected Bridge server and the runner. The runner now consumes the generated token, authenticates its WebSocket and protected API requests, and redacts the credential from logs.
 - Because failure happened before device connection, this attempt did not mutate device configuration.
 
 ## Runner output

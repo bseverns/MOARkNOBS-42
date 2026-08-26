@@ -39,6 +39,63 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function parseBridgeConsoleUrl(text) {
+  const match = String(text || '').match(/bridge console:\s+(https?:\/\/\S+)/);
+  if (!match) return null;
+  try {
+    return new URL(match[1]);
+  } catch (_) {
+    return null;
+  }
+}
+
+function redactControlToken(text) {
+  return String(text || '').replace(/([?&]token=)[^\s]+/g, '$1[redacted]');
+}
+
+function buildStructuredWebSocketUrl(consoleUrl) {
+  const target = new URL('/ws/events', consoleUrl);
+  target.protocol = target.protocol === 'https:' ? 'wss:' : 'ws:';
+  const token = consoleUrl.searchParams.get('token');
+  if (token) target.searchParams.set('token', token);
+  return target.toString();
+}
+
+function withControlToken(options = {}, controlToken) {
+  return {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(controlToken ? { authorization: `Bearer ${controlToken}` } : {}),
+    },
+  };
+}
+
+function configDifferencePaths(left, right, pathLabel = '$', output = []) {
+  if (output.length >= 32 || Object.is(left, right)) return output;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    const length = Math.max(left.length, right.length);
+    for (let index = 0; index < length && output.length < 32; index += 1) {
+      configDifferencePaths(left[index], right[index], `${pathLabel}[${index}]`, output);
+    }
+    return output;
+  }
+  if (
+    left && right &&
+    typeof left === 'object' && typeof right === 'object' &&
+    !Array.isArray(left) && !Array.isArray(right)
+  ) {
+    const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+    for (const key of [...keys].sort()) {
+      if (output.length >= 32) break;
+      configDifferencePaths(left[key], right[key], `${pathLabel}.${key}`, output);
+    }
+    return output;
+  }
+  output.push(pathLabel);
+  return output;
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -137,7 +194,6 @@ async function main() {
   ];
 
   const baseUrl = `http://${host}:${port}`;
-  const wsUrl = `ws://${host}:${port}/ws/events`;
   const scenarios = [];
   const structuredEvents = [];
   const serverStdout = [];
@@ -148,14 +204,23 @@ async function main() {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  let serverReady = false;
+  let bridgeConsoleUrl = null;
+  let controlToken = null;
+  let serverStdoutBuffer = '';
   let serverExitCode = null;
   server.stdout.on('data', (chunk) => {
     const text = chunk.toString();
     serverStdout.push(text);
-    process.stdout.write(`[bridge-session:server] ${text}`);
-    if (text.includes('bridge console:')) {
-      serverReady = true;
+    serverStdoutBuffer += text;
+    const lines = serverStdoutBuffer.split('\n');
+    serverStdoutBuffer = lines.pop() || '';
+    for (const line of lines) {
+      process.stdout.write(`[bridge-session:server] ${redactControlToken(line)}\n`);
+      const parsedUrl = parseBridgeConsoleUrl(line);
+      if (parsedUrl) {
+        bridgeConsoleUrl = parsedUrl;
+        controlToken = parsedUrl.searchParams.get('token');
+      }
     }
   });
   server.stderr.on('data', (chunk) => {
@@ -164,12 +229,20 @@ async function main() {
     process.stderr.write(`[bridge-session:server:err] ${text}`);
   });
   server.once('exit', (code, signal) => {
+    if (serverStdoutBuffer) {
+      process.stdout.write(
+        `[bridge-session:server] ${redactControlToken(serverStdoutBuffer)}\n`,
+      );
+      serverStdoutBuffer = '';
+    }
     serverExitCode = code === null ? signal : code;
   });
 
   let ws = null;
   let baselineConfig = null;
   let mutatedConfig = null;
+  let lastSession = null;
+  let failureDetails = null;
 
   async function cleanup() {
     if (ws) {
@@ -185,7 +258,10 @@ async function main() {
   }
 
   try {
-    await waitFor(() => serverReady, timeoutMs, 'bridge server startup');
+    await waitFor(() => bridgeConsoleUrl, timeoutMs, 'bridge server startup');
+    if (!controlToken) {
+      throw new Error('Bridge server did not expose a control token');
+    }
     scenarios.push({
       id: 'server-start',
       title: 'Bridge server starts and exposes the console address',
@@ -193,7 +269,7 @@ async function main() {
       detail: baseUrl,
     });
 
-    ws = new WebSocket(wsUrl);
+    ws = new WebSocket(buildStructuredWebSocketUrl(bridgeConsoleUrl));
     ws.addEventListener('message', (event) => {
       const text = String(event.data || '').trim();
       if (!text) return;
@@ -219,7 +295,7 @@ async function main() {
       });
     });
 
-    const connectPayload = await fetchJson(`${baseUrl}/api/connect`, {
+    const connectPayload = await fetchJson(`${baseUrl}/api/connect`, withControlToken({
       method: 'POST',
       body: JSON.stringify({
         serialName: serialPath,
@@ -229,7 +305,7 @@ async function main() {
         oscBind: '127.0.0.1',
         midiLabel,
       }),
-    });
+    }, controlToken));
     if (!connectPayload?.state?.running) {
       throw new Error('Bridge service did not enter running state after /api/connect');
     }
@@ -238,6 +314,7 @@ async function main() {
       const payload = await fetchJson(`${baseUrl}/api/device/session`, {
         method: 'GET',
       });
+      lastSession = clone(payload?.session ?? null);
       return payload?.session?.ready ? payload : null;
     }, timeoutMs, 'device session readiness');
 
@@ -276,10 +353,10 @@ async function main() {
     const nextIdleFloor = baselineIdleFloor >= 127 ? baselineIdleFloor - 1 : baselineIdleFloor + 1;
     mutatedConfig.filter.idle_floor = nextIdleFloor;
 
-    const stagePayload = await fetchJson(`${baseUrl}/api/device/stage`, {
+    const stagePayload = await fetchJson(`${baseUrl}/api/device/stage`, withControlToken({
       method: 'POST',
       body: JSON.stringify({ config: mutatedConfig }),
-    });
+    }, controlToken));
     if (!stagePayload?.result?.dirty) {
       throw new Error('Stage call did not mark the bridge session dirty');
     }
@@ -301,10 +378,10 @@ async function main() {
       'device.config.dirty event on /ws/events',
     );
 
-    const applyPayload = await fetchJson(`${baseUrl}/api/device/apply`, {
+    const applyPayload = await fetchJson(`${baseUrl}/api/device/apply`, withControlToken({
       method: 'POST',
       body: JSON.stringify({}),
-    });
+    }, controlToken));
     if (!applyPayload?.result?.applied || !applyPayload?.result?.checksum) {
       throw new Error('Apply did not return an ACK/checksum result');
     }
@@ -336,18 +413,18 @@ async function main() {
       'device.apply.ack event on /ws/events',
     );
 
-    const cleanupStage = await fetchJson(`${baseUrl}/api/device/stage`, {
+    const cleanupStage = await fetchJson(`${baseUrl}/api/device/stage`, withControlToken({
       method: 'POST',
       body: JSON.stringify({ config: baselineConfig }),
-    });
+    }, controlToken));
     if (!cleanupStage?.result?.dirty) {
       throw new Error('Cleanup stage did not mark the bridge session dirty');
     }
 
-    const cleanupApply = await fetchJson(`${baseUrl}/api/device/apply`, {
+    const cleanupApply = await fetchJson(`${baseUrl}/api/device/apply`, withControlToken({
       method: 'POST',
       body: JSON.stringify({}),
-    });
+    }, controlToken));
     if (!cleanupApply?.result?.applied) {
       throw new Error('Cleanup apply did not return success');
     }
@@ -384,6 +461,71 @@ async function main() {
       detail: error.message,
     });
     console.error(`[bridge-session] Scenario failed: ${error.message}`);
+    failureDetails = { originalError: error.message };
+    try {
+      const payload = await fetchJson(`${baseUrl}/api/device/session`, {
+        method: 'GET',
+      });
+      lastSession = clone(payload?.session ?? null);
+      if (mutatedConfig && lastSession?.liveConfig) {
+        failureDetails.readbackDifferencePaths = configDifferencePaths(
+          lastSession.liveConfig,
+          mutatedConfig,
+        );
+      }
+    } catch (diagnosticError) {
+      failureDetails.sessionReadError = diagnosticError.message;
+    }
+
+    if (baselineConfig) {
+      const baselineIdleFloor = baselineConfig.filter?.idle_floor;
+      let cleanupApplyError = null;
+      try {
+        const stage = await fetchJson(
+          `${baseUrl}/api/device/stage`,
+          withControlToken({
+            method: 'POST',
+            body: JSON.stringify({ config: baselineConfig }),
+          }, controlToken),
+        );
+        if (stage?.result?.dirty) {
+          try {
+            await fetchJson(
+              `${baseUrl}/api/device/apply`,
+              withControlToken({
+                method: 'POST',
+                body: JSON.stringify({}),
+              }, controlToken),
+            );
+          } catch (cleanupError) {
+            cleanupApplyError = cleanupError.message;
+          }
+        }
+        await waitFor(async () => {
+          const payload = await fetchJson(`${baseUrl}/api/device/session`, {
+            method: 'GET',
+          });
+          lastSession = clone(payload?.session ?? null);
+          return lastSession?.liveConfig?.filter?.idle_floor === baselineIdleFloor;
+        }, timeoutMs, 'failure cleanup config readback');
+        failureDetails.cleanupApplyError = cleanupApplyError;
+        failureDetails.cleanupRestoredIdleFloor = baselineIdleFloor;
+        scenarios.push({
+          id: 'cleanup-after-failure',
+          title: 'Failure cleanup restores the original live config target',
+          ok: true,
+          detail: `idle_floor restored to ${baselineIdleFloor}`,
+        });
+      } catch (cleanupError) {
+        failureDetails.cleanupError = cleanupError.message;
+        scenarios.push({
+          id: 'cleanup-after-failure',
+          title: 'Failure cleanup restores the original live config target',
+          ok: false,
+          detail: cleanupError.message,
+        });
+      }
+    }
   } finally {
     await cleanup();
     const report = {
@@ -395,6 +537,15 @@ async function main() {
       midiLabel,
       scenarios,
       structuredEventNames: structuredEvents.map((entry) => entry.event),
+      failureDiagnostics: scenarios.some((entry) => !entry.ok)
+        ? {
+            session: lastSession,
+            details: failureDetails,
+            alerts: structuredEvents
+              .filter((entry) => entry.event === 'bridge.alert')
+              .map((entry) => clone(entry.payload)),
+          }
+        : null,
       serverExitCode,
       durationMs: Date.now() - startedAt,
     };
@@ -413,7 +564,17 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[bridge-session] fatal: ${error.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`[bridge-session] fatal: ${error.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  buildStructuredWebSocketUrl,
+  parseBridgeConsoleUrl,
+  redactControlToken,
+  withControlToken,
+  configDifferencePaths,
+};

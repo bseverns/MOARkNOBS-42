@@ -12,7 +12,8 @@ This is an evidence folder. For tie-break rules, see [Documentation Truth Map](.
 
 ## Current references
 
-- [2026-08-26 structured Bridge-session failure receipt](2026-08-26-structured-bridge-session-failure.md)
+- [2026-08-26 structured Bridge-session HIL receipt](2026-08-26-structured-bridge-session-summary.md)
+- [2026-08-26 resolved authentication failure diagnostic](2026-08-26-structured-bridge-session-failure.md)
 - [2026-05-30 structured bridge-session HIL receipt](2026-05-30-structured-bridge-session-summary.md)
 - [Historical structured bridge-session receipt](../firmware/0526_bridge-session-summary.md)
 - [Structured bridge-session template](TEMPLATE_bridge-session-summary.md)

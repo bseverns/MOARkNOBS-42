@@ -9,7 +9,7 @@ Bench receipts record what was actually observed on a rig, host, browser, or rel
 | Area        | Receipt                                                                                     | What It Proves                                                               |
 | ----------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | App         | [App over Bridge session summary](app/2026-05-31-app-over-bridge-session-summary.md)        | Browser App can operate through the structured Bridge session path.          |
-| Bridge      | [2026-08-26 structured session failure](bridge/2026-08-26-structured-bridge-session-failure.md) | Current runner is blocked by Bridge control-token authentication drift.   |
+| Bridge      | [2026-08-26 structured session](bridge/2026-08-26-structured-bridge-session-summary.md)       | Authenticated session, staged Apply, ACK, and cleanup passed on hardware.    |
 | Bridge      | [Structured Bridge session summary](bridge/2026-05-30-structured-bridge-session-summary.md) | Bridge session behavior was exercised against the expected runtime contract. |
 | Host recipe | [macOS IAC + REAPER basic observed](bridge-host-recipes/macos-iac-reaper-basic-observed.md) | A specific host routing recipe was observed, not universally certified.      |
 | Firmware    | [Boot contract summary](firmware/0526_boot-contract-summary.md)                             | Firmware boot identity and contract behavior were checked.                   |

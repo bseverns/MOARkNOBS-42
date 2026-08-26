@@ -250,6 +250,21 @@ Payload:
 
 ## Session API
 
+### Device config hydration and readback
+
+The Bridge uses the bounded single-line `GET_CONFIG` response for initial
+session hydration, authoritative Apply readback, and uncertain-outcome
+resynchronization. It does not automatically select `GET_CONFIG_CHUNKED` from
+the device capability flag: a live device may advertise that capability while
+an incomplete chunk stream is still capable of occupying the serial lane and
+hiding a later Apply ACK.
+
+Chunked config reads remain an explicit device-session opt-in. When enabled,
+an incomplete `GET_CONFIG_CHUNKED` handshake falls back once to `GET_CONFIG`
+and emits a `bridge.alert` with code `chunked_config_fallback`. The normal
+Bridge service keeps the opt-in disabled until the chunk stream is separately
+verified on the target firmware and hardware.
+
 ### `GET /api/device/session`
 
 Response:
