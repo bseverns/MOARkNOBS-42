@@ -9,6 +9,7 @@ MOARkNOBS-42 does not just ship binaries. It tries to ship receipts. At the curr
 - the hardware-test firmware artifact
 - the hardware-test hardware reference bundle, not an orderable fabrication bundle
 - a deterministic hardware-test source export
+- a frozen browser App bundle tied to the release commit
 - a hardware-test manifest describing how those artifacts were built
 - hardware-test checksums so another machine can verify the output
 - unsigned bridge binaries with per-target checksums; beta/public bridge assets must pass the signing gate
@@ -63,13 +64,14 @@ Without that manifest, a release is just a pile of files. With it, the release b
 
 ## CI release workflow
 
-`.github/workflows/release.yml` now does two release lanes:
+`.github/workflows/release.yml` now builds two release lanes and publishes only after both succeed:
 
-- hardware-test firmware/core artifact lane via `release.sh`
+- hardware-test firmware/App/core artifact lane via `release.sh`
 - hardware-test bridge packaging lane (`pkg`) for `macOS x64 + arm64`, `Linux x64`, and `Windows x64`
 
-The workflow always uploads artifacts to the workflow run. GitHub Release asset upload is conditional:
-assets are attached only when a release for the tag already exists, and those upload labels identify them as hardware-test/prerelease artifacts.
+The workflow always stores the core and Bridge bundles as workflow artifacts. A final gated job then creates or updates
+the GitHub prerelease and attaches the complete asset set, eliminating the former requirement that a Release already
+exist before the tag-triggered workflow began. Release tags must be annotated semantic tags with matching changelog entries.
 Unsigned bridge artifacts are acceptable only for internal/operator evidence. Beta/public bridge assets must be rebuilt or promoted with `REQUIRE_BRIDGE_SIGNING=1`.
 
 ## Read the full operator guide

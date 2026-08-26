@@ -12,7 +12,7 @@ flowchart LR
   B --> C[Verify lanes]
   B --> D[Firmware build]
   B --> E[Hardware bundle]
-  B --> F[Source export]
+  B --> F[Source + App bundles]
   D --> G[Manifest + checksums]
   E --> G
   F --> G
@@ -39,8 +39,8 @@ ls dist
 jq '.' dist/mn42_v0.0.0_hardware-test_manifest.json
 ```
 
-Everything lands in `dist/`: the versioned firmware hex, hardware reference bundle, deterministic source export zip,
-release verification summary, license docs, and a manifest that ties all of it to tool versions and git state.
+Everything lands in `dist/`: the versioned firmware hex, hardware reference bundle, deterministic source export ZIP,
+frozen browser App ZIP, release verification summary, license docs, and a manifest that ties all of it to tool versions and git state.
 
 _A simple file-tree image of `dist/` would help here, because the artifact bundle is easier to understand visually than as a sentence._
 
@@ -94,10 +94,11 @@ The script does the following in order:
 5. copies `mn42_<version>_hardware-test_firmware.hex` into `dist/`;
 6. creates `mn42_<version>_hardware-test_hardware-reference.zip` with an explicit prototype/reference boundary,
    the tracked fabrication boundary note, current hardware notes, and available local machine drawings;
-7. creates a deterministic source export zip from tracked files only;
-8. copies license docs;
-9. copies `mn42_<version>_hardware-test_verification.json` into `dist/`; and
-10. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, the
+7. creates a deterministic source export ZIP from tracked files only;
+8. builds and archives a frozen browser App from the same commit;
+9. copies license docs;
+10. copies `mn42_<version>_hardware-test_verification.json` into `dist/`; and
+11. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, the
     verification summary, and the exact commands executed.
 
 You trigger the whole dance with:
@@ -114,7 +115,7 @@ Swap `v0.0.0` for whatever tag you intend to cut.
 
 - git commit + branch + dirtiness
 - PlatformIO core/Python versions from `pio system info`
-- the command strings for clean/build
+- the command strings for firmware clean/build and the App bundle build
 - the firmware version string that was injected at build time
 - verification truth from `dist/mn42_<version>_hardware-test_verification.json` (what ran vs what was skipped)
 - SHA-256 hashes and byte sizes for the release artifacts
@@ -154,19 +155,20 @@ matrix (`pkg`) for:
 - `node24-linux-x64`
 - `node24-win-x64`
 
-That keeps firmware artifacts on the same scripted path as local releases while adding deterministic bridge outputs.
-The workflow always stores bundles as workflow artifacts and uploads assets to a GitHub release only when that tag's
-release already exists. Core uploaded assets are:
+That keeps firmware and App artifacts on the same scripted path as local releases while adding deterministic Bridge outputs.
+The workflow stores both bundles as workflow artifacts, then a final gated job creates or updates the GitHub prerelease
+and attaches all assets only after every required lane passes. Core uploaded assets are:
 
 - `mn42_<tag>_hardware-test_firmware.hex`
 - `mn42_<tag>_hardware-test_hardware-reference.zip`
 - `mn42_<tag>_hardware-test_source.zip`
+- `mn42_<tag>_hardware-test_app.zip`
 - `mn42_<tag>_hardware-test_verification.json`
 - `mn42_<tag>_hardware-test_manifest.json`
 - `mn42_<tag>_hardware-test_SHA256SUMS.txt`
 - the bundled license docs (`THIRD_PARTY_LICENSES.md` and the `LICENSES/` directory)
 
-Bridge uploads (when release exists) include:
+Each platform-specific Bridge ZIP includes:
 
 - per-target bridge binaries
 - per-target SHA256 checksum files

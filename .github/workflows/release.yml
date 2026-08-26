@@ -4,12 +4,11 @@ on:
   push:
     tags:
       - "v*"
-      - "[0-9]*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build (defaults to current ref/tag)"
-        required: false
+        description: "Annotated semantic tag to build (vX.Y.Z)"
+        required: true
         type: string
 
 jobs:
@@ -35,8 +34,8 @@ jobs:
             release_tag="${GITHUB_REF_NAME}"
             checkout_ref="${GITHUB_REF}"
           else
-            release_tag="manual-${GITHUB_SHA:0:7}"
-            checkout_ref="${GITHUB_REF}"
+            echo "Release workflow requires an annotated semantic tag." >&2
+            exit 1
           fi
           artifact_tag="$(printf '%s' "${release_tag}" | sed -E 's/[^A-Za-z0-9._-]+/-/g')"
           echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
@@ -46,9 +45,32 @@ jobs:
           echo "Resolved artifact tag: ${artifact_tag}"
           echo "Resolved checkout ref: ${checkout_ref}"
 
-  firmware-preflight:
+  release-contract:
     runs-on: ubuntu-latest
     needs: resolve-release-meta
+    outputs:
+      release_sha: ${{ steps.contract.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve-release-meta.outputs.checkout_ref }}
+          fetch-depth: 0
+      - id: contract
+        name: Require semantic annotated tag and changelog entry
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          python3 tools/check_release_tag.py --root . --tag "${RELEASE_TAG}"
+          release_sha="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          echo "release_sha=${release_sha}" >> "${GITHUB_OUTPUT}"
+
+  firmware-preflight:
+    runs-on: ubuntu-latest
+    needs:
+      - resolve-release-meta
+      - release-contract
     steps:
       - uses: actions/checkout@v5
         with:
@@ -83,7 +105,9 @@ jobs:
 
   bridge-preflight:
     runs-on: ubuntu-latest
-    needs: resolve-release-meta
+    needs:
+      - resolve-release-meta
+      - release-contract
     steps:
       - uses: actions/checkout@v5
         with:
@@ -98,7 +122,9 @@ jobs:
 
   app-preflight:
     runs-on: macos-15
-    needs: resolve-release-meta
+    needs:
+      - resolve-release-meta
+      - release-contract
     steps:
       - uses: actions/checkout@v5
         with:
@@ -122,8 +148,6 @@ jobs:
       - firmware-preflight
       - bridge-preflight
       - app-preflight
-    permissions:
-      contents: write
     env:
       RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
     steps:
@@ -171,57 +195,17 @@ jobs:
             dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_firmware.hex
             dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_hardware-reference.zip
             dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_source.zip
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_app.zip
             dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_verification.json
             dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_manifest.json
             dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_SHA256SUMS.txt
             dist/THIRD_PARTY_LICENSES.md
             dist/LICENSES
-      - name: Check whether GitHub release exists
-        id: release-check
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const tag = process.env.RELEASE_TAG;
-            try {
-              const release = await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag,
-              });
-              core.setOutput("exists", "true");
-              core.setOutput("release_id", String(release.data.id));
-            } catch (error) {
-              if (error.status === 404) {
-                core.setOutput("exists", "false");
-                return;
-              }
-              throw error;
-            }
-        env:
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
-      - name: Upload labeled hardware-test core assets when release exists
-        if: steps.release-check.outputs.exists == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release upload "${RELEASE_TAG}" \
-            "dist/mn42_${RELEASE_TAG}_hardware-test_firmware.hex#MN42 hardware-test firmware HEX (prototype/prerelease)" \
-            "dist/mn42_${RELEASE_TAG}_hardware-test_hardware-reference.zip#MN42 hardware-test hardware reference bundle (not fabrication-ready)" \
-            "dist/mn42_${RELEASE_TAG}_hardware-test_source.zip#MN42 hardware-test source export" \
-            "dist/mn42_${RELEASE_TAG}_hardware-test_verification.json#MN42 hardware-test verification receipt" \
-            "dist/mn42_${RELEASE_TAG}_hardware-test_manifest.json#MN42 hardware-test provenance manifest" \
-            "dist/mn42_${RELEASE_TAG}_hardware-test_SHA256SUMS.txt#MN42 hardware-test checksums" \
-            "dist/THIRD_PARTY_LICENSES.md#Third-party license notices" \
-            --clobber
-      - name: Note skipped core release upload
-        if: steps.release-check.outputs.exists != 'true'
-        run: echo "No GitHub release found for tag '${RELEASE_TAG}'. Hardware-test core assets kept as workflow artifacts only."
 
   bridge-package-artifacts:
     needs:
       - resolve-release-meta
+      - release-contract
       - bridge-preflight
     strategy:
       fail-fast: false
@@ -344,7 +328,7 @@ jobs:
             --stage-dir "${stage_dir}" \
             --target "${{ matrix.target }}" \
             --release-tag "${{ needs.resolve-release-meta.outputs.release_tag }}" \
-            --commit-sha "${{ github.sha }}" \
+            --commit-sha "${{ needs.release-contract.outputs.release_sha }}" \
             --node-target "${{ matrix.target }}" \
             --signing-status "unsigned-ci-artifact"
       - name: Upload per-target bridge artifact bundle
@@ -353,13 +337,11 @@ jobs:
           name: bridge-package-${{ matrix.target }}
           path: bridge/dist/release-${{ matrix.target }}
 
-  bridge-release-upload:
+  bridge-bundle-artifacts:
     runs-on: ubuntu-latest
     needs:
       - resolve-release-meta
       - bridge-package-artifacts
-    permissions:
-      contents: write
     env:
       RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
       ARTIFACT_TAG: ${{ needs.resolve-release-meta.outputs.artifact_tag }}
@@ -371,65 +353,146 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           pattern: bridge-package-*
-          merge-multiple: true
-          path: bridge/dist/release-upload
-      - name: Restore Unix executable bits for combined bridge bundle
+          path: bridge/dist/release-download
+      - name: Archive each platform Bridge bundle without flattening support files
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          binaries=(bridge/dist/release-upload/mn42-bridge-*-node24-macos-* bridge/dist/release-upload/mn42-bridge-*-node24-linux-*)
-          shopt -u nullglob
-          if [ ${#binaries[@]} -gt 0 ]; then
-            chmod 755 "${binaries[@]}"
-          fi
+          mkdir -p bridge/dist/release-upload
+          for target in node24-macos-x64 node24-macos-arm64 node24-linux-x64 node24-win-x64; do
+            source_dir="bridge/dist/release-download/bridge-package-${target}"
+            output_file="bridge/dist/release-upload/mn42-bridge-${ARTIFACT_TAG}-${target}-hardware-test.zip"
+            python3 tools/archive_release_directory.py \
+              --source "${source_dir}" \
+              --output "${output_file}" \
+              --prefix "mn42-bridge-${ARTIFACT_TAG}-${target}"
+          done
       - name: Upload combined hardware-test bridge artifact bundle
         uses: actions/upload-artifact@v7
         with:
           name: hardware-test-bridge-${{ env.ARTIFACT_TAG }}
           path: bridge/dist/release-upload
-      - name: Check whether GitHub release exists
-        id: release-check
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs:
+      - resolve-release-meta
+      - release-contract
+      - release-artifacts
+      - bridge-bundle-artifacts
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
+      RELEASE_SHA: ${{ needs.release-contract.outputs.release_sha }}
+      ARTIFACT_TAG: ${{ needs.resolve-release-meta.outputs.artifact_tag }}
+    steps:
+      - name: Download hardware-test core artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: hardware-test-core-${{ env.ARTIFACT_TAG }}
+          path: release-assets/core
+      - name: Download hardware-test Bridge artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: hardware-test-bridge-${{ env.ARTIFACT_TAG }}
+          path: release-assets/bridge
+      - name: Create or update the hardware-test prerelease
+        id: release
         uses: actions/github-script@v8
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_SHA: ${{ env.RELEASE_SHA }}
         with:
           script: |
             const tag = process.env.RELEASE_TAG;
+            const sha = process.env.RELEASE_SHA;
+            const markerStart = '<!-- mn42-artifacts:start -->';
+            const markerEnd = '<!-- mn42-artifacts:end -->';
+            const artifactIndex = `${markerStart}\n## Artifacts\n\nBuilt from \`${sha}\` / tag \`${tag}\`.\n\n` +
+              '- Firmware HEX\n' +
+              '- Hardware reference bundle\n' +
+              '- Tracked-source export\n' +
+              '- Frozen browser App bundle\n' +
+              '- Bridge packages: macOS arm64, macOS x64, Linux x64, Windows x64\n' +
+              '- Verification receipt and provenance manifest\n' +
+              '- SHA-256 checksums and third-party license notices\n\n' +
+              'All Bridge binaries are unsigned hardware-test/prerelease artifacts. See the verification JSON for checks run versus skipped.\n' +
+              markerEnd;
+            let release;
             try {
-              const release = await github.rest.repos.getReleaseByTag({
+              release = (await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 tag,
-              });
-              core.setOutput("exists", "true");
-              core.setOutput("release_id", String(release.data.id));
+              })).data;
+              const currentBody = release.body || '';
+              const managedBlock = /<!-- mn42-artifacts:start -->[\s\S]*?<!-- mn42-artifacts:end -->/;
+              const body = managedBlock.test(currentBody)
+                ? currentBody.replace(managedBlock, artifactIndex)
+                : `${currentBody}\n\n${artifactIndex}`.trim();
+              release = (await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.id,
+                body,
+                prerelease: true,
+              })).data;
             } catch (error) {
-              if (error.status === 404) {
-                core.setOutput("exists", "false");
-                return;
-              }
-              throw error;
+              if (error.status !== 404) throw error;
+              const generated = await github.rest.repos.generateReleaseNotes({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag,
+              });
+              release = (await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag,
+                name: tag,
+                body: `${generated.data.body || ''}\n\n${artifactIndex}`.trim(),
+                draft: false,
+                prerelease: true,
+              })).data;
             }
-        env:
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
-      - name: Upload labeled hardware-test bridge assets to existing GitHub release
-        if: steps.release-check.outputs.exists == 'true'
+            core.setOutput('release_id', String(release.id));
+            core.setOutput('html_url', release.html_url);
+      - name: Upload the complete labeled release asset set
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           upload_args=()
-          for asset in bridge/dist/release-upload/*; do
+          for asset in release-assets/core/* release-assets/bridge/*; do
             if [[ ! -f "${asset}" ]]; then
               continue
             fi
             filename="$(basename "${asset}")"
             case "${filename}" in
-              mn42-bridge-*-cli-*)
-                label="MN42 Bridge hardware-test CLI (${filename}; unsigned prerelease)"
+              *_firmware.hex)
+                label="MN42 hardware-test firmware HEX (prototype/prerelease)"
                 ;;
-              mn42-bridge-*-console-*)
-                label="MN42 Bridge hardware-test console/server (${filename}; unsigned prerelease)"
+              *_hardware-reference.zip)
+                label="MN42 hardware-test hardware reference bundle (not fabrication-ready)"
+                ;;
+              *_source.zip)
+                label="MN42 hardware-test tracked-source export"
+                ;;
+              *_app.zip)
+                label="MN42 frozen browser App bundle"
+                ;;
+              *_verification.json)
+                label="MN42 hardware-test verification receipt"
+                ;;
+              *_manifest.json)
+                label="MN42 hardware-test provenance manifest"
+                ;;
+              *_SHA256SUMS.txt)
+                label="MN42 hardware-test core checksums"
+                ;;
+              mn42-bridge-*-node24-*-hardware-test.zip)
+                label="MN42 Bridge platform bundle (${filename}; unsigned hardware-test prerelease)"
                 ;;
               SHA256SUMS-*)
                 label="MN42 Bridge hardware-test checksums (${filename})"
@@ -450,10 +513,9 @@ jobs:
             upload_args+=("${asset}#${label}")
           done
           if [[ ${#upload_args[@]} -eq 0 ]]; then
-            echo "No bridge release-upload files found to attach." >&2
+            echo "No release files found to attach." >&2
             exit 1
           fi
           gh release upload "${RELEASE_TAG}" "${upload_args[@]}" --clobber
-      - name: Note skipped bridge release upload
-        if: steps.release-check.outputs.exists != 'true'
-        run: echo "No GitHub release found for tag '${RELEASE_TAG}'. Hardware-test bridge assets kept as workflow artifacts only."
+      - name: Report published prerelease
+        run: echo "Published complete hardware-test prerelease at ${{ steps.release.outputs.html_url }}"

@@ -38,6 +38,7 @@ BUILD_ENV="teensy40_main"
 FIRMWARE_NAME="mn42_${VERSION}_hardware-test_firmware.hex"
 HARDWARE_REFERENCE_NAME="mn42_${VERSION}_hardware-test_hardware-reference.zip"
 SOURCE_EXPORT_NAME="mn42_${VERSION}_hardware-test_source.zip"
+APP_BUNDLE_NAME="mn42_${VERSION}_hardware-test_app.zip"
 MANIFEST_NAME="mn42_${VERSION}_hardware-test_manifest.json"
 CHECKSUMS_NAME="mn42_${VERSION}_hardware-test_SHA256SUMS.txt"
 VERIFICATION_NAME="mn42_${VERSION}_hardware-test_verification.json"
@@ -178,6 +179,15 @@ python3 "$ROOT_DIR/tools/export_release_source.py" \
   --version "$VERSION" \
   --output "$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME"
 
+APP_SOURCE_SHA_VALUE="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+APP_BUILD_CMD=(npm --prefix "$ROOT_DIR/App" run build:deploy)
+APP_SOURCE_SHA="$APP_SOURCE_SHA_VALUE" "${APP_BUILD_CMD[@]}"
+
+python3 "$ROOT_DIR/tools/archive_release_directory.py" \
+  --source "$ROOT_DIR/$OUTPUT_DIR/app" \
+  --output "$ROOT_DIR/$OUTPUT_DIR/$APP_BUNDLE_NAME" \
+  --prefix "mn42-app"
+
 if [ -f "$VERIFICATION_SOURCE_FILE" ]; then
   cp "$VERIFICATION_SOURCE_FILE" "$VERIFICATION_DIST_FILE"
 else
@@ -211,6 +221,7 @@ cp -r "$ROOT_DIR/firmware/LICENSES" "$ROOT_DIR/$OUTPUT_DIR/"
 
 CLEAN_CMD_STR=$(printf '%q ' "${CLEAN_CMD[@]}")
 BUILD_CMD_STR=$(printf '%q ' "${BUILD_CMD[@]}")
+APP_BUILD_CMD_STR="APP_SOURCE_SHA=$(printf '%q' "$APP_SOURCE_SHA_VALUE") $(printf '%q ' "${APP_BUILD_CMD[@]}")"
 
 python3 "$ROOT_DIR/tools/generate_release_manifest.py" \
   --version "$VERSION" \
@@ -221,18 +232,21 @@ python3 "$ROOT_DIR/tools/generate_release_manifest.py" \
   --firmware "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME" \
   --hardware-reference "$ROOT_DIR/$OUTPUT_DIR/$HARDWARE_REFERENCE_NAME" \
   --artifact "source_export=$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME" \
+  --artifact "browser_app_bundle=$ROOT_DIR/$OUTPUT_DIR/$APP_BUNDLE_NAME" \
   --artifact "verification=$VERIFICATION_DIST_FILE" \
   --artifact "third_party_licenses=$ROOT_DIR/$OUTPUT_DIR/THIRD_PARTY_LICENSES.md" \
   --verification-file "$VERIFICATION_DIST_FILE" \
   --pio-home "$PIO_HOME" \
   --step "clean=$CLEAN_CMD_STR" \
-  --step "build=$BUILD_CMD_STR"
+  --step "build=$BUILD_CMD_STR" \
+  --step "app_bundle=$APP_BUILD_CMD_STR"
 
 python3 "$ROOT_DIR/tools/write_checksums.py" \
   --output "$ROOT_DIR/$OUTPUT_DIR/$CHECKSUMS_NAME" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$HARDWARE_REFERENCE_NAME" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/$APP_BUNDLE_NAME" \
   --file "$VERIFICATION_DIST_FILE" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$MANIFEST_NAME" \
   --file "$ROOT_DIR/$OUTPUT_DIR/THIRD_PARTY_LICENSES.md"

@@ -7,15 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.8] - 2026-08-25
+
 ### Added
+- Frozen, deterministic browser App ZIPs now ship with the firmware, source, verification, provenance, checksum, and license artifacts.
+- Release-tag preflight now requires an annotated semantic tag and a matching dated changelog entry.
+
+### Changed
+- GitHub prerelease creation and asset upload now run as one final gated publication job after every core and Bridge platform bundle succeeds.
+- Bridge outputs are preserved as four platform-specific ZIPs so manifests, checksums, READMEs, and license files cannot overwrite one another during collection.
+
+### Fixed
+- Packaged Bridge schema authority now includes the App tuning catalog and supports the named and async ES-module exports required by the staged runtime.
+- Release publication no longer depends on a GitHub Release already existing when the tag-triggered workflow starts.
+
+### Release Boundary
+- This remains a hardware-test/prerelease artifact set. Bridge binaries are unsigned, HIL may be skipped on hosted runners, and beta/public claims still require the documented signing and hardware evidence.
+
+## [v0.9.7] - 2026-08-25
+
+### Added
+- Device-owned Incoming MIDI routes with profile persistence, soft takeover, and musician-facing App configuration.
+- Expanded Lab coverage for slot envelopes, LFOs, profile performance controls, and machine-level modulation routes.
 - Root README now introduces MN42 as a complete instrument ecosystem and routes performers, builders, contributors, and evaluators to one landing page each.
 - Documentation navigation now provides a five-page Learn syllabus and generated path breadcrumbs.
 - The retained wiki source pack is explicitly archived in favor of canonical repository documentation.
 - App and Bridge entry pages are now concise operational guides backed by focused behavior and operator references.
 
 ### Changed
+- Reframed the App and Bridge around selected-slot behavior, profile performance, incoming control, and evidence-backed device authority.
 - Hardware-test status and fabrication photos now live in `HARDWARE_TEST_README.md` instead of dominating the project landing page.
 - Contribution guidance now front-loads the required readiness checklist and `tools/doctor.py --full` gate.
+
+### Release Boundary
+- Published as release `v0.9.7` from legacy lightweight tag `26_8` at `af1f1e7`; the tagged software state passed its core preflights, but the initial GitHub Release had no attached assets after the Bridge package smoke and release-upload ordering exposed last-mile defects.
+- Treat this as a hardware-test/prerelease milestone and release-engineering rehearsal, not a signed beta/public distribution.
 
 ## [v0.9.6] - 2026-06-01
 
@@ -159,5 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.2.0
 [0.1.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.1.0
 [v0.9.6]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/beta5
+[v0.9.7]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/26_8
+[v0.9.8]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.9.8
 [beta0.6.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/beta0.6.0
-[Unreleased]: https://github.com/bseverns/MOARkNOBS-42/compare/beta5...HEAD
+[Unreleased]: https://github.com/bseverns/MOARkNOBS-42/compare/v0.9.8...HEAD
