@@ -285,6 +285,11 @@ Response:
 and driver status, brownout count, EEPROM primary/backup validity, last EEPROM load source, and memory headroom. Unknown
 fields remain `null`; display degraded mode is not treated as a bridge-transport failure by itself.
 
+`GET /api/device/session?warm=1` may be used before a device is connected to load the Bridge's bundled App schema
+authority. That response reports `schemaSource: "bundled"` and supplies the schema, but does not invent a manifest, live
+configuration, firmware identity, or `ready` session. Packaged-artifact smoke coverage uses this path to prove that every
+App runtime dependency required for schema validation is self-contained; it is independent of a firmware build SHA.
+
 ### `POST /api/device/stage`
 
 Request body:
