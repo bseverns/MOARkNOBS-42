@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The final GitHub Release upload now selects the repository explicitly, allowing the checkout-free publication job to attach its already-built asset bundles.
+
 ## [v0.9.8] - 2026-08-25
 
 ### Added

@@ -516,6 +516,8 @@ jobs:
             echo "No release files found to attach." >&2
             exit 1
           fi
-          gh release upload "${RELEASE_TAG}" "${upload_args[@]}" --clobber
+          gh release upload "${RELEASE_TAG}" "${upload_args[@]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
       - name: Report published prerelease
         run: echo "Published complete hardware-test prerelease at ${{ steps.release.outputs.html_url }}"
