@@ -268,11 +268,32 @@ void LEDManager::update() {
         markDirty(CONTROL_LED_INDEX());
     }
 
-    if (diagnosticMode && leds.size() >= 4) {
-        uint8_t idx = leds.size() - 4;
-        uint8_t b = sin8((now() - diagStart) >> 2);
-        leds[idx] = CRGB(b, b, b);
-        markDirty(idx);
+    if (!controlActive && panelModeIndicator != PanelModeIndicator::None &&
+        CONTROL_LED_INDEX() < leds.size()) {
+        const uint8_t wave = sin8(static_cast<uint8_t>((now() - diagStart) >> 2));
+        const uint8_t pulse = static_cast<uint8_t>(64U + (static_cast<uint16_t>(wave) * 191U) / 255U);
+        CRGB color = CRGB::White;
+        switch (panelModeIndicator) {
+        case PanelModeIndicator::Config:
+            color = CRGB(255, 96, 0);
+            break;
+        case PanelModeIndicator::Lfo:
+            color = CRGB(255, 0, 180);
+            break;
+        case PanelModeIndicator::Jitter:
+            color = CRGB(0, 180, 255);
+            break;
+        case PanelModeIndicator::Diagnostic:
+            color = CRGB::White;
+            break;
+        case PanelModeIndicator::None:
+            break;
+        }
+        color.r = static_cast<uint8_t>((static_cast<uint16_t>(color.r) * pulse) / 255U);
+        color.g = static_cast<uint8_t>((static_cast<uint16_t>(color.g) * pulse) / 255U);
+        color.b = static_cast<uint8_t>((static_cast<uint16_t>(color.b) * pulse) / 255U);
+        leds[CONTROL_LED_INDEX()] = color;
+        markDirty(CONTROL_LED_INDEX());
     }
 
     switch (currentState) {
@@ -398,10 +419,18 @@ void LEDManager::blinkStatusLED(uint8_t times, uint16_t delayMs) {
 
 void LEDManager::setDiagnosticMode(bool enabled) {
     diagnosticMode = enabled;
+    setPanelModeIndicator(enabled ? PanelModeIndicator::Diagnostic : PanelModeIndicator::None);
+}
+
+void LEDManager::setPanelModeIndicator(PanelModeIndicator mode) {
+    if (panelModeIndicator == mode) {
+        return;
+    }
+    panelModeIndicator = mode;
     diagStart = now();
-    if (!enabled && leds.size() >= 4) {
-        leds[leds.size() - 4] = CRGB::Black;
-        markDirty(leds.size() - 4);
+    if (mode == PanelModeIndicator::None && CONTROL_LED_INDEX() < leds.size()) {
+        leds[CONTROL_LED_INDEX()] = CRGB::Black;
+        markDirty(CONTROL_LED_INDEX());
         presentFrame();
     }
 }

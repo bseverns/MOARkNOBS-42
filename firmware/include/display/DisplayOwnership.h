@@ -6,6 +6,7 @@ namespace display {
 enum class Owner {
     Startup,
     Modal,
+    ContextHelp,
     Status,
     Control,
     Screensaver,
@@ -15,6 +16,7 @@ enum class Owner {
 struct OwnershipRequest {
     bool startupActive = false;
     bool modalActive = false;
+    bool contextHelpActive = false;
     bool statusActive = false;
     bool controlActive = false;
     bool screensaverDue = false;
@@ -26,6 +28,9 @@ inline Owner resolveOwner(const OwnershipRequest &request) {
     }
     if (request.modalActive) {
         return Owner::Modal;
+    }
+    if (request.contextHelpActive) {
+        return Owner::ContextHelp;
     }
     if (request.statusActive) {
         return Owner::Status;

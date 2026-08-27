@@ -13,6 +13,7 @@
 #include "Log.h"
 #include "WebSerial.h"
 #include "LFO/LFOManager.h"
+#include "generated/ControlHelp.generated.h"
 
 namespace {
 
@@ -780,7 +781,7 @@ bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context) {
     char line1[20];
     char line2[20];
     char line3[20];
-    snprintf(line1, sizeof(line1), "Cfg Slot %u", slotIndex);
+    snprintf(line1, sizeof(line1), "[CONFIG] Slot %u", slotIndex);
     snprintf(line2, sizeof(line2), "%s Ch%u D1%u", configSlotTypeShortName(slot.type), channel,
              data1);
     snprintf(line3, sizeof(line3), "C5 Exit+Save");
@@ -802,7 +803,7 @@ bool renderLfoTuningViewIfActive() {
     char line1[20];
     char line2[24];
     char line3[24];
-    snprintf(line1, sizeof(line1), "LFO%u T:%s", static_cast<unsigned>(index + 1),
+    snprintf(line1, sizeof(line1), "[LFO%u] T:%s", static_cast<unsigned>(index + 1),
              hasTarget ? lfoTargetShortLabel(target) : "NONE");
     snprintf(line2, sizeof(line2), "%s D%.2f V%.2f", lfoShapeShortLabel(lfo.getShape()),
              lfo.getDepth(), value);
@@ -831,10 +832,30 @@ bool renderJitterTuningViewIfActive() {
     char line1[20];
     char line2[24];
     char line3[24];
-    snprintf(line1, sizeof(line1), "Jitter Tune");
+    snprintf(line1, sizeof(line1), "[JITTER TUNE]");
     snprintf(line2, sizeof(line2), "Base D%.2f S%.2f", baseDepth, baseSmooth);
     snprintf(line3, sizeof(line3), "Eff  D%.2f S%.2f", effectiveDepth, effectiveSmooth);
     displayManager.drawText(line1, line2, line3);
+    return true;
+}
+
+bool renderControlHelpIfActive() {
+    const uint8_t mask = buttonManager.controlHelpMask();
+    if (mask == 0) {
+        return false;
+    }
+
+    for (size_t index = 0; index < kControlHelpEntryCount; ++index) {
+        const ControlHelpEntry &entry = kControlHelpEntries[index];
+        if (entry.mask == mask) {
+            displayManager.drawText(entry.line1, entry.line2, entry.line3);
+            return true;
+        }
+    }
+
+    char line1[20];
+    snprintf(line1, sizeof(line1), "CHORD 0x%02X", mask);
+    displayManager.drawText(line1, "Release to return", "See Quick Reference");
     return true;
 }
 

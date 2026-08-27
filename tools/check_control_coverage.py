@@ -7,6 +7,7 @@ import argparse
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 
@@ -54,6 +55,37 @@ def main() -> None:
     )
 
     registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    if registry.get("schema_version") != 2:
+        raise SystemExit("control registry must use schema_version 2")
+
+    namespace_buttons = [item.get("button") for item in registry.get("namespaces", [])]
+    if sorted(namespace_buttons) != list(range(6)):
+        raise SystemExit("control registry namespaces must define Ctrl0 through Ctrl5 exactly once")
+
+    context_masks: set[int] = set()
+    for context in registry.get("contexts", []):
+        buttons = context.get("mask", [])
+        if not buttons or any(not isinstance(button, int) or button < 0 or button > 5 for button in buttons):
+            raise SystemExit(f"invalid contextual help mask: {buttons!r}")
+        mask = sum(1 << button for button in set(buttons))
+        if mask in context_masks:
+            raise SystemExit(f"duplicate contextual help mask: {buttons!r}")
+        context_masks.add(mask)
+        for key in ("line1", "line2", "line3"):
+            if not context.get(key) or len(context[key]) > 21:
+                raise SystemExit(f"invalid OLED help {key} for mask {buttons!r}")
+
+    if not all((1 << button) in context_masks for button in range(6)):
+        raise SystemExit("contextual help must define a root view for Ctrl0 through Ctrl5")
+
+    required_combo_fields = {"id", "control", "label", "layer", "family", "reversible"}
+    for item in registry.get("combos", []):
+        missing = required_combo_fields - item.keys()
+        if missing:
+            raise SystemExit(f"{item.get('id', '<unknown>')}: missing registry fields {sorted(missing)}")
+        if item["layer"] not in {"immediate", "modifier", "edit", "browser"}:
+            raise SystemExit(f"{item['id']}: invalid control layer {item['layer']!r}")
+
     expected = {normalize_control(item["control"]): item["id"] for item in registry["combos"]}
     coverage_controls = extract_controls(coverage_path.read_text(encoding="utf-8"))
     guide_controls = extract_controls(guide_path.read_text(encoding="utf-8"))
@@ -85,6 +117,11 @@ def main() -> None:
         for error in errors:
             print(error)
         raise SystemExit(1)
+
+    subprocess.run(
+        [sys.executable, str(root / "tools/generate_control_artifacts.py"), "--root", str(root), "--check"],
+        check=True,
+    )
 
     print(f"control coverage check passed ({len(expected)} registered controls)")
 

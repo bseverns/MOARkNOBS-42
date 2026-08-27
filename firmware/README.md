@@ -94,6 +94,8 @@ Ctrl3 and Ctrl4 defer their ordinary single action until the 300 ms double-press
 
 The former Ctrl5 collision is removed: rapid taps can no longer be classified as an LFO toggle. Ctrl5 singles continue to update `g_tappedBPM`, while the dedicated LFO chord preserves the previous live lane initialization and tuning-retention behavior.
 
+The OLED also acts as a contextual command palette. Holding Ctrl0-Ctrl5 shows that control's semantic namespace and useful chord continuations; recognized chord prefixes show deeper continuations. The compact firmware table and [generated quick reference](../docs/reference/generated/OnDeviceQuickReference.md) both come from [the on-device control registry](../docs/reference/on_device_control_registry.json), so help copy and gesture metadata share one machine-readable source. Config, LFO, jitter, and diagnostic views retain priority and use persistent mode headers.
+
 ## First Reading Path
 
 If you are learning this firmware by reading code, start with

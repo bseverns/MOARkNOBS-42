@@ -4,6 +4,8 @@ The raw button/combination table is useful, but it is not the easiest way to lea
 
 This page groups the combos by intention so a new player can memorize the ones that matter first.
 
+While any control button is held, the OLED now acts as a contextual command palette. It names that control's family and shows the most useful continuations; recognized two-button prefixes reveal their available three- or four-button continuations. The compact, generated [On-Device Control Quick Reference](../reference/generated/OnDeviceQuickReference.md) comes from the same registry as the firmware help table.
+
 ![Control-button map highlighting recovery, profile, arp, reactive-control, and mapping combo clusters.](../assets/workflows/combo-map-overview.png)
 
 ## Start here if you are new

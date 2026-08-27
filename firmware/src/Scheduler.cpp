@@ -164,7 +164,7 @@ void initializeSchedulers() {
             if (displayManager.isStatusOverlayActive() &&
                 !buttonManager.isOnDeviceConfigModeActive() &&
                 !buttonManager.isLfoTuningModeActive() && !g_jitterTuningActive &&
-                !diagnosticMode) {
+                !diagnosticMode && buttonManager.controlHelpMask() == 0) {
                 return;
             }
             displayManager.beginDraw();
@@ -184,6 +184,10 @@ void initializeSchedulers() {
                 const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,
                                               midiHandler, diagSnapshot);
+                displayManager.endDraw();
+                return;
+            }
+            if (renderControlHelpIfActive()) {
                 displayManager.endDraw();
                 return;
             }

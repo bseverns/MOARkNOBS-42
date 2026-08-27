@@ -48,6 +48,8 @@ This matrix tracks whether each major runtime feature has an on-device control p
 ## Verification Notes
 
 - Modal OLED views now dominate status overlays while active.
-- LFO and jitter tuning both have persistent OLED mode views.
+- Config, LFO, jitter, and diagnostics use persistent, unmistakable mode headers.
+- Held control buttons expose registry-generated namespaces and valid continuations on the OLED.
 - Status overlays remain useful outside modal modes.
-- Run `python3 tools/check_control_coverage.py --root .` after changing button combos or this matrix.
+- `docs/reference/on_device_control_registry.json` generates the firmware help table and compact quick reference.
+- Run `python3 tools/generate_control_artifacts.py --root .` after registry edits, then `python3 tools/check_control_coverage.py --root .` to verify generated artifacts and coverage.

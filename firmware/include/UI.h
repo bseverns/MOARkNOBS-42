@@ -11,6 +11,7 @@ bool renderControlOverlayIfActive();
 bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context);
 bool renderLfoTuningViewIfActive();
 bool renderJitterTuningViewIfActive();
+bool renderControlHelpIfActive();
 void streamWebSerialScope();
 void streamWebSerialState();
 void flushPendingFilterPersists();

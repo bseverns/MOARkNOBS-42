@@ -231,6 +231,7 @@ class DisplayManager {
 #if defined(UNIT_TEST)
     // Unity seam for simulating a missing or failed OLED bring-up.
     void setTestInitializationResult(bool present, bool ok);
+    const String &statusMessageForTest() const { return _statusMessage; }
 #endif
 
   private:

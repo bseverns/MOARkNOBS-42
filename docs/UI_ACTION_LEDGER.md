@@ -1,6 +1,8 @@
 # UI Action Ledger
 
-**Source of truth for all button gestures and their side effects.**
+**Detailed behavioral ledger for all button gestures and their side effects.**
+
+The machine-readable source for gesture identity, control family, interaction layer, reversibility, generated quick reference, and OLED chord-help strings is [`reference/on_device_control_registry.json`](reference/on_device_control_registry.json). This ledger remains the detailed side-effect view and is checked against that registry.
 
 This document captures every user gesture, its conditions, resulting actions, OLED feedback, LED behavior, and whether it triggers persistent storage writes or WebSerial events.
 
@@ -194,10 +196,11 @@ When multiple display producers are active at once, OLED ownership resolves in t
 
 1. Startup animation
 2. Modal edit views (`on-device config`, `LFO tune`, `jitter tune`, `diagnostics`)
-3. Status overlays / temporary messages (only when no modal edit view is active)
-4. Control overlays (`filter`, `arp`, `arp edit`, `note dynamics`)
-5. Screensaver
-6. Baseline context view
+3. Held-control contextual command palette
+4. Status overlays / temporary messages (only when no modal edit view is active)
+5. Control overlays (`filter`, `arp`, `arp edit`, `note dynamics`)
+6. Screensaver
+7. Baseline context view
 
 This is enforced in the low-priority display scheduler path.
 

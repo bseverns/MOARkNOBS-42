@@ -249,6 +249,7 @@ void ButtonManager::enterOnDeviceConfigMode(ButtonManagerContext &context) {
         context.diagnosticMode = false;
         context.ledManager.setDiagnosticMode(false);
     }
+    context.ledManager.setPanelModeIndicator(PanelModeIndicator::Config);
     context.displayManager.displayStatus("Config Mode ON", 1200);
 }
 
@@ -264,6 +265,7 @@ void ButtonManager::exitOnDeviceConfigMode(ButtonManagerContext &context, bool a
     _onDeviceConfigModeActive = false;
     _onDeviceConfigModeDirty = false;
     _lastConfigFloorPotBucket = -1;
+    context.ledManager.setPanelModeIndicator(PanelModeIndicator::None);
     context.displayManager.displayStatus(saved ? "Config Saved" : "Config Mode OFF", 1200);
 }
 
@@ -276,6 +278,7 @@ void ButtonManager::enterLfoTuningMode(ButtonManagerContext &context) {
     _lastLfoTuneDepth = -1.0f;
     _lastLfoTuneRatioIndex = -1;
     _lastLfoTuneBipolarState = -1;
+    context.ledManager.setPanelModeIndicator(PanelModeIndicator::Lfo);
     context.displayManager.displayStatus("LFO Tune ON", 1000);
 }
 
@@ -284,6 +287,7 @@ void ButtonManager::exitLfoTuningMode(ButtonManagerContext &context) {
     _lfoTuningActive = false;
     _lastLfoTuneRatioIndex = -1;
     _lastLfoTuneBipolarState = -1;
+    context.ledManager.setPanelModeIndicator(PanelModeIndicator::None);
     context.displayManager.displayStatus("LFO Tune OFF", 1000);
 }
 
@@ -1252,9 +1256,15 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
 
     // After updating each control button, check for multi-button combos
     const uint8_t mask = _scanner.controlMask();
+    _controlHelpMask = mask;
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
     bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive && !_lfoTuningActive;
     g_jitterTuningActive = jitterActive;
+    if (jitterActive) {
+        context.ledManager.setPanelModeIndicator(PanelModeIndicator::Jitter);
+    } else if (!_onDeviceConfigModeActive && !_lfoTuningActive && !context.diagnosticMode) {
+        context.ledManager.setPanelModeIndicator(PanelModeIndicator::None);
+    }
     dispatchGestureEvents(
         _gesture.updateControlMask(mask, now, !_onDeviceConfigModeActive && !_lfoTuningActive),
         context);

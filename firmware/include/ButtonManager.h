@@ -179,6 +179,8 @@ class ButtonManager {
     bool isOnDeviceConfigModeActive() const { return _onDeviceConfigModeActive; }
     bool isLfoTuningModeActive() const { return _lfoTuningActive; }
     uint8_t lfoTuningIndex() const { return _lfoTuningIndex; }
+    // Debounced Ctrl0-Ctrl5 mask used by the OLED contextual command palette.
+    uint8_t controlHelpMask() const { return _controlHelpMask; }
 
     /*
     Directly read a muxed button's state; useful for unit tests and safe to
@@ -209,6 +211,8 @@ class ButtonManager {
             _ctrlPotValues[idx] = value;
         }
     }
+
+    void setControlHelpMaskForTest(uint8_t mask) { _controlHelpMask = mask; }
 #endif
 
   private:
@@ -266,6 +270,7 @@ class ButtonManager {
     float _lastLfoTuneDepth = -1.0f;
     int8_t _lastLfoTuneRatioIndex = -1;
     int8_t _lastLfoTuneBipolarState = -1;
+    uint8_t _controlHelpMask = 0;
 
   public:
     // Return the latest smoothed value for one of the control pots.

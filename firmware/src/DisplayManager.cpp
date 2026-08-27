@@ -1047,6 +1047,9 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     case 0: { // Button matrix snapshot
         _display.setCursor(0, 0);
         for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
+            if (r == 0) {
+                _display.print("[DIAG BTN] ");
+            }
             for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
                 uint8_t idx = r * BUTTON_COLS + c;
                 // Polarity: '1' = pressed (active-low scan normalized to active-high display)
@@ -1059,6 +1062,9 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     case 1: { // Envelope baselines
         for (uint8_t i = 0; i < ctx.envelopes.size() && i < 6; ++i) {
             _display.setCursor(0, i * 10);
+            if (i == 0) {
+                _display.print("[DIAG EF] ");
+            }
             _display.print("EF");
             _display.print(i);
             _display.print(':');
@@ -1068,7 +1074,7 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     }
     case 2: { // MIDI counters
         _display.setCursor(0, 0);
-        _display.print("RX:");
+        _display.print("[DIAG MIDI] RX:");
         _display.println(midi.getRxCount());
         _display.setCursor(0, 10);
         _display.print("TX:");
@@ -1083,7 +1089,7 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     }
     case 3: { // Loop and ISR timing
         _display.setCursor(0, 0);
-        _display.print("Loop mx:");
+        _display.print("[DIAG PERF] L:");
         _display.println(diag.maxLoopMicros);
         _display.setCursor(0, 10);
         _display.print("ISR mx:");
@@ -1101,7 +1107,7 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     case kDiagnosticPageDebug: { // Deep dive: EF health, LFO taps, and tempo lock.
         // Line 0: tempo and clock lock status.
         _display.setCursor(0, 0);
-        _display.print("DBG BPM:");
+        _display.print("[DIAG] BPM:");
         if (g_tappedBPM > 0.0f) {
             _display.print(g_tappedBPM, 1);
         } else {

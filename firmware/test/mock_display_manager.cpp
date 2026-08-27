@@ -20,8 +20,14 @@ void DisplayManager::drawArpSettings(uint8_t currentStep, const char *shapeAbbr)
 }
 
 void DisplayManager::drawText(const char *line1, const char *line2, const char *line3) {
-    (void)line1;
-    (void)line2;
-    (void)line3;
+    _statusMessage = line1 ? line1 : "";
+    if (line2 && line2[0] != '\0') {
+        _statusMessage += "\n";
+        _statusMessage += line2;
+    }
+    if (line3 && line3[0] != '\0') {
+        _statusMessage += "\n";
+        _statusMessage += line3;
+    }
 }
 #endif

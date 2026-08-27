@@ -343,6 +343,8 @@ void test_jitter_combo_updates_settings() {
     bm.scanControlInputs(ctx);
 
     TEST_ASSERT_TRUE(g_jitterTuningActive);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(PanelModeIndicator::Jitter),
+                            static_cast<uint8_t>(led.getPanelModeIndicator()));
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.0f, g_jitterSettings.depth);
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, g_jitterSettings.smoothness);
 }
@@ -374,6 +376,8 @@ void test_config_mode_combo_autosaves_dirty_changes() {
 
     bm.handleMultiButtonPress(kConfigMask, ctx);
     TEST_ASSERT_TRUE(bm.isOnDeviceConfigModeActive());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(PanelModeIndicator::Config),
+                            static_cast<uint8_t>(led.getPanelModeIndicator()));
     TEST_ASSERT_FALSE(profileRuntimeRequests.savePending());
 
     bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 4, ctx); // change CC/data1 + dirty
@@ -383,6 +387,8 @@ void test_config_mode_combo_autosaves_dirty_changes() {
     bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 5, ctx); // exit + autosave
     TEST_ASSERT_FALSE(bm.isOnDeviceConfigModeActive());
     TEST_ASSERT_FALSE(bm._onDeviceConfigModeDirty);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(PanelModeIndicator::None),
+                            static_cast<uint8_t>(led.getPanelModeIndicator()));
     TEST_ASSERT_TRUE(profileRuntimeRequests.savePending());
 }
 
@@ -446,6 +452,8 @@ void test_lfo_tuning_combo_and_route_cycle() {
 
     bm.handleMultiButtonPress(kLfoMask, ctx);
     TEST_ASSERT_TRUE(bm.isLfoTuningModeActive());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(PanelModeIndicator::Lfo),
+                            static_cast<uint8_t>(led.getPanelModeIndicator()));
     TEST_ASSERT_EQUAL_UINT8(0, bm.lfoTuningIndex());
 
     bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 4, ctx); // add internal route
@@ -466,4 +474,6 @@ void test_lfo_tuning_combo_and_route_cycle() {
 
     bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 5, ctx); // exit
     TEST_ASSERT_FALSE(bm.isLfoTuningModeActive());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(PanelModeIndicator::None),
+                            static_cast<uint8_t>(led.getPanelModeIndicator()));
 }

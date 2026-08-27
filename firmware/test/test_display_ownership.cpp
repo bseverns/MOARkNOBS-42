@@ -80,3 +80,31 @@ void test_display_owner_od08_screensaver_only_when_idle() {
     idle.screensaverDue = true;
     TEST_ASSERT_TRUE(display::screensaverMayRender(idle));
 }
+
+void test_display_owner_od09_root_context_help_dominates_status() {
+    OwnershipRequest request{};
+    request.contextHelpActive = true;
+    request.statusActive = true;
+
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Owner::ContextHelp),
+                            static_cast<uint8_t>(display::resolveOwner(request)));
+    TEST_ASSERT_FALSE(display::statusMayRender(request));
+}
+
+void test_display_owner_od10_prefix_context_help_dominates_control_overlay() {
+    OwnershipRequest request{};
+    request.contextHelpActive = true;
+    request.controlActive = true;
+
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Owner::ContextHelp),
+                            static_cast<uint8_t>(display::resolveOwner(request)));
+}
+
+void test_display_owner_od11_modal_dominates_context_help() {
+    OwnershipRequest request{};
+    request.modalActive = true;
+    request.contextHelpActive = true;
+
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Owner::Modal),
+                            static_cast<uint8_t>(display::resolveOwner(request)));
+}

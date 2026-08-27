@@ -646,6 +646,21 @@ void test_display_no_ack_suppresses_runtime_retry() {
     TEST_ASSERT_TRUE(displayManager.begin());
 }
 
+void test_ui_context_help_uses_registry_generated_copy() {
+    buttonManager.setControlHelpMaskForTest(1u << 0);
+    TEST_ASSERT_TRUE(renderControlHelpIfActive());
+    TEST_ASSERT_EQUAL_STRING("C0 MOD / REACT\n+C1 ARG +C2 PAIR\n+C4 EF +C5 BEND",
+                             displayManager.statusMessageForTest().c_str());
+
+    buttonManager.setControlHelpMaskForTest((1u << 0) | (1u << 1));
+    TEST_ASSERT_TRUE(renderControlHelpIfActive());
+    TEST_ASSERT_EQUAL_STRING("C0+C1 ARG / LFO\n+C3 LFO TUNE\n+C4 LFO LIVE",
+                             displayManager.statusMessageForTest().c_str());
+
+    buttonManager.setControlHelpMaskForTest(0);
+    TEST_ASSERT_FALSE(renderControlHelpIfActive());
+}
+
 void test_webserial_slot_patch_emits_schema_and_legacy_payloads() {
     clearTestLogBuffer();
     webSerialStreaming = true;

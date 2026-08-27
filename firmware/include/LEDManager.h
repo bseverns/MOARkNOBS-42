@@ -42,6 +42,9 @@ Warning animations that temporarily override the strip during spicy actions.
 */
 enum class LEDWarning { None, Destructive, Diagnostic };
 
+// Persistent control-LED signatures for modal panel states.
+enum class PanelModeIndicator { None, Config, Lfo, Jitter, Diagnostic };
+
 /*
 Manages the WS2812 LED strip used for visual feedback.
 */
@@ -139,6 +142,10 @@ class LEDManager {
     // Pulse a single LED while diagnostics are active.
     void setDiagnosticMode(bool enabled);
 
+    // Set the persistent control-LED signature for the current edit mode.
+    void setPanelModeIndicator(PanelModeIndicator mode);
+    PanelModeIndicator getPanelModeIndicator() const { return panelModeIndicator; }
+
   private:
     void applyBrightness();
     void syncToOctoBuffer();
@@ -164,6 +171,7 @@ class LEDManager {
     bool controlActive = false;
     bool diagnosticMode = false;
     unsigned long diagStart = 0;
+    PanelModeIndicator panelModeIndicator = PanelModeIndicator::None;
     bool warningActive = false;
     LEDWarning warningType = LEDWarning::None;
     unsigned long warningStart = 0;
