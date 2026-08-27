@@ -158,7 +158,7 @@ def main() -> None:
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Run docs, release, App, and Bridge guards. Use --firmware for firmware lanes.",
+        help="Run docs, release, App, Bridge, and firmware guards.",
     )
     args = parser.parse_args()
 
@@ -170,7 +170,7 @@ def main() -> None:
     selected_app = args.app or args.full
     selected_bridge = args.bridge or args.full
     selected_release = args.release or args.full
-    selected_firmware = args.firmware
+    selected_firmware = args.firmware or args.full
     env_only = not any(
         [selected_docs, selected_app, selected_bridge, selected_release, selected_firmware]
     )

@@ -64,6 +64,7 @@ constexpr uint8_t panicMask = maskCtrl0 | maskCtrl1 | maskCtrl2;
 constexpr uint8_t configModeMask = maskCtrl0 | maskCtrl2 | maskCtrl3 | maskCtrl5;
 constexpr uint8_t clockSourceMask = maskCtrl1 | maskCtrl4 | maskCtrl5;
 constexpr uint8_t lfoTuningMask = maskCtrl0 | maskCtrl1 | maskCtrl3;
+constexpr uint8_t lfoLiveToggleMask = maskCtrl0 | maskCtrl1 | maskCtrl4;
 constexpr unsigned long kTuningStatusMs = 600;
 
 // Emit one slot patch so the browser can follow on-device edits.
@@ -633,25 +634,6 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         streamArgPatch(context.configManager);
         break;
     }
-    case 5: {
-        // Double Press (Ctrl #5): make LFO 1 a live source for the active slot.
-        // A never-configured lane starts centered at full depth so enabling it
-        // has an audible effect; later toggles preserve user tuning.
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
-        SlotLfoLane &lane = slot.lfo.lfo[0];
-        const bool enable = !lane.enabled();
-        if (enable && lane.amount == 0) {
-            lane.setMode(ModCombineMode::Centered);
-            lane.amount = 100;
-        }
-        lane.setEnabled(enable);
-        slot.lfo = sanitizeSlotLfoConfig(slot.lfo);
-        context.configManager.saveSlot(context.activePot, slot);
-
-        context.displayManager.displayStatus(enable ? "LFO1 LIVE ON" : "LFO1 LIVE OFF", 1200);
-        streamSlotPatch(context.configManager, context.activePot);
-        break;
-    }
     default:
         context.displayManager.displayStatus("Unknown double press", 1000);
         break;
@@ -1048,6 +1030,24 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         return;
     } else if (_lfoTuningActive) {
         return;
+    }
+    // (0.9) Ctrl0 + Ctrl1 + Ctrl4: make LFO 1 a live source for the active slot.
+    // A never-configured lane starts centered at full depth so enabling it has
+    // an audible effect; later toggles preserve user tuning.
+    else if (pressedButtons == lfoLiveToggleMask) {
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        SlotLfoLane &lane = slot.lfo.lfo[0];
+        const bool enable = !lane.enabled();
+        if (enable && lane.amount == 0) {
+            lane.setMode(ModCombineMode::Centered);
+            lane.amount = 100;
+        }
+        lane.setEnabled(enable);
+        slot.lfo = sanitizeSlotLfoConfig(slot.lfo);
+        context.configManager.saveSlot(context.activePot, slot);
+
+        context.displayManager.displayStatus(enable ? "LFO1 LIVE ON" : "LFO1 LIVE OFF", 1200);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==

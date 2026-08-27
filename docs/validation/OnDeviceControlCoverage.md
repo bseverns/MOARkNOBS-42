@@ -26,7 +26,7 @@ This matrix tracks whether each major runtime feature has an on-device control p
 | LFO         | Shape                        | LFO tune mode + `Ctrl2`                                  | persistent LFO tune view + status text          | Yes      |
 | LFO         | Sync enable                  | LFO tune mode + `Ctrl3`                                  | persistent LFO tune view + status text          | Yes      |
 | LFO         | Route target                 | LFO tune mode + `Ctrl4`                                  | persistent LFO tune view + status text          | Yes      |
-| LFO         | Toggle live LFO 1 slot lane   | double-press `Ctrl5`                                     | status text (`LFO1 LIVE ON/OFF`)                 | Yes      |
+| LFO         | Toggle live LFO 1 slot lane   | `Ctrl0+Ctrl1+Ctrl4`                                      | status text (`LFO1 LIVE ON/OFF`)                 | Yes      |
 | LFO         | Frequency                    | LFO tune mode + `CtrlPot0`                               | persistent LFO tune view + short status text    | Yes      |
 | LFO         | Depth                        | LFO tune mode + `CtrlPot1`                               | persistent LFO tune view + short status text    | Yes      |
 | LFO         | Sync ratio                   | LFO tune mode + `CtrlPot2` (sync ON)                     | persistent LFO tune view + short status text    | Yes      |

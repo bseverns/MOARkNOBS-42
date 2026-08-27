@@ -89,6 +89,7 @@ These are where the deck starts acting more like a reactive instrument.
 | `Ctrl0 + Ctrl1` | cycle ARG method                 |
 | `Ctrl0 + Ctrl2` | cycle ARG envelope pair          |
 | `Ctrl0 + Ctrl4` | enable EF and randomize settings |
+| `Ctrl0 + Ctrl1 + Ctrl4` | toggle live LFO 1 for the active slot |
 
 These are great once you already understand EF and ARG, but they are exactly the ones that can feel like "black magic" without context.
 

@@ -80,7 +80,7 @@ Non-persistent live `SET_*` mutations live in `ProtocolLiveControlHandlers`.
 These are ownership boundaries only: command names, response shapes,
 persistence semantics, and the durable layout are unchanged.
 
-## On-device Double-press Editing
+## On-device Live Editing
 
 The performance surface can now reach three formerly configurator-heavy slot settings without entering config mode:
 
@@ -88,11 +88,11 @@ The performance surface can now reach three formerly configurator-heavy slot set
 | ------- | ---------------- | ------------- |
 | Double-press `Ctrl3` | Cycle EF oversampling through 1x, 2x, 4x, 8x, 16x, and 32x | Reconfigures the assigned follower immediately |
 | Double-press `Ctrl4` | Toggle the slot-local ARG combiner | Switches the configured ARG method and source pair in or out |
-| Double-press `Ctrl5` | Toggle the fixed LFO 1 lane | Enables live centered modulation at 100% for an untuned lane and preserves later tuning |
+| `Ctrl0+Ctrl1+Ctrl4` | Toggle the fixed LFO 1 lane | Enables live centered modulation at 100% for an untuned lane and preserves later tuning |
 
-Ctrl3–Ctrl5 defer their ordinary single action until the 300 ms double-press window expires. Double presses therefore do not also change channel/data1 or register a BPM tap. The edits persist with the slot and stream `slot_patch` readback to an attached configurator. The complete short/long/double/combo map lives in [include/ButtonManager/README.md](include/ButtonManager/README.md).
+Ctrl3 and Ctrl4 defer their ordinary single action until the 300 ms double-press window expires, so their double actions do not also change channel or data1. Ctrl5 has no double-press action: each tap-tempo press fires immediately on release, including fast 240 BPM tapping. The edits persist with the slot and stream `slot_patch` readback to an attached configurator. The complete short/long/double/combo map lives in [include/ButtonManager/README.md](include/ButtonManager/README.md).
 
-The timing audit is explicit about the remaining musical collision: 240 BPM taps are 250 ms apart and classify as Ctrl5 doubles; 200 BPM sits exactly on the boundary; 180 BPM has only about 33 ms of margin before debounce and human timing variation. The current behavior is retained for compatibility while the Ctrl5 vocabulary is reviewed. Use the App/device-clock lane for fast tempo entry rather than treating this build as proof that rapid deck tapping is unambiguous. Confirmed Ctrl5 singles now update `g_tappedBPM`; the previous handler only displayed the calculated value.
+The former Ctrl5 collision is removed: rapid taps can no longer be classified as an LFO toggle. Ctrl5 singles continue to update `g_tappedBPM`, while the dedicated LFO chord preserves the previous live lane initialization and tuning-retention behavior.
 
 ## First Reading Path
 

@@ -68,11 +68,11 @@ _Long-press stunts ask for a quick confirm tap after you let go—no more accide
 | Ctrl2  | Cycle EF assignment                  | Toggle Slot Active              | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
 | Ctrl3  | Cycle MIDI Channel                   | Reload persisted configuration | Cycle EF oversampling (1x/2x/4x/8x/16x/32x)                                |
 | Ctrl4  | Cycle registry number (CC/NRPN/RPN)  | Save active profile/config      | Toggle the active slot's ARG combiner                                       |
-| Ctrl5  | Tap BPM (exit diagnostics if active) | Enter diagnostics / cycle pages | Toggle live LFO 1 modulation for the active slot                            |
+| Ctrl5  | Tap BPM immediately (exit diagnostics if active) | Enter diagnostics / cycle pages | None |
 
-Ctrl3–Ctrl5 use exclusive double presses. Their normal short-press action waits for the 300 ms double-press window to close, so changing oversampling does not also change the MIDI channel, toggling ARG does not increment `data1`, and toggling LFO 1 does not register a tempo tap. A chord consumes its participating button releases, preventing combo gestures from leaking these solo actions.
+Ctrl3 and Ctrl4 use exclusive double presses. Their normal short-press action waits for the 300 ms double-press window to close, so changing oversampling does not also change the MIDI channel and toggling ARG does not increment `data1`. Ctrl5 fires tap tempo immediately on release and has no double-press action, so rapid tempo taps remain tempo taps. A chord consumes its participating button releases, preventing combo gestures from leaking these solo actions.
 
-The Ctrl5 double press edits the active slot's fixed LFO 1 lane. A lane that has never been tuned starts in **Centered** mode at **100%** so enabling it immediately produces live modulation. Turning it off preserves mode and amount for the next enable. All three new double-press edits are saved to the slot and emitted as `slot_patch` updates so an attached configurator follows the hardware state.
+The `Ctrl0+Ctrl1+Ctrl4` chord edits the active slot's fixed LFO 1 lane. A lane that has never been tuned starts in **Centered** mode at **100%** so enabling it immediately produces live modulation. Turning it off preserves mode and amount for the next enable. These live edits are saved to the slot and emitted as `slot_patch` updates so an attached configurator follows the hardware state.
 When you arm the persisted-config reload (**Ctrl3**) or diagnostic toggle (**Ctrl5**) with a long press, the LED strip throws a full-strip warning animation. The red-and-white reload warning gives you time to cancel before unsaved runtime edits are replaced; the teal shimmer marks diagnostics.
 
 ### Slot Buttons
@@ -88,6 +88,7 @@ When you arm the persisted-config reload (**Ctrl3**) or diagnostic toggle (**Ctr
 | --------------------- | -------------------------------- |
 | Ctrl0 + Ctrl1 + Ctrl2 | Panic-safe baseline reset (stop arp, disable EF follow, reload active profile) |
 | Ctrl0 + Ctrl1 + Ctrl3 | Toggle LFO quick-tune mode |
+| Ctrl0 + Ctrl1 + Ctrl4 | Toggle live LFO 1 modulation for the active slot |
 | Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5 | Toggle on-device config mode |
 | Ctrl3 + Ctrl4 + Ctrl5 | Toggle USB MIDI output           |
 | Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |

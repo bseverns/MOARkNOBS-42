@@ -169,7 +169,7 @@ void test_double_press_ctrl2_cycles_midi_type() {
     TEST_ASSERT_EQUAL(MIDIMessageType::Note, slot.type);
 }
 
-void test_double_press_ctrl3_to_ctrl5_live_controls() {
+void test_double_press_ctrl3_ctrl4_and_lfo_live_combo() {
     auto pm = createPotentiometerManager();
     auto bm = createButtonManager(&pm);
 
@@ -219,16 +219,55 @@ void test_double_press_ctrl3_to_ctrl5_live_controls() {
     TEST_ASSERT_EQUAL_UINT8(1, cfg.getSlot(activePot).arg.enabled);
     TEST_ASSERT_EQUAL_UINT8(10, cfg.getSlotData1(activePot));
 
-    doubleTap(5, 2000);
+    constexpr uint8_t kLfoLiveMask =
+        static_cast<uint8_t>((1u << 0) | (1u << 1) | (1u << 4));
+    bm.handleMultiButtonPress(kLfoLiveMask, ctx);
     const SlotLfoLane &enabledLane = cfg.getSlot(activePot).lfo.lfo[0];
     TEST_ASSERT_TRUE(enabledLane.enabled());
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Centered),
                             static_cast<uint8_t>(enabledLane.mode()));
     TEST_ASSERT_EQUAL_INT(100, enabledLane.amount);
 
-    doubleTap(5, 2500);
+    bm.handleMultiButtonPress(kLfoLiveMask, ctx);
     TEST_ASSERT_FALSE(cfg.getSlot(activePot).lfo.lfo[0].enabled());
     TEST_ASSERT_EQUAL_INT(100, cfg.getSlot(activePot).lfo.lfo[0].amount);
+}
+
+void test_ctrl5_fast_taps_update_tempo_without_lfo_toggle() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 1);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 1;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
+
+    const uint8_t ctrl5 = NUM_VIRTUAL_BUTTONS + 5;
+    cfg.getSlot(activePot).lfo.lfo[0].setEnabled(false);
+    g_tappedBPM = 120.0f;
+
+    fakeMillis = 3000;
+    bm.updateButtonStateMachine(ctrl5, true, ctx);
+    fakeMillis = 3050;
+    bm.updateButtonStateMachine(ctrl5, false, ctx);
+    fakeMillis = 3250;
+    bm.updateButtonStateMachine(ctrl5, true, ctx);
+    fakeMillis = 3300;
+    bm.updateButtonStateMachine(ctrl5, false, ctx);
+
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 240.0f, g_tappedBPM);
+    TEST_ASSERT_FALSE(cfg.getSlot(activePot).lfo.lfo[0].enabled());
 }
 
 void test_ctrl3_single_waits_out_double_press_window() {

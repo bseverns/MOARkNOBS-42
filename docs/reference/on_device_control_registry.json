@@ -24,6 +24,7 @@
     { "id": "clock_out", "control": "Ctrl1+Ctrl5" },
     { "id": "clock_source", "control": "Ctrl1+Ctrl4+Ctrl5" },
     { "id": "lfo_tune", "control": "Ctrl0+Ctrl1+Ctrl3" },
+    { "id": "lfo_live_toggle", "control": "Ctrl0+Ctrl1+Ctrl4" },
     { "id": "config_mode", "control": "Ctrl0+Ctrl2+Ctrl3+Ctrl5" },
     { "id": "diagnostics", "control": "long-press Ctrl5" },
     { "id": "jitter_tune", "control": "hold Ctrl0+Ctrl3+Ctrl4" }

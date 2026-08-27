@@ -34,15 +34,6 @@ Counts runReleaseSequence(const std::vector<unsigned long> &releases) {
     return counts;
 }
 
-std::vector<unsigned long> tempoReleases(unsigned bpm, size_t taps = 8) {
-    const double intervalMs = 60000.0 / static_cast<double>(bpm);
-    std::vector<unsigned long> releases;
-    for (size_t index = 0; index < taps; ++index) {
-        releases.push_back(static_cast<unsigned long>(1000.0 + intervalMs * index + 0.5));
-    }
-    return releases;
-}
-
 void testThresholdBoundaries() {
     bool pending = false;
     unsigned long lastRelease = 0;
@@ -78,19 +69,11 @@ void testRepeatedFastCtrl3AndCtrl4SinglesCollideWithDoubles() {
     }
 }
 
-void testTapTempoVocabulary() {
+void testTapTempoIntervals() {
     assert(tappedBpmFromInterval(1000) == 60.0f);
     assert(tappedBpmFromInterval(500) == 120.0f);
     assert(tappedBpmFromInterval(300) == 200.0f);
     assert(tappedBpmFromInterval(250) == 240.0f);
-    for (unsigned bpm : {60U, 120U, 180U, 200U}) {
-        const Counts counts = runReleaseSequence(tempoReleases(bpm));
-        assert(counts.singles == 8);
-        assert(counts.doubles == 0);
-    }
-    const Counts fast = runReleaseSequence(tempoReleases(240));
-    assert(fast.singles == 0);
-    assert(fast.doubles == 4);
 }
 
 void testChordConsumptionClearsPendingSoloActions() {
@@ -124,7 +107,7 @@ void testReleaseOrderingAroundChordConsumption() {
 int main() {
     testThresholdBoundaries();
     testRepeatedFastCtrl3AndCtrl4SinglesCollideWithDoubles();
-    testTapTempoVocabulary();
+    testTapTempoIntervals();
     testChordConsumptionClearsPendingSoloActions();
     testReleaseOrderingAroundChordConsumption();
     std::cout << "button gesture timing tests passed\n";

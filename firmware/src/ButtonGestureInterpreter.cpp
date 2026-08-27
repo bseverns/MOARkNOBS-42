@@ -108,13 +108,18 @@ void ButtonGestureInterpreter::resolveRelease(uint8_t index, unsigned long now,
         return;
     }
 
-    if (mode.immediateShortPresses) {
+    const bool immediateCtrl5 = index == NUM_VIRTUAL_BUTTONS + 5;
+    if (mode.immediateShortPresses || immediateCtrl5) {
         events.add(ButtonGestureEventType::SinglePress, index);
         consumeDeferredPress(machine.shortPressPending, machine.lastShortRelease);
         return;
     }
 
-    const bool deferredControl = index >= NUM_VIRTUAL_BUTTONS + 3;
+    // Ctrl3 and Ctrl4 still own exclusive double-press actions. Ctrl5 is
+    // deliberately immediate so fast tap-tempo input can never be classified
+    // as a double press.
+    const bool deferredControl = index >= NUM_VIRTUAL_BUTTONS + 3 &&
+                                 index <= NUM_VIRTUAL_BUTTONS + 4;
     if (deferredControl) {
         const DeferredPressDecision decision =
             registerDeferredRelease(machine.shortPressPending, machine.lastShortRelease, now);
@@ -135,7 +140,7 @@ void ButtonGestureInterpreter::resolveRelease(uint8_t index, unsigned long now,
 
 ButtonGestureEvents ButtonGestureInterpreter::flushDeferred(unsigned long now) {
     ButtonGestureEvents events;
-    for (uint8_t controlIndex = 3; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
+    for (uint8_t controlIndex = 3; controlIndex <= 4; ++controlIndex) {
         const uint8_t index = static_cast<uint8_t>(NUM_VIRTUAL_BUTTONS + controlIndex);
         ButtonStateMachine &machine = _machines[index];
         if (flushDeferredPress(machine.shortPressPending, machine.lastShortRelease, now)) {

@@ -107,6 +107,23 @@ void testExclusiveControlDoublePresses() {
     assert(!hasEvent(gestures.flushDeferred(500), ButtonGestureEventType::SinglePress, control3));
 }
 
+void testCtrl5PressesAreImmediateSingles() {
+    constexpr uint8_t control5 = NUM_VIRTUAL_BUTTONS + 5;
+    ButtonGestureInterpreter gestures;
+    gestures.reset();
+
+    gestures.updateButton(control5, true, 10);
+    ButtonGestureEvents firstRelease = gestures.updateButton(control5, false, 50);
+    assert(hasEvent(firstRelease, ButtonGestureEventType::SinglePress, control5));
+    assert(!hasEvent(firstRelease, ButtonGestureEventType::DoublePress, control5));
+
+    gestures.updateButton(control5, true, 100);
+    ButtonGestureEvents secondRelease = gestures.updateButton(control5, false, 150);
+    assert(hasEvent(secondRelease, ButtonGestureEventType::SinglePress, control5));
+    assert(!hasEvent(secondRelease, ButtonGestureEventType::DoublePress, control5));
+    assert(!hasEvent(gestures.flushDeferred(500), ButtonGestureEventType::SinglePress, control5));
+}
+
 void testLongPressConfirmation() {
     ButtonGestureInterpreter gestures;
     gestures.reset();
@@ -395,6 +412,7 @@ void testShortAndLongSpecialChords() {
 int main() {
     testLegacySingleAndDoublePresses();
     testExclusiveControlDoublePresses();
+    testCtrl5PressesAreImmediateSingles();
     testLongPressConfirmation();
     testSettledChordConsumesSoloReleases();
     testEveryTwoButtonPressAndReleaseOrder();

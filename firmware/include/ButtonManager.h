@@ -49,8 +49,7 @@
 //     - Combo (Ctrl3+4): Cycle LED modes
 //     - Combo (Ctrl4+5): Set slot to Note mode
 //   Ctrl5 (BPM / Diag):
-//     - Short: Tap BPM (or exit diagnostic mode)
-//     - Double: Toggle live LFO 1 modulation for the active slot
+//     - Short: Tap BPM immediately (or exit diagnostic mode)
 //     - Long+Confirm: Enter/cycle diagnostic pages
 //     - Combo (Ctrl0+5): Set slot to Pitch Bend
 //     - Combo (Ctrl1+5): Toggle MIDI clock out
@@ -58,6 +57,7 @@
 //     - Combo (Ctrl3+4+5): Toggle USB MIDI out
 //     - Combo (Ctrl1+4+5): Toggle clock source (EXT follow / INT forced)
 //     - Combo (Ctrl0+1+3): Toggle LFO quick-tune mode
+//     - Combo (Ctrl0+1+4): Toggle live LFO 1 modulation for the active slot
 //   On-device config mode:
 //     - Combo (Ctrl0+2+3+5): Enter dedicated slot config editing mode
 //     - Ctrl0/1: Prev/next slot
@@ -87,6 +87,7 @@
 //   - Ctrl3+4+5: Toggle USB MIDI out
 //   - Ctrl1+4+5: Toggle clock source (EXT follow / INT forced)
 //   - Ctrl0+1+3: Toggle LFO quick-tune mode
+//   - Ctrl0+1+4: Toggle live LFO 1 modulation for the active slot
 //   - Ctrl0+2+3+5: Toggle on-device config mode
 //   - In LFO tune mode, Ctrl4 cycles internal route target for selected LFO
 //   - In LFO tune mode, CtrlPot2 edits sync ratio (sync ON) or bipolar state (sync OFF)

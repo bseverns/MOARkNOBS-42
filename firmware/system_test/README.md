@@ -34,7 +34,7 @@ proving the board, bridge, and OSC stack stay in lockstep.
   config.
 - `mn42_persistence_abuse_runner.js` – Evidence wrapper for persistence abuse. Safe by default: it runs the non-destructive
   boot/apply/readback proof and only runs destructive profile/macro/scene storage checks when `--exercise-storage` is passed.
-- `test_*.cpp` – hardware-oriented subsystem tests, including control-button timing and the Ctrl3/Ctrl4/Ctrl5 double-press paths for EF oversampling, ARG enable, and live LFO 1 modulation.
+- `test_*.cpp` – hardware-oriented subsystem tests, including Ctrl3/Ctrl4 double-press timing, immediate Ctrl5 tap tempo, and the `Ctrl0+Ctrl1+Ctrl4` live LFO 1 chord.
 - `TestHelpers.cpp` – shared glue for those sketches.
 
 ## Running the full-stack script
