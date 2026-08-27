@@ -18,31 +18,16 @@ JSON report: /Users/bseverns/Documents/GitHub/MOARkNOBS-42/logs/live-controls-20
 
 FAIL
 
-## Proven
+## Failure
 
-- USB MIDI output toggle round-trips through `GET_USB_MIDI` / `SET_USB_MIDI`.
-- Note dynamics round-trips through `GET_NOTE_DYNAMICS` / `SET_NOTE_DYNAMICS`.
-- Jitter round-trips through `GET_JITTER` / `SET_JITTER`.
-- Clock round-trips through `GET_CLOCK` / `SET_CLOCK`.
-- Normalized `GET_CONFIG` hash is unchanged before and after the live-only lanes.
-- Live-only controls did not create a config diff on the firmware lane.
+- Error: Operation not permitted, cannot open `/dev/cu.usbmodem192460701`.
+- No device manifest or live-control lane result was captured.
 
-## Lane Summary
+## Evidence Status
 
-- USB MIDI: false -> false -> false
-- Note dynamics: velocity undefined, probability undefined -> velocity undefined, probability undefined -> restored velocity undefined, probability undefined
-- Jitter: depth undefined, smoothness undefined -> depth undefined, smoothness undefined -> restored depth undefined, smoothness undefined
-- Clock: follow_external false, clock_out false, bpm undefined -> follow_external false, clock_out false, bpm undefined -> restored follow_external false, clock_out false, bpm undefined
-
-## Config Stability
-
-- Baseline normalized GET_CONFIG hash: `unknown/not captured`
-- Final normalized GET_CONFIG hash: `unknown/not captured`
-- Stable: no
+This failed attempt does not prove firmware identity, live-control behavior, configuration stability, or cleanup.
 
 ## Caveats
 
-- This receipt proves firmware-side live control behavior directly over the serial/configurator lane.
-- “Does not dirty staged config” is evidenced here by unchanged normalized `GET_CONFIG` state before/after the live-only commands.
-- This receipt does not claim Bridge/App session behavior by itself.
-
+- Retain this only as a diagnostic record of the failed attempt.
+- Rerun with an attached board before citing current-HEAD HIL confidence.

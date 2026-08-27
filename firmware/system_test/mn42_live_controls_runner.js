@@ -572,6 +572,43 @@ function renderMarkdown(report) {
   const live = report.live_controls || {};
   const manifest = report.manifest || {};
   const config = report.config_stability || {};
+  const passed = report.result === 'passed';
+  const evidenceSection = passed
+    ? `## Proven
+
+- USB MIDI output toggle round-trips through \`GET_USB_MIDI\` / \`SET_USB_MIDI\`.
+- Note dynamics round-trips through \`GET_NOTE_DYNAMICS\` / \`SET_NOTE_DYNAMICS\`.
+- Jitter round-trips through \`GET_JITTER\` / \`SET_JITTER\`.
+- Clock round-trips through \`GET_CLOCK\` / \`SET_CLOCK\`.
+- Normalized \`GET_CONFIG\` hash is unchanged before and after the live-only lanes.
+- Live-only controls did not create a config diff on the firmware lane.
+
+## Lane Summary
+
+- USB MIDI: ${boolText(live.usb_midi?.baseline?.usb_midi_out)} -> ${boolText(live.usb_midi?.mutated?.usb_midi_out)} -> ${boolText(live.usb_midi?.restored?.usb_midi_out)}
+- Note dynamics: velocity ${live.note_dynamics?.baseline?.velocity_shift}, probability ${live.note_dynamics?.baseline?.change_probability} -> velocity ${live.note_dynamics?.mutated?.velocity_shift}, probability ${live.note_dynamics?.mutated?.change_probability} -> restored velocity ${live.note_dynamics?.restored?.velocity_shift}, probability ${live.note_dynamics?.restored?.change_probability}
+- Jitter: depth ${live.jitter?.baseline?.depth}, smoothness ${live.jitter?.baseline?.smoothness} -> depth ${live.jitter?.mutated?.depth}, smoothness ${live.jitter?.mutated?.smoothness} -> restored depth ${live.jitter?.restored?.depth}, smoothness ${live.jitter?.restored?.smoothness}
+- Clock: follow_external ${boolText(live.clock?.baseline?.follow_external)}, clock_out ${boolText(live.clock?.baseline?.clock_out_enabled)}, bpm ${live.clock?.baseline?.tapped_bpm} -> follow_external ${boolText(live.clock?.mutated?.follow_external)}, clock_out ${boolText(live.clock?.mutated?.clock_out_enabled)}, bpm ${live.clock?.mutated?.tapped_bpm} -> restored follow_external ${boolText(live.clock?.restored?.follow_external)}, clock_out ${boolText(live.clock?.restored?.clock_out_enabled)}, bpm ${live.clock?.restored?.tapped_bpm}
+
+## Config Stability
+
+- Baseline normalized GET_CONFIG hash: \`${config.baseline_hash}\`
+- Final normalized GET_CONFIG hash: \`${config.final_hash}\`
+- Stable: yes`
+    : `## Failure
+
+- ${report.error || 'Live-control validation did not complete.'}
+- No device manifest or live-control lane result was captured.
+
+## Evidence Status
+
+This failed attempt does not prove firmware identity, live-control behavior, configuration stability, or cleanup.`;
+  const caveats = passed
+    ? `- This receipt proves firmware-side live control behavior directly over the serial/configurator lane.
+- “Does not dirty staged config” is evidenced here by unchanged normalized \`GET_CONFIG\` state before/after the live-only commands.
+- This receipt does not claim Bridge/App session behavior by itself.`
+    : `- Retain this only as a diagnostic record of the failed attempt.
+- Rerun with an attached board before citing current-HEAD HIL confidence.`;
   return `# Firmware Bench Summary: Live Controls
 
 Date: ${dateStamp()}
@@ -590,35 +627,13 @@ JSON report: ${report.artifacts?.report ?? 'unknown/not captured'}
 
 ## Result
 
-${report.result === 'passed' ? 'PASS' : 'FAIL'}
+${passed ? 'PASS' : 'FAIL'}
 
-## Proven
-
-- USB MIDI output toggle round-trips through \`GET_USB_MIDI\` / \`SET_USB_MIDI\`.
-- Note dynamics round-trips through \`GET_NOTE_DYNAMICS\` / \`SET_NOTE_DYNAMICS\`.
-- Jitter round-trips through \`GET_JITTER\` / \`SET_JITTER\`.
-- Clock round-trips through \`GET_CLOCK\` / \`SET_CLOCK\`.
-- Normalized \`GET_CONFIG\` hash is unchanged before and after the live-only lanes.
-- Live-only controls did not create a config diff on the firmware lane.
-
-## Lane Summary
-
-- USB MIDI: ${boolText(live.usb_midi?.baseline?.usb_midi_out)} -> ${boolText(live.usb_midi?.mutated?.usb_midi_out)} -> ${boolText(live.usb_midi?.restored?.usb_midi_out)}
-- Note dynamics: velocity ${live.note_dynamics?.baseline?.velocity_shift}, probability ${live.note_dynamics?.baseline?.change_probability} -> velocity ${live.note_dynamics?.mutated?.velocity_shift}, probability ${live.note_dynamics?.mutated?.change_probability} -> restored velocity ${live.note_dynamics?.restored?.velocity_shift}, probability ${live.note_dynamics?.restored?.change_probability}
-- Jitter: depth ${live.jitter?.baseline?.depth}, smoothness ${live.jitter?.baseline?.smoothness} -> depth ${live.jitter?.mutated?.depth}, smoothness ${live.jitter?.mutated?.smoothness} -> restored depth ${live.jitter?.restored?.depth}, smoothness ${live.jitter?.restored?.smoothness}
-- Clock: follow_external ${boolText(live.clock?.baseline?.follow_external)}, clock_out ${boolText(live.clock?.baseline?.clock_out_enabled)}, bpm ${live.clock?.baseline?.tapped_bpm} -> follow_external ${boolText(live.clock?.mutated?.follow_external)}, clock_out ${boolText(live.clock?.mutated?.clock_out_enabled)}, bpm ${live.clock?.mutated?.tapped_bpm} -> restored follow_external ${boolText(live.clock?.restored?.follow_external)}, clock_out ${boolText(live.clock?.restored?.clock_out_enabled)}, bpm ${live.clock?.restored?.tapped_bpm}
-
-## Config Stability
-
-- Baseline normalized GET_CONFIG hash: \`${config.baseline_hash ?? 'unknown/not captured'}\`
-- Final normalized GET_CONFIG hash: \`${config.final_hash ?? 'unknown/not captured'}\`
-- Stable: ${config.stable ? 'yes' : 'no'}
+${evidenceSection}
 
 ## Caveats
 
-- This receipt proves firmware-side live control behavior directly over the serial/configurator lane.
-- “Does not dirty staged config” is evidenced here by unchanged normalized \`GET_CONFIG\` state before/after the live-only commands.
-- This receipt does not claim Bridge/App session behavior by itself.
+${caveats}
 `;
 }
 
@@ -785,7 +800,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[live-controls] ${error.message || error}`);
-  process.exit(1);
-});
+module.exports = { renderMarkdown };
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`[live-controls] ${error.message || error}`);
+    process.exit(1);
+  });
+}
