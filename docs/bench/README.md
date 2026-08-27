@@ -15,6 +15,7 @@ Bench receipts record what was actually observed on a rig, host, browser, or rel
 | Firmware    | [Boot contract summary](firmware/0526_boot-contract-summary.md)                             | Firmware boot identity and contract behavior were checked.                   |
 | Firmware    | [2026-08-26 boot contract](firmware/2026-08-26_boot-contract-summary.md)                     | Current production firmware handoff, apply, readback, and cleanup passed.     |
 | Firmware    | [2026-08-26 live controls](firmware/2026-08-26_live-controls-summary.md)                     | Current live-control lanes round-tripped and restored without config drift.  |
+| Firmware    | [2026-08-26 Ctrl5 HIL rerun](firmware/2026-08-26_ctrl5-hil-summary.md)                       | Updated firmware, boot contract, live controls, and Bridge session passed.   |
 | Firmware    | [Bridge session summary](firmware/0526_bridge-session-summary.md)                           | Firmware behavior was exercised through the Bridge session path.             |
 | Firmware    | [Persistence abuse](firmware/PersistenceAbuse.md)                                           | EEPROM/profile persistence was stressed beyond normal happy-path use.        |
 | Latency     | [Latency method](latency/method.md)                                                         | How latency measurements should be captured.                                 |
