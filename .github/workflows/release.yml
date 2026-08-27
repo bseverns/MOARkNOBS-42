@@ -102,6 +102,8 @@ jobs:
         run: pio test -d firmware -e native_modulation -vvv
       - name: Run native persistence layout tests
         run: pio test -d firmware -e native_persistence -vvv
+      - name: Run native MIDI input tests
+        run: pio test -d firmware -e native_midi_input -vvv
 
   bridge-preflight:
     runs-on: ubuntu-latest

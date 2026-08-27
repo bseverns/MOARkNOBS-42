@@ -21,6 +21,7 @@ pio test -d firmware -e native_biquad -vvv | tee logs/native-biquad-test.log
 pio test -d firmware -e native_transport -vvv | tee logs/native-transport-test.log
 pio test -d firmware -e native_modulation -vvv | tee logs/native-modulation-test.log
 pio test -d firmware -e native_persistence -vvv | tee logs/native-persistence-test.log
+pio test -d firmware -e native_midi_input -vvv | tee logs/native-midi-input-test.log
 pio run -d firmware -e teensy40_main | tee logs/firmware-main-build.log
 
 REQUIRE_HIL="${REQUIRE_HIL:-0}"
