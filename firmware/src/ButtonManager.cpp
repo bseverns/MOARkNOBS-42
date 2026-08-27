@@ -1258,7 +1258,8 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     const uint8_t mask = _scanner.controlMask();
     _controlHelpMask = mask;
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
-    bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive && !_lfoTuningActive;
+    bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive && !_lfoTuningActive &&
+                        !context.diagnosticMode;
     g_jitterTuningActive = jitterActive;
     if (jitterActive) {
         context.ledManager.setPanelModeIndicator(PanelModeIndicator::Jitter);

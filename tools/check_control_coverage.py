@@ -85,6 +85,8 @@ def main() -> None:
             raise SystemExit(f"{item.get('id', '<unknown>')}: missing registry fields {sorted(missing)}")
         if item["layer"] not in {"immediate", "modifier", "edit", "browser"}:
             raise SystemExit(f"{item['id']}: invalid control layer {item['layer']!r}")
+        if "+" in item["control"] and (not item.get("oled") or len(item["oled"]) > 16):
+            raise SystemExit(f"{item['id']}: chord requires an OLED label of at most 16 characters")
 
     expected = {normalize_control(item["control"]): item["id"] for item in registry["combos"]}
     coverage_controls = extract_controls(coverage_path.read_text(encoding="utf-8"))

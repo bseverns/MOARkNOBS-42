@@ -657,6 +657,16 @@ void test_ui_context_help_uses_registry_generated_copy() {
     TEST_ASSERT_EQUAL_STRING("C0+C1 ARG / LFO\n+C3 LFO TUNE\n+C4 LFO LIVE",
                              displayManager.statusMessageForTest().c_str());
 
+    buttonManager.setControlHelpMaskForTest((1u << 2) | (1u << 4));
+    TEST_ASSERT_TRUE(renderControlHelpIfActive());
+    TEST_ASSERT_EQUAL_STRING("C2+C4\nTap: ARP ON/OFF\nHold: ARP EDIT",
+                             displayManager.statusMessageForTest().c_str());
+
+    buttonManager.setControlHelpMaskForTest(0x3Fu);
+    TEST_ASSERT_TRUE(renderControlHelpIfActive());
+    TEST_ASSERT_EQUAL_STRING("CHORD 0x3F\nRelease to return\nSee Quick Reference",
+                             displayManager.statusMessageForTest().c_str());
+
     buttonManager.setControlHelpMaskForTest(0);
     TEST_ASSERT_FALSE(renderControlHelpIfActive());
 }

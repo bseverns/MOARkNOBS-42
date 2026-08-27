@@ -29,15 +29,16 @@ Display ownership should resolve in this order:
 | OD-09 | Root chord help                     | hold each of `Ctrl0` through `Ctrl5`                     | command palette     | namespace and useful continuations remain visible while held               |
 | OD-10 | Chord continuation help             | hold `Ctrl0+Ctrl1`                                      | command palette     | ARG action plus LFO Tune and LFO Live continuations are visible            |
 | OD-11 | Modal view beats chord help         | hold a control while config/LFO/diagnostics is active   | modal view          | persistent bracketed mode header remains visible                           |
+| OD-12 | Diagnostics reject jitter ownership | in diagnostics, hold `Ctrl0+Ctrl3+Ctrl4`                | diagnostics         | diagnostic OLED and white LED remain; jitter tuning does not activate      |
 
 ## Run Procedure
 
 1. Flash and boot `teensy40_main`.
-2. Execute OD-01 through OD-11 in order.
+2. Execute OD-01 through OD-12 in order.
 3. Mark each case `PASS` / `FAIL` with notes.
 
 ## Result Log
 
-| Date | Firmware | Tester | OD-01..08 | OD-09 | OD-10 | OD-11 | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| _fill_ | _fill_ | _fill_ | _-_ | _-_ | _-_ | _-_ | _fill_ |
+| Date | Firmware | Tester | OD-01..08 | OD-09 | OD-10 | OD-11 | OD-12 | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| _fill_ | _fill_ | _fill_ | _-_ | _-_ | _-_ | _-_ | _-_ | _fill_ |

@@ -22,6 +22,7 @@ void test_double_press_ctrl3_ctrl4_and_lfo_live_combo();
 void test_ctrl5_fast_taps_update_tempo_without_lfo_toggle();
 void test_ctrl3_single_waits_out_double_press_window();
 void test_jitter_combo_updates_settings();
+void test_diagnostics_blocks_jitter_mode_and_preserves_led_signature();
 void test_config_mode_combo_autosaves_dirty_changes();
 void test_clock_source_combo_toggles_follow_external();
 void test_lfo_tuning_combo_and_route_cycle();
@@ -36,6 +37,7 @@ SystemTestSummary runSystemTests() {
     RUN_TEST(test_ctrl5_fast_taps_update_tempo_without_lfo_toggle);
     RUN_TEST(test_ctrl3_single_waits_out_double_press_window);
     RUN_TEST(test_jitter_combo_updates_settings);
+    RUN_TEST(test_diagnostics_blocks_jitter_mode_and_preserves_led_signature);
     RUN_TEST(test_config_mode_combo_autosaves_dirty_changes);
     RUN_TEST(test_clock_source_combo_toggles_follow_external);
     RUN_TEST(test_lfo_tuning_combo_and_route_cycle);
@@ -61,6 +63,7 @@ void setup() {
     RUN_TEST(test_ctrl5_fast_taps_update_tempo_without_lfo_toggle);
     RUN_TEST(test_ctrl3_single_waits_out_double_press_window);
     RUN_TEST(test_jitter_combo_updates_settings);
+    RUN_TEST(test_diagnostics_blocks_jitter_mode_and_preserves_led_signature);
     RUN_TEST(test_config_mode_combo_autosaves_dirty_changes);
     RUN_TEST(test_clock_source_combo_toggles_follow_external);
     RUN_TEST(test_lfo_tuning_combo_and_route_cycle);

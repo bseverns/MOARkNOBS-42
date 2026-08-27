@@ -349,6 +349,51 @@ void test_jitter_combo_updates_settings() {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, g_jitterSettings.smoothness);
 }
 
+void test_diagnostics_blocks_jitter_mode_and_preserves_led_signature() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 0);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 0;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = true;
+    uint8_t diagPage = DisplayManager::kDiagnosticPageDebug;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
+
+    led.setDiagnosticMode(true);
+    g_jitterTuningActive = false;
+
+    const int pressed = 0;
+    const int released = 1023;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 0] = true;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 1] = false;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 2] = false;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 3] = true;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 4] = true;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 5] = false;
+    ScopedSequence values{
+        pressed, released, released, pressed, pressed, released, // ctrl 0..5
+        512,     512,      512                                   // control pots
+    };
+
+    fakeMillis = DEBOUNCE_DELAY + 1;
+    bm.scanControlInputs(ctx);
+
+    TEST_ASSERT_TRUE(diag);
+    TEST_ASSERT_FALSE(g_jitterTuningActive);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(PanelModeIndicator::Diagnostic),
+                            static_cast<uint8_t>(led.getPanelModeIndicator()));
+}
+
 void test_config_mode_combo_autosaves_dirty_changes() {
     auto pm = createPotentiometerManager();
     auto bm = createButtonManager(&pm);

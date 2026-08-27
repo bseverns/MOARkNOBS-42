@@ -24,6 +24,23 @@ constexpr ControlHelpEntry kControlHelpEntries[] = {
     {9, "C0+C3 SYSEX", "+C1 LFO TUNE", "+C4 JITTER"},
     {18, "C1+C4 AFTERTOUCH", "+C5 CLOCK SOURCE", "Release: AFTER"},
     {24, "C3+C4 LED MODE", "+C5 USB MIDI", "Release: LED"},
+    {7, "C0+C1+C2", "PANIC BASELINE", "Release to return"},
+    {6, "C1+C2", "CYCLE PROFILE", "Release to return"},
+    {20, "C2+C4", "Tap: ARP ON/OFF", "Hold: ARP EDIT"},
+    {12, "C2+C3", "Tap: ARP NOTE +1", "Hold: SWING PRESET"},
+    {48, "C4+C5", "TYPE: NOTE", "Release to return"},
+    {40, "C3+C5", "TYPE: PROGRAM", "Release to return"},
+    {33, "C0+C5", "TYPE: PITCH BEND", "Release to return"},
+    {36, "C2+C5", "TYPE: NRPN", "Release to return"},
+    {10, "C1+C3", "TYPE: RPN", "Release to return"},
+    {17, "C0+C4", "EF RANDOMIZE", "Release to return"},
+    {56, "C3+C4+C5", "USB MIDI OUT", "Release to return"},
+    {34, "C1+C5", "CLOCK OUT", "Release to return"},
+    {50, "C1+C4+C5", "CLOCK SOURCE", "Release to return"},
+    {11, "C0+C1+C3", "LFO TUNE", "Release to return"},
+    {19, "C0+C1+C4", "LFO 1 ON/OFF", "Release to return"},
+    {45, "C0+C2+C3+C5", "CONFIG MODE", "Release to return"},
+    {25, "C0+C3+C4", "Hold: JITTER TUNE", "Release to return"},
 };
 
 constexpr size_t kControlHelpEntryCount = sizeof(kControlHelpEntries) / sizeof(kControlHelpEntries[0]);

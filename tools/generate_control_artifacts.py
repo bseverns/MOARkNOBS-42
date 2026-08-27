@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 
@@ -39,6 +40,21 @@ def cpp_string(value: str) -> str:
     return json.dumps(value)
 
 
+def chord_buttons(control: str) -> list[int] | None:
+    buttons = [int(value) for value in re.findall(r"Ctrl([0-5])", control)]
+    return buttons if len(buttons) >= 2 else None
+
+
+def append_help_entry(lines: list[str], mask: int, display_lines: list[str]) -> None:
+    for display_line in display_lines:
+        if len(display_line) > 21:
+            raise ValueError(f"OLED help line exceeds 21 characters: {display_line!r}")
+    lines.append(
+        f"    {{{mask}, {cpp_string(display_lines[0])}, {cpp_string(display_lines[1])}, "
+        f"{cpp_string(display_lines[2])}}},\n"
+    )
+
+
 def render_header(registry: dict) -> str:
     lines = [HEADER_PREAMBLE]
     seen: set[int] = set()
@@ -48,13 +64,37 @@ def render_header(registry: dict) -> str:
             raise ValueError(f"duplicate contextual help mask: {mask}")
         seen.add(mask)
         display_lines = [context[key] for key in ("line1", "line2", "line3")]
-        for display_line in display_lines:
-            if len(display_line) > 21:
-                raise ValueError(f"OLED help line exceeds 21 characters: {display_line!r}")
-        lines.append(
-            f"    {{{mask}, {cpp_string(display_lines[0])}, {cpp_string(display_lines[1])}, "
-            f"{cpp_string(display_lines[2])}}},\n"
-        )
+        append_help_entry(lines, mask, display_lines)
+
+    chord_groups: dict[int, list[dict]] = {}
+    for combo in registry["combos"]:
+        buttons = chord_buttons(combo["control"])
+        if buttons is None:
+            continue
+        chord_groups.setdefault(control_mask(buttons), []).append(combo)
+
+    for mask, combos in chord_groups.items():
+        if mask in seen:
+            continue
+        buttons = chord_buttons(combos[0]["control"])
+        assert buttons is not None
+        gesture = "+".join(f"C{button}" for button in buttons)
+        tap = next((combo for combo in combos if not combo["control"].startswith("hold ")), None)
+        hold = next((combo for combo in combos if combo["control"].startswith("hold ")), None)
+        if tap and hold:
+            display_lines = [gesture, f"Tap: {tap['oled']}", f"Hold: {hold['oled']}"]
+        elif hold:
+            display_lines = [gesture, f"Hold: {hold['oled']}", "Release to return"]
+        elif tap:
+            display_lines = [gesture, tap["oled"], "Release to return"]
+        else:
+            raise ValueError(f"no action for chord mask {mask}")
+        append_help_entry(lines, mask, display_lines)
+        seen.add(mask)
+
+    missing_masks = set(chord_groups) - seen
+    if missing_masks:
+        raise ValueError(f"registered chord masks lack OLED help: {sorted(missing_masks)}")
     lines.append("};\n\n")
     lines.append(
         "constexpr size_t kControlHelpEntryCount = "

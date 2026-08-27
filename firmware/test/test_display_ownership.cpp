@@ -108,3 +108,12 @@ void test_display_owner_od11_modal_dominates_context_help() {
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Owner::Modal),
                             static_cast<uint8_t>(display::resolveOwner(request)));
 }
+
+void test_display_owner_od12_diagnostics_dominates_jitter_chord_help() {
+    OwnershipRequest request{};
+    request.modalActive = true;
+    request.contextHelpActive = true;
+
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Owner::Modal),
+                            static_cast<uint8_t>(display::resolveOwner(request)));
+}

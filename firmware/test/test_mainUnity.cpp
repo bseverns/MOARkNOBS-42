@@ -134,6 +134,7 @@ void test_display_owner_od08_screensaver_only_when_idle();
 void test_display_owner_od09_root_context_help_dominates_status();
 void test_display_owner_od10_prefix_context_help_dominates_control_overlay();
 void test_display_owner_od11_modal_dominates_context_help();
+void test_display_owner_od12_diagnostics_dominates_jitter_chord_help();
 void test_diagnostic_record_persists_boot_and_apply_events();
 void test_diagnostic_record_rejects_corrupt_storage();
 void test_diagnostic_record_loop_overrun_only_grows();
@@ -302,6 +303,7 @@ void setup() {
     RUN_TEST(test_display_owner_od09_root_context_help_dominates_status);
     RUN_TEST(test_display_owner_od10_prefix_context_help_dominates_control_overlay);
     RUN_TEST(test_display_owner_od11_modal_dominates_context_help);
+    RUN_TEST(test_display_owner_od12_diagnostics_dominates_jitter_chord_help);
     RUN_TEST(test_diagnostic_record_persists_boot_and_apply_events);
     RUN_TEST(test_diagnostic_record_rejects_corrupt_storage);
     RUN_TEST(test_diagnostic_record_loop_overrun_only_grows);
