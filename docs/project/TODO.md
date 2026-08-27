@@ -257,4 +257,4 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 ### Hardware
 
-- [ ] Properly feed both the logic and LED circuits from input
+- [x] Properly feed both the logic and LED circuits from input
