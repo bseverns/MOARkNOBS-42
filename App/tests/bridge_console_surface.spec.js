@@ -33,11 +33,12 @@ async function consoleFixture(page, { running = false } = {}) {
   };
   const posts = [];
   let serial;
+  const anyPath = '*'.repeat(2);
   await page.routeWebSocket('**/ws', (socket) => {
     serial = socket;
   });
   await page.routeWebSocket('**/events', () => {});
-  await page.route('**/bridge-console/**', async (route) => {
+  await page.route(`${anyPath}/bridge-console/${anyPath}`, async (route) => {
     const name = new URL(route.request().url()).pathname.split('/').pop() || 'index.html';
     const type = name.endsWith('.js')
       ? 'text/javascript'
@@ -46,7 +47,7 @@ async function consoleFixture(page, { running = false } = {}) {
         : 'text/html';
     await route.fulfill({ contentType: type, body: readFileSync(new URL(name, uiRoot)) });
   });
-  await page.route('**/api/**', async (route) => {
+  await page.route(`${anyPath}/api/${anyPath}`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     let payload = { state };
     if (route.request().method() === 'POST') {
