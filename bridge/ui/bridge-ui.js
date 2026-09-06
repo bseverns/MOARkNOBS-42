@@ -258,6 +258,12 @@ function jumpTo(mode, targetId) {
   target.scrollIntoView({ block: 'start' });
 }
 
+function openSetupWorkbench(targetId) {
+  const workbench = document.getElementById('setup-workbench');
+  if (workbench) workbench.open = true;
+  if (targetId) jumpTo('setup', targetId);
+}
+
 function renderRecallSetup() {
   const panel = document.getElementById('recall-setup');
   const select = document.getElementById('recall-select');
@@ -293,7 +299,9 @@ function renderRecallSummary() {
       setup.config.serialName || 'Choose a serial port in Edit saved setups',
     MIDI: destinations.deviceMidi,
     OSC: destinations.deviceOsc,
-    'Suggested MN42 profile': setup.suggestedDeviceProfile || 'None specified',
+    Profile: setup.suggestedDeviceProfile
+      ? `${setup.suggestedDeviceProfile} · advisory`
+      : 'None specified · advisory',
     'Last used': setup.lastUsedAt
       ? formatWhen(setup.lastUsedAt)
       : 'Not started from this setup yet',
@@ -2038,7 +2046,12 @@ function bindEvents() {
       document.getElementById('recall-select').value;
     renderCustomSetups({ syncName: true });
     loadSelectedCustomSetup();
-    jumpTo('setup', 'custom-setups-heading');
+    openSetupWorkbench('custom-setups-heading');
+  });
+  document.getElementById('new-saved-setup').addEventListener('click', () => {
+    openSetupWorkbench();
+    beginNewCustomSetup();
+    document.getElementById('custom-setups-heading').scrollIntoView({ block: 'start' });
   });
   document
     .getElementById('start-saved-setup')
@@ -2114,6 +2127,7 @@ function bindEvents() {
 
 async function boot() {
   consoleState.customSetups = loadCustomSetups();
+  document.getElementById('setup-workbench').open = !consoleState.customSetups.length;
   document.getElementById('first-run-guide').open =
     !consoleState.customSetups.length;
   renderCustomSetups();

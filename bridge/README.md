@@ -29,11 +29,13 @@ Open <http://127.0.0.1:8787/> if the server does not open it automatically. Then
 3. Open **Monitor**, start passive soundcheck, and move one stable hardware control to observe configured Bridge outputs.
 4. Select **Open configurator** when you need instrument configuration edits.
 
-Returning users can choose a browser-local **Performance Setup** and **Start this setup** to recall its exact serial,
-MIDI, and OSC settings. The suggested MN42 profile stays advisory. **Load selected** only fills the form.
+Returning users begin at **Your saved rig**: choose a browser-local **Performance Setup** and **Start this setup**
+to recall its exact serial, MIDI, and OSC settings. The suggested MN42 profile stays advisory. **Edit** and
+**New setup** open the collapsed setup workbench; its manual start action is **Start current setup**.
 
-**Routing** provides Slot/EF → CC → Channel route cards, with raw JSON under Advanced. These outbound routes apply
-on the next Bridge start in Configured routes mode; legacy compatibility retains its automatic CC assignments.
+**Routing** labels Device → MIDI cards **Next start** and MIDI → OSC custom routes **Live now**. Slot/EF → CC →
+Channel cards, with raw JSON under Advanced, apply on the next Bridge start in Configured routes mode; legacy
+compatibility retains its automatic CC assignments.
 Invalid raw definitions block starting and saving until corrected.
 
 **Monitor** follows MN42 → USB → Bridge and the four OSC/MIDI directions. Idle routes remain neutral; observed

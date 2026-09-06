@@ -87,6 +87,8 @@ test('Bridge route cards preserve MIDI numbering and reject invalid raw edits', 
 }) => {
   const fixture = await consoleFixture(page);
   await page.getByRole('button', { name: 'Routing', exact: true }).click();
+  await expect(page.locator('#outbound-midi-heading')).toContainText('Next start');
+  await expect(page.locator('#mapping-list-heading')).toContainText('Live now');
   const editor = page.locator('#add-outbound-route');
   await editor.locator('[name=sourceNumber]').fill('12');
   await editor.locator('[name=controller]').fill('74');
@@ -132,6 +134,11 @@ test('saved rig recall preserves selected ports and profile remains advisory', a
   await page.reload();
   await expect(page.locator('#recall-select')).toContainText('Friday performance');
   await expect(page.locator('#first-run-guide')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#setup-workbench')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#start-bridge')).toBeHidden();
+  await page.locator('#edit-saved-setup').click();
+  await expect(page.locator('#setup-workbench')).toHaveAttribute('open', '');
+  await expect(page.locator('#custom-setup-name')).toHaveValue('Friday performance');
   await page.locator('#start-saved-setup').click();
   await expect(page.locator('#routing-heartbeat-heading')).toBeVisible();
   expect(fixture.posts).toHaveLength(1);

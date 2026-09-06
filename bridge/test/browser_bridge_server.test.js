@@ -1067,7 +1067,7 @@ async function run() {
   );
   assert.match(
     consoleHtml,
-    /Active custom routes[\s\S]*update active routing immediately[\s\S]*pending setup changes/,
+    /MIDI → OSC custom routes[\s\S]*Live now[\s\S]*update active routing immediately[\s\S]*pending setup changes/,
     'Routing should distinguish active custom routes from pending setup changes',
   );
 

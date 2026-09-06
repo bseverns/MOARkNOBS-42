@@ -19,10 +19,8 @@
         host/network unless you have deliberate network protection.
       </p>
       <div class="actions">
-        <button id="start-bridge" data-console-modes="setup" type="button">Start bridge</button>
         <button id="stop-bridge" class="action-danger" data-console-modes="setup mappings stage advanced"
           type="button">Stop bridge</button>
-        <button id="refresh-ports" data-console-modes="setup" type="button">Refresh ports</button>
         <button id="reset-metrics" data-console-modes="advanced" type="button">Reset metrics</button>
         <button id="clear-alerts" data-console-modes="advanced" type="button">Clear alerts</button>
         <button id="download-snapshot" data-console-modes="setup mappings advanced" type="button">Download snapshot</button>
@@ -40,18 +38,21 @@
     <section class="mode-view is-active" data-mode-view="setup" aria-labelledby="setup-heading">
       <h2 id="setup-heading" class="sr-only">Setup mode</h2>
       <section id="recall-setup" class="panel recall-panel" aria-labelledby="recall-heading" hidden>
-        <p class="eyebrow">Your saved rig</p>
+        <p class="eyebrow">Your rig</p>
         <h2 id="recall-heading">Recall a Performance Setup</h2>
         <label for="recall-select">Performance Setup</label>
         <select id="recall-select"></select>
         <dl id="recall-summary" class="status-grid"></dl>
         <div class="actions">
           <button id="start-saved-setup" type="button">Start this setup</button>
-          <button id="edit-saved-setup" type="button">Edit saved setups</button>
-          <button type="button" data-jump-mode="setup" data-jump-target="connection-heading">New setup / manual configuration</button>
+          <button id="edit-saved-setup" type="button">Edit</button>
+          <button id="new-saved-setup" type="button">New setup</button>
         </div>
         <p id="recall-status" class="hint" role="status">Recalling a host setup never changes the MN42 profile.</p>
       </section>
+      <details id="setup-workbench" class="setup-workbench">
+        <summary>Set up or edit this rig</summary>
+        <div class="setup-workbench-content">
       <details id="first-run-guide" class="panel"><summary>First time? Connect your rig</summary>
         <ol class="first-run-path" aria-label="First-run path">
           <li><strong>Choose device</strong><span>Pick the detected serial port.</span></li>
@@ -148,6 +149,10 @@
               </details>
             </details>
           </form>
+          <div class="actions manual-setup-actions">
+            <button id="start-bridge" data-console-modes="setup" type="button">Start current setup</button>
+            <button id="refresh-ports" data-console-modes="setup" type="button">Refresh ports</button>
+          </div>
         </section>
 
         <section class="panel" aria-labelledby="recipe-heading">
@@ -214,12 +219,14 @@
           </div>
         </section>
       </section>
+        </div>
+      </details>
     </section>
 
     <section class="mode-view" data-mode-view="mappings" aria-labelledby="mappings-heading" hidden>
       <h2 id="mappings-heading" class="sr-only">Routing mode</h2>
       <section class="panel" aria-labelledby="outbound-midi-heading">
-        <h2 id="outbound-midi-heading">Device telemetry → MIDI</h2>
+        <h2 id="outbound-midi-heading">Device → MIDI <span class="route-timing-badge route-timing-pending">Next start</span></h2>
         <p class="hint">Legacy compatibility emits slots as channel 1 CCs and envelopes as channel 2 CCs. Mapped
           mode is opt-in and emits only the explicit routes below.</p>
         <label for="midi-telemetry-mode">Outbound MIDI mode</label>
@@ -272,7 +279,7 @@
       </section>
       <section class="panel-grid">
         <section class="panel" aria-labelledby="mapping-list-heading">
-          <h2 id="mapping-list-heading">Active custom routes</h2>
+          <h2 id="mapping-list-heading">MIDI → OSC custom routes <span class="route-timing-badge route-timing-live">Live now</span></h2>
           <table class="mapping-table">
             <thead>
               <tr>
