@@ -12,20 +12,9 @@
   <main class="shell">
     <header class="hero">
       <p class="eyebrow">MOARkNOBS-42 bridge</p>
-      <h1>Bridge command center</h1>
-      <p class="summary">
-        Default path: choose device, choose host recipe, start the bridge, open the App, then download a
-        snapshot if something fails. Raw serial and WebSocket debugging still exist, but they stay in
-        Diagnostics where they belong.
-      </p>
-      <ol class="first-run-path" aria-label="First-run path">
-        <li><strong>Choose device</strong><span>Pick the detected serial port.</span></li>
-        <li><strong>Choose recipe</strong><span>Prefill the host routing lane.</span></li>
-        <li><strong>Start</strong><span>Wait for cached session ready.</span></li>
-        <li><strong>Open App</strong><span>Use the Bridge transport.</span></li>
-        <li><strong>Snapshot</strong><span>Export state if anything fails.</span></li>
-      </ol>
-      <p class="security-note">
+      <h1>Bridge patchbay</h1>
+      <p class="summary">Recall your rig, follow the signal, and check the path before you play.</p>
+      <p class="security-note" data-console-modes="setup advanced">
         Local-only by default. Keep this console, `/api/*`, `/ws`, OSC, and MIDI command lanes on a trusted
         host/network unless you have deliberate network protection.
       </p>
@@ -50,6 +39,28 @@
 
     <section class="mode-view is-active" data-mode-view="setup" aria-labelledby="setup-heading">
       <h2 id="setup-heading" class="sr-only">Setup mode</h2>
+      <section id="recall-setup" class="panel recall-panel" aria-labelledby="recall-heading" hidden>
+        <p class="eyebrow">Your saved rig</p>
+        <h2 id="recall-heading">Recall a Performance Setup</h2>
+        <label for="recall-select">Performance Setup</label>
+        <select id="recall-select"></select>
+        <dl id="recall-summary" class="status-grid"></dl>
+        <div class="actions">
+          <button id="start-saved-setup" type="button">Start this setup</button>
+          <button id="edit-saved-setup" type="button">Edit saved setups</button>
+          <button type="button" data-jump-mode="setup" data-jump-target="connection-heading">New setup / manual configuration</button>
+        </div>
+        <p id="recall-status" class="hint" role="status">Recalling a host setup never changes the MN42 profile.</p>
+      </section>
+      <details id="first-run-guide" class="panel"><summary>First time? Connect your rig</summary>
+        <ol class="first-run-path" aria-label="First-run path">
+          <li><strong>Choose device</strong><span>Pick the detected serial port.</span></li>
+          <li><strong>Choose recipe</strong><span>Prefill the host routing lane.</span></li>
+          <li><strong>Start</strong><span>Wait for cached session ready.</span></li>
+          <li><strong>Open App</strong><span>Use the Bridge transport.</span></li>
+          <li><strong>Snapshot</strong><span>Export state if anything fails.</span></li>
+        </ol>
+      </details>
       <section class="panel-grid" aria-label="Setup panels">
         <section class="panel" aria-labelledby="connection-heading">
           <h2 id="connection-heading">Connect and route</h2>
@@ -216,11 +227,25 @@
           <option value="legacy">Legacy compatibility</option>
           <option value="mapped">Configured routes</option>
         </select>
-        <label for="outbound-midi-mappings">Outbound route JSON</label>
-        <textarea id="outbound-midi-mappings" rows="8" spellcheck="false">[]</textarea>
-        <p class="hint">Each route uses <code>source</code> (<code>slots</code> or <code>envelopes</code>),
-          zero-based <code>sourceIndex</code>, MIDI <code>channel</code> 1–16, and <code>controller</code> 0–127.</p>
-        <p id="outbound-midi-mapping-status" class="hint" aria-live="polite">No pending outbound MIDI routes.</p>
+        <p class="hint">Routes below are pending until the next Bridge start. Choose Configured routes to use them;
+          legacy mode keeps its automatic CC assignments.</p>
+        <ul id="outbound-route-list" class="outbound-routes" aria-label="Pending device to MIDI routes"></ul>
+        <form id="add-outbound-route" class="outbound-editor">
+          <label>Source<select name="source"><option value="slots">Slot</option><option value="envelopes">EF</option></select></label>
+          <label>Number (1–128)<input name="sourceNumber" type="number" min="1" max="128" value="1" required /></label>
+          <label>Send as CC<input name="controller" type="number" min="0" max="127" value="74" required /></label>
+          <label>Channel<input name="channel" type="number" min="1" max="16" value="1" required /></label>
+          <button type="submit">Add route</button>
+        </form>
+        <p class="hint">Slot and EF numbers start at 1. Only sources present in device telemetry produce output.</p>
+        <details class="advanced-setup">
+          <summary>Advanced / Edit raw route definition</summary>
+          <label for="outbound-midi-mappings">Outbound route JSON</label>
+          <textarea id="outbound-midi-mappings" rows="8" spellcheck="false">[]</textarea>
+          <p class="hint">Raw definitions use zero-based sourceIndex, source slots or envelopes, channel 1–16,
+            and controller 0–127. Invalid edits must be corrected before starting or saving a setup.</p>
+        </details>
+        <p id="outbound-midi-mapping-status" class="hint" role="status">No pending outbound MIDI routes.</p>
       </section>
       <section class="panel mapping-learn-panel" aria-labelledby="mapping-learn-heading">
         <h2 id="mapping-learn-heading">Learn a MIDI → OSC route</h2>
@@ -304,67 +329,60 @@
     <section class="mode-view" data-mode-view="stage" aria-labelledby="stage-heading" hidden>
       <h2 id="stage-heading" class="sr-only">Monitor mode</h2>
       <section class="panel-grid" aria-label="Monitor panels">
-        <section class="panel" aria-labelledby="stage-status-heading">
-          <h2 id="stage-status-heading">Connection health</h2>
-          <div class="stage-card-grid" id="stage-summary-cards">
-            <article class="stage-card">
-              <span class="stage-label">Bridge</span>
-              <strong id="status-running">stopped</strong>
-            </article>
-            <article class="stage-card">
-              <span class="stage-label">Serial</span>
-              <strong id="status-serial">disconnected</strong>
-            </article>
-            <article class="stage-card">
-              <span class="stage-label">Device</span>
-              <strong id="status-ready">awaiting HELLO</strong>
-            </article>
-            <article class="stage-card">
-              <span class="stage-label">Telemetry</span>
-              <strong id="status-telemetry">none yet</strong>
-            </article>
-            <article class="stage-card">
-              <span class="stage-label">RT p95</span>
-              <strong id="status-rt-p95">n/a</strong>
-            </article>
-            <article class="stage-card">
-              <span class="stage-label">Jitter p95</span>
-              <strong id="status-rt-jitter-p95">n/a</strong>
-            </article>
-          </div>
-          <p class="hint">This is the compact operator view: enough to decide whether the bridge and the device are
-            still healthy without reading a cockpit during a show.</p>
-        </section>
-
-        <section class="panel" aria-labelledby="routing-heartbeat-heading">
-          <h2 id="routing-heartbeat-heading">Routing heartbeat</h2>
+        <section class="panel patchbay-panel" aria-labelledby="routing-heartbeat-heading">
+          <h2 id="routing-heartbeat-heading">Live patchbay</h2>
           <p id="stage-performance-setup" class="hint">Performance setup: unsaved current routing</p>
-          <div class="route-heartbeat-grid">
-            <article class="route-heartbeat" id="route-device-osc">
-              <span>OSC destination · OSC 127.0.0.1:9000</span>
-              <strong>not seen</strong>
+          <div class="patchbay" id="stage-summary-cards">
+            <article class="patch-node device-node">
+              <span class="eyebrow">MN42</span><strong id="status-ready">awaiting handshake</strong>
+              <span id="patch-device-identity">Device identity pending</span>
+              <span id="patch-config">Config pending</span>
             </article>
-            <article class="route-heartbeat" id="route-device-midi">
-              <span>MIDI destination · MIDI MN42 Bridge</span>
-              <strong>not seen</strong>
+            <div class="usb-link" id="patch-usb"><span>USB ↕</span><strong id="status-serial">disconnected</strong></div>
+            <article class="patch-node bridge-node">
+              <span class="eyebrow">MN42 Bridge</span><strong id="status-running">stopped</strong>
+              <span>Telemetry <strong id="status-telemetry">none yet</strong></span>
+              <span>RT p95 <strong id="status-rt-p95">n/a</strong> · Jitter <strong id="status-rt-jitter-p95">n/a</strong></span>
             </article>
-            <article class="route-heartbeat" id="route-osc-device">
-              <span>OSC destination · OSC input</span>
-              <strong>not seen</strong>
-            </article>
-            <article class="route-heartbeat" id="route-midi-device">
-              <span>MIDI destination · MIDI input</span>
-              <strong>not seen</strong>
-            </article>
+            <div class="patch-branches">
+              <article class="route-heartbeat" id="route-device-osc"><b>↓ OSC OUT</b>
+                <span>OSC destination · OSC 127.0.0.1:9000</span><small>Configured output</small><strong>not seen</strong>
+              </article>
+              <article class="route-heartbeat" id="route-device-midi"><b>↓ MIDI OUT</b>
+                <span>MIDI destination · MIDI MN42 Bridge</span><small>Legacy compatibility</small><strong>not seen</strong>
+              </article>
+              <article class="route-heartbeat" id="route-osc-device"><b>↑ OSC IN → MN42</b>
+                <span>OSC input</span><small>Configured input</small><strong>not seen</strong>
+              </article>
+              <article class="route-heartbeat" id="route-midi-device"><b>↑ MIDI IN → MN42</b>
+                <span>MIDI input</span><small>Configured input</small><strong>not seen</strong>
+              </article>
+            </div>
           </div>
+          <p class="hint">Lines show configured paths; activity shows traffic observed by the Bridge.
+            Idle paths are neutral. Destination app receipt is not confirmed.</p>
+          <button type="button" data-jump-mode="mappings" data-jump-target="outbound-midi-heading">Edit routing</button>
+        </section>
+        <section class="panel soundcheck-panel" aria-labelledby="soundcheck-heading">
+          <p class="eyebrow">Before you play</p><h2 id="soundcheck-heading">Passive soundcheck</h2>
+          <ol class="soundcheck-steps">
+            <li>Start listening, then move one stable, unmodulated MN42 control.</li>
+            <li>Follow its telemetry through the configured Bridge outputs.</li>
+            <li>Confirm sound or visuals in your destination app.</li>
+          </ol>
           <button id="start-soundcheck" type="button" disabled>Start passive soundcheck</button>
-          <p id="soundcheck-status" class="hint" role="status" aria-live="polite">
-            Start a write-free check, then move one stable, unmodulated hardware control.
-          </p>
+          <p id="soundcheck-status" role="status" aria-live="polite">Ready for a passive check. No test traffic is generated.</p>
+          <ul id="soundcheck-results" class="soundcheck-results" aria-label="Soundcheck observations"></ul>
+          <div class="actions">
+            <button type="button" data-jump-mode="mappings" data-jump-target="outbound-midi-heading">Open Routing</button>
+            <button type="button" data-jump-mode="advanced" data-jump-target="routes-heading">View route trace</button>
+          </div>
         </section>
 
         <section class="panel" aria-labelledby="device-session-heading">
-          <h2 id="device-session-heading">Cached device session</h2>
+          <h2 id="device-session-heading">Device verdict</h2>
+          <p id="device-verdict" role="status">Waiting for device state.</p>
+          <details><summary>Device details</summary>
           <dl class="status-grid compact-grid" id="device-session-grid">
             <div>
               <dt>Device</dt>
@@ -431,6 +449,7 @@
               <dd id="status-last-trace">none</dd>
             </div>
           </dl>
+          </details>
         </section>
 
         <section class="panel" aria-labelledby="stage-ops-heading">
@@ -453,6 +472,13 @@
 
     <section class="mode-view" data-mode-view="advanced" aria-labelledby="advanced-heading" hidden>
       <h2 id="advanced-heading" class="sr-only">Diagnostics mode</h2>
+      <nav class="actions" aria-label="Diagnostics sections">
+        <button type="button" data-jump-mode="advanced" data-jump-target="runtime-heading">Problems</button>
+        <button type="button" data-jump-mode="advanced" data-jump-target="routes-heading">Routes</button>
+        <button type="button" data-jump-mode="advanced" data-jump-target="raw-serial-heading">Serial</button>
+        <button type="button" data-jump-mode="advanced" data-jump-target="logs-heading">Logs</button>
+        <button type="button" data-jump-mode="advanced" data-jump-target="state-json-heading">Raw state</button>
+      </nav>
       <section class="panel-grid" aria-label="Diagnostics panels">
         <section class="panel" aria-labelledby="runtime-heading">
           <h2 id="runtime-heading">Runtime status</h2>

@@ -15,6 +15,8 @@ const {
   latestLearnableMidiCc,
   normalizeHostSetupConfig,
   observedSoundcheckLanes,
+  expectedSoundcheckLanes,
+  parseOutboundRouteDraft,
   operatorConfirmationMessage,
   parseSlotTelemetryLine,
   parseHostSetupEnvelope,
@@ -57,11 +59,14 @@ function run() {
     status: 'ok',
     recoveryRequired: false,
   });
-  assert.deepEqual(describeDraft({ dirty: true, deviceAuthority: 'verified' }), {
-    label: 'draft staged',
-    status: 'warn',
-    recoveryRequired: true,
-  });
+  assert.deepEqual(
+    describeDraft({ dirty: true, deviceAuthority: 'verified' }),
+    {
+      label: 'draft staged',
+      status: 'warn',
+      recoveryRequired: true,
+    },
+  );
   assert.deepEqual(
     describeDraft({ deviceAuthority: 'verified-device-different' }),
     {
@@ -114,7 +119,11 @@ function run() {
   );
   assert.deepEqual(
     parseSlotTelemetryLine(
-      JSON.stringify({ type: 'telemetry', traceId: 'movement-1', slots: [10, 64] }),
+      JSON.stringify({
+        type: 'telemetry',
+        traceId: 'movement-1',
+        slots: [10, 64],
+      }),
     ),
     { traceId: 'movement-1', slots: [10, 64] },
   );
@@ -123,10 +132,125 @@ function run() {
     [...observedSoundcheckLanes(routes, { traceId: 'movement-1' })].sort(),
     ['deviceMidi', 'deviceOsc'],
   );
-  assert.equal(isActionVisibleInMode('setup mappings advanced', 'mappings'), true);
-  assert.equal(isActionVisibleInMode('setup mappings advanced', 'stage'), false);
+  assert.deepEqual(expectedSoundcheckLanes({}, [11]), [
+    'deviceOsc',
+    'deviceMidi',
+  ]);
+  const mappedConfig = {
+    midiTelemetryMode: 'mapped',
+    outboundMidiMappings: [
+      { source: 'slots', sourceIndex: 11 },
+      { source: 'envelopes', sourceIndex: 0 },
+    ],
+  };
+  assert.deepEqual(expectedSoundcheckLanes(mappedConfig, [11]), [
+    'deviceOsc',
+    'deviceMidi',
+  ]);
+  assert.deepEqual(expectedSoundcheckLanes(mappedConfig, [0]), ['deviceOsc']);
+  assert.deepEqual(
+    expectedSoundcheckLanes({ midiTelemetryMode: 'mapped' }, [11]),
+    ['deviceOsc'],
+  );
+  assert.deepEqual(
+    [
+      ...observedSoundcheckLanes(
+        [
+          {
+            flow: 'serial->midi',
+            kind: 'drop_feedback',
+            traceId: 'movement-1',
+          },
+          { flow: 'serial->osc', kind: 'event', traceId: 'movement-1' },
+          { flow: 'serial->osc', kind: 'telemetry', traceId: 'other-movement' },
+        ],
+        { traceId: 'movement-1' },
+      ),
+    ],
+    [],
+    'Unrelated events and dropped routes cannot pass soundcheck',
+  );
+  assert.equal(
+    describeRouteHeartbeats(
+      [{ flow: 'osc->serial', kind: 'drop_feedback', hostTimestampMs: now }],
+      now,
+    ).oscDevice.recent,
+    false,
+    'Dropped traffic must not light a successful path',
+  );
+  assert.deepEqual(
+    [
+      ...observedSoundcheckLanes(
+        [
+          {
+            flow: 'serial->osc',
+            kind: 'telemetry',
+            hostTimestampMs: now - 5000,
+          },
+        ],
+        { detectedAt: now },
+      ),
+    ],
+    [],
+    'Old telemetry cannot pass a new soundcheck',
+  );
+  const routeDraft = [
+    { source: 'slots', sourceIndex: 11, controller: 74, channel: 1 },
+  ];
+  assert.equal(
+    parseOutboundRouteDraft(JSON.stringify(routeDraft))[0].sourceIndex,
+    11,
+  );
+  assert.throws(() => parseOutboundRouteDraft('{}'), /array/);
+  assert.throws(
+    () =>
+      parseOutboundRouteDraft(
+        JSON.stringify([{ ...routeDraft[0], channel: 17 }]),
+      ),
+    /Route 1/,
+  );
+  assert.throws(
+    () =>
+      parseOutboundRouteDraft(
+        JSON.stringify([{ ...routeDraft[0], sourceIndex: null }]),
+      ),
+    /Route 1/,
+  );
+  assert.throws(
+    () =>
+      parseOutboundRouteDraft(
+        JSON.stringify([{ ...routeDraft[0], controller: '' }]),
+      ),
+    /Route 1/,
+  );
+  assert.throws(
+    () =>
+      parseOutboundRouteDraft(JSON.stringify(Array(129).fill(routeDraft[0]))),
+    /128/,
+  );
+  assert.throws(
+    () =>
+      parseOutboundRouteDraft(
+        JSON.stringify([
+          { ...routeDraft[0], id: 'same' },
+          { ...routeDraft[0], id: 'same' },
+        ]),
+      ),
+    /unique/,
+  );
+  assert.equal(
+    isActionVisibleInMode('setup mappings advanced', 'mappings'),
+    true,
+  );
+  assert.equal(
+    isActionVisibleInMode('setup mappings advanced', 'stage'),
+    false,
+  );
   assert.match(operatorConfirmationMessage('stop'), /routing.*disconnect/i);
-  assert.match(operatorConfirmationMessage('clearAlerts'), /unresolved conditions.*raise again/i);
+  assert.match(
+    operatorConfirmationMessage('clearAlerts'),
+    /unresolved conditions.*raise again/i,
+  );
   assert.deepEqual(
     latestLearnableMidiCc(
       [
@@ -197,6 +321,7 @@ function run() {
       {
         id: 'friday-show',
         name: 'Friday show',
+        lastUsedAt: '2026-08-10T18:00:00.000Z',
         notes: 'Launch visuals before routing.',
         suggestedDeviceProfile: 'Performance A',
         createdAt: '2026-08-09T18:00:00.000Z',
@@ -211,6 +336,7 @@ function run() {
   assert.equal(envelope.version, 1);
   assert.equal(envelope.setups.length, 1);
   assert.equal(envelope.setups[0].suggestedDeviceProfile, 'Performance A');
+  assert.equal(envelope.setups[0].lastUsedAt, '2026-08-10T18:00:00.000Z');
   assert.deepEqual(parseHostSetupEnvelope(envelope), {
     setups: envelope.setups,
     rejected: 0,
@@ -222,7 +348,9 @@ function run() {
     hostSetupConfigFingerprint(normalizedHostConfig),
   );
 
-  console.log('Bridge operator state covers mapping learn and versioned Performance Setups');
+  console.log(
+    'Bridge operator state covers mapping learn and versioned Performance Setups',
+  );
 }
 
 run();

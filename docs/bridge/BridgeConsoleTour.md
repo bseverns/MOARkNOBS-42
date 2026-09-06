@@ -11,7 +11,7 @@ For transport and support-boundary tie-breaks, see [Bridge README](https://githu
 - Open `http://127.0.0.1:8787/`.
 - Use Node `24.x` only; the Bridge package still pins `>=24 <25`.
 
-Screenshot note: the images below were captured on 2026-08-03 from the local Bridge console against the repository's MN42 device simulator. They preserve a complete cached-session example but predate the visible label change from `Mappings / Stage / Advanced` to `Routing / Monitor / Diagnostics`; they are UI documentation—not hardware validation evidence.
+Screenshot note: the images below were captured on 2026-08-03 from the local Bridge console against the repository's MN42 device simulator. They preserve a complete cached-session example but predate the visible label change from `Mappings / Stage / Advanced` to `Routing / Monitor / Diagnostics`; they also predate the September patchbay redesign. They are historical UI documentation, not hardware validation evidence.
 
 Simulator session example from this capture:
 
@@ -35,6 +35,8 @@ This capture shows a complete setup path, including the simulator serial path, a
 - `My Performance Setups` saves named copies of computer/rig routing, destination names, routes, optional notes, and an advisory MN42 profile in this browser. Loading a setup only fills the form; it never starts or restarts routing or changes firmware state. Use JSON export/import to back up the collection or move it to another browser.
 - `Start bridge` launches the desktop runtime. `Stop bridge` remains available in every mode, is visually marked as destructive, and asks for confirmation before disconnecting the serial/MIDI/OSC runtime. `Refresh ports` rescans serial and MIDI devices.
 
+When saved setups exist, Setup leads with a rig recall card showing exact ports, destination names, notes, the advisory profile, and last-used time. **Start this setup** explicitly loads and starts that saved host configuration, preserving its ports even if another device is detected. It is disabled while routing runs. **Edit saved setups** loads the selected rig into the editor. Last-used time is recorded after a successful start and survives JSON export/import; older version 1 files remain compatible.
+
 Performance Setups are personal operator convenience, not known-good recipes or host-validation evidence. When routing is already running, stop and start the Bridge deliberately after loading a setup whose MIDI or OSC transport values should take effect.
 
 ### Serial Port Selection
@@ -56,6 +58,12 @@ Routing mode provides a guided, passive MIDI-learn path for custom MIDI CC → O
 
 Learning does not emit MIDI, OSC, or device writes. Adding or removing a confirmed route updates the live Bridge routing configuration without restarting transports. Routes loaded into the Setup form from a Performance Setup are pending setup changes until the Bridge is deliberately started with that setup. A custom route is additive: its inbound CC still follows the existing typed OSC and device-control lanes. Custom routes remain intentionally limited to MIDI CC input and OSC output; use the Diagnostics route trace when you need to verify a more complex typed-event path.
 
+### Device telemetry → MIDI
+
+Add a route by choosing Slot or EF, a source number starting at 1, MIDI CC 0–127, and channel 1–16. Cards show pending routes and offer Remove. Sources absent from telemetry produce no output. Choose **Configured routes** to use the cards on the next Bridge start; legacy mode retains automatic CC assignments. These changes do not update running transports.
+
+**Advanced / Edit raw route definition** retains JSON access with zero-based source indices. Invalid JSON, invalid entries, duplicate IDs, and more than 128 routes are rejected; correct the definition before starting or saving a setup.
+
 ## Monitor Mode
 
 ![Bridge console Monitor mode with connection-health cards, cached device session, and operator actions](../images/bridge-stage-mode.png)
@@ -66,8 +74,8 @@ In the screenshot above, the simulated device is connected, `Device` is `ready`,
 
 - `Bridge`, `Serial`, and `Device` show whether the desktop runtime is running, whether the serial link is up, and whether the device session is actually ready.
 - `Telemetry` reports `live`, `delayed`, `stale`, or the relevant stopped/disconnected state instead of presenting an old timestamp as current activity. `RT p95` and `Jitter p95` summarize whether round-trip timing is staying inside configured targets.
-- `Routing heartbeat` shows the most recent Device → OSC, Device → MIDI, OSC → Device, and MIDI → Device routes. Recently observed lanes pulse; older lanes report how long ago they were seen.
-- `Cached device session` shows the last known firmware identity, schema version/source, power profile, LED cap, rail state, config-export validation, device truth, draft state, and last apply result.
+- **Live patchbay** connects MN42, USB, Bridge, and the Device → OSC, Device → MIDI, OSC → Device, and MIDI → Device lanes. Destination labels describe configured intent; lane text and line styling show observed activity. Older traffic stays neutral, and dropped routes do not light a successful path. USB loss is explicit. Host application receipt is not confirmed.
+- **Device verdict** keeps readiness, configuration attention, and the reported power profile visible. **Device details** discloses firmware identity, schema version/source, LED cap, rail state, config-export validation, device truth, draft state, and last apply result. A reported power profile is not a blanket safety verdict.
 - `Operator actions` keeps only the show-safe actions visible:
   - `Open configurator`
   - `Download snapshot`
@@ -77,9 +85,11 @@ When validation fails, a device configuration draft is staged, or device authori
 
 ### Passive Soundcheck
 
-`Start passive soundcheck` is write-free. It captures a live slot-telemetry baseline, asks the performer to move one stable, unmodulated hardware control, detects the next slot-value change, and checks whether matching route traces reached OSC and MIDI. It does not generate MIDI notes, OSC commands, slot writes, or synthetic device movement. LFO or envelope modulation can also change slot telemetry, so use a stable slot when you want the result to correspond to a deliberate physical move.
+`Start passive soundcheck` is write-free. It captures a live slot-telemetry baseline, asks the performer to move one stable, unmodulated hardware control, detects the next slot-value change, and checks for Bridge output traces alongside that movement. OSC is expected; MIDI is expected in legacy mode or when a configured MIDI slot route matches a changed slot. EF-only mappings do not require MIDI output during this slot check. Trace IDs correlate telemetry when available; otherwise the check uses a short time window, which cannot establish control-specific delivery. It does not generate MIDI notes, OSC commands, slot writes, or synthetic device movement. LFO or envelope modulation can also change slot telemetry, so use a stable slot when you want the result to correspond to a deliberate physical move.
 
-The result reports OSC and MIDI independently. A missing lane means only that the Bridge did not observe that route during the check; confirm the selected host recipe, destination availability, and Diagnostics route trace before treating it as a hardware fault.
+The result reports OSC and MIDI independently and marks unmatched MIDI slots as not configured. A connection or routing change interrupts the check. The performer must confirm sound or visuals in the destination app; Bridge output is not a delivery acknowledgement. A missing lane means only that the Bridge did not observe that route during the check; confirm the selected host recipe, destination availability, and Diagnostics route trace before treating it as a hardware fault.
+
+Alerts link to the relevant runtime, serial, or route evidence. Diagnostics also provides Problems, Routes, Serial, Logs, and Raw state navigation with keyboard focus at the destination.
 
 ### What “Session Ready” Means
 

@@ -991,7 +991,7 @@ async function run() {
   const consoleHtml = consoleResponse.body.toString('utf8');
   assert.match(
     consoleHtml,
-    /Bridge command center/,
+    /Bridge patchbay/,
     'server should expose the simplified first-run console copy',
   );
   assert.match(
@@ -1027,7 +1027,7 @@ async function run() {
   );
   assert.match(
     consoleHtml,
-    /Routing heartbeat[\s\S]*Performance setup:[\s\S]*OSC destination · OSC[\s\S]*MIDI destination · MIDI/,
+    /Live patchbay[\s\S]*Performance setup:[\s\S]*OSC destination · OSC[\s\S]*MIDI destination · MIDI/,
     'Monitor should expose named passive routing destinations',
   );
   assert.match(

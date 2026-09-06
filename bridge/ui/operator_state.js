@@ -32,11 +32,7 @@
     if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
       return null;
     }
-    const controller = integerInRange(
-      mapping.controller ?? mapping.cc,
-      0,
-      127,
-    );
+    const controller = integerInRange(mapping.controller ?? mapping.cc, 0, 127);
     const channel =
       mapping.channel === null || mapping.channel === ''
         ? null
@@ -55,18 +51,30 @@
       address,
       valueMode: mapping.valueMode === 'normalized' ? 'normalized' : 'raw',
       scale: Number.isFinite(Number(mapping.scale)) ? Number(mapping.scale) : 1,
-      offset: Number.isFinite(Number(mapping.offset)) ? Number(mapping.offset) : 0,
+      offset: Number.isFinite(Number(mapping.offset))
+        ? Number(mapping.offset)
+        : 0,
       argType: mapping.argType === 'int' ? 'int' : 'float',
     };
   }
 
   function normalizeOutboundMidiMapping(mapping, index) {
-    if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) return null;
+    if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping))
+      return null;
     const source = shortString(mapping.source, 32).toLowerCase();
-    const sourceIndex = integerInRange(mapping.sourceIndex ?? mapping.index, 0, 127);
+    const sourceIndex = integerInRange(
+      mapping.sourceIndex ?? mapping.index,
+      0,
+      127,
+    );
     const channel = integerInRange(mapping.channel, 1, 16);
     const controller = integerInRange(mapping.controller ?? mapping.cc, 0, 127);
-    if (!['slots', 'envelopes'].includes(source) || sourceIndex === null || channel === null || controller === null) {
+    if (
+      !['slots', 'envelopes'].includes(source) ||
+      sourceIndex === null ||
+      channel === null ||
+      controller === null
+    ) {
       return null;
     }
     return {
@@ -111,10 +119,9 @@
       rtJitterP95TargetMs: positiveNumber(config.rtJitterP95TargetMs, 5),
       alertSuppressionMs: positiveNumber(config.alertSuppressionMs, 3000),
       allowFeedbackLoops: Boolean(config.allowFeedbackLoops),
-      midiToOscMappings: rawMappings
-        .map(normalizeHostMapping)
-        .filter(Boolean),
-      midiTelemetryMode: config.midiTelemetryMode === 'mapped' ? 'mapped' : 'legacy',
+      midiToOscMappings: rawMappings.map(normalizeHostMapping).filter(Boolean),
+      midiTelemetryMode:
+        config.midiTelemetryMode === 'mapped' ? 'mapped' : 'legacy',
       outboundMidiMappings: rawOutboundMappings
         .map(normalizeOutboundMidiMapping)
         .filter(Boolean),
@@ -122,7 +129,8 @@
   }
 
   function normalizeHostSetup(setup) {
-    if (!setup || typeof setup !== 'object' || Array.isArray(setup)) return null;
+    if (!setup || typeof setup !== 'object' || Array.isArray(setup))
+      return null;
     const id = shortString(setup.id, 96);
     const name = shortString(setup.name, 80);
     const config = normalizeHostSetupConfig(setup.config);
@@ -135,6 +143,7 @@
         shortString(setup.suggestedDeviceProfile, 80) || null,
       createdAt: shortString(setup.createdAt, 64) || null,
       updatedAt: shortString(setup.updatedAt, 64) || null,
+      lastUsedAt: shortString(setup.lastUsedAt, 64) || null,
       config,
     };
   }
@@ -183,8 +192,10 @@
 
   function formatTelemetryFreshness(state = {}, nowMs = Date.now()) {
     if (!state.running) return { label: 'bridge stopped', status: 'muted' };
-    if (!state.serialConnected) return { label: 'serial disconnected', status: 'error' };
-    if (!state.lastTelemetryAt) return { label: 'waiting for telemetry', status: 'warn' };
+    if (!state.serialConnected)
+      return { label: 'serial disconnected', status: 'error' };
+    if (!state.lastTelemetryAt)
+      return { label: 'waiting for telemetry', status: 'warn' };
     const age = ageSeconds(state.lastTelemetryAt, nowMs);
     if (age === null) return { label: 'timestamp invalid', status: 'error' };
     if (age <= 3) return { label: 'live', status: 'ok' };
@@ -198,9 +209,13 @@
       return { label: 'verified', status: 'ok', recoveryRequired: false };
     }
     if (status === 'invalid') {
-      const count = Array.isArray(validation?.errors) ? validation.errors.length : 0;
+      const count = Array.isArray(validation?.errors)
+        ? validation.errors.length
+        : 0;
       return {
-        label: count ? `invalid · ${count} error${count === 1 ? '' : 's'}` : 'invalid',
+        label: count
+          ? `invalid · ${count} error${count === 1 ? '' : 's'}`
+          : 'invalid',
         status: 'error',
         recoveryRequired: true,
       };
@@ -218,15 +233,23 @@
       preflighting: 'checking candidate',
       pending: 'pending',
     };
-    const status = authority === 'verified'
-      ? 'ok'
-      : authority === 'pending' || authority === 'preflighting' || authority === 'resynchronizing'
-        ? 'warn'
-        : 'error';
+    const status =
+      authority === 'verified'
+        ? 'ok'
+        : authority === 'pending' ||
+            authority === 'preflighting' ||
+            authority === 'resynchronizing'
+          ? 'warn'
+          : 'error';
     return {
       label: labels[authority] || authority,
       status,
-      recoveryRequired: !['verified', 'pending', 'preflighting', 'resynchronizing'].includes(authority),
+      recoveryRequired: ![
+        'verified',
+        'pending',
+        'preflighting',
+        'resynchronizing',
+      ].includes(authority),
     };
   }
 
@@ -247,8 +270,9 @@
     const latest = {};
     routes.forEach((route) => {
       const lane = ROUTE_LANES[route?.flow];
-      if (!lane) return;
-      const timestamp = Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
+      if (!lane || String(route?.kind || '').startsWith('drop_')) return;
+      const timestamp =
+        Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
       if (!Number.isFinite(timestamp)) return;
       if (!latest[lane] || timestamp > latest[lane].timestamp) {
         latest[lane] = { route, timestamp };
@@ -257,21 +281,33 @@
     return Object.fromEntries(
       Object.values(ROUTE_LANES).map((lane) => {
         const entry = latest[lane];
-        if (!entry) return [lane, { label: 'not seen', status: 'muted', recent: false }];
+        if (!entry)
+          return [lane, { label: 'not seen', status: 'muted', recent: false }];
         const age = Math.max(0, Math.floor((nowMs - entry.timestamp) / 1000));
-        if (age <= 3) return [lane, { label: 'active now', status: 'ok', recent: true }];
-        if (age < 60) return [lane, { label: `seen ${age}s ago`, status: 'muted', recent: false }];
+        if (age <= 3)
+          return [lane, { label: 'active now', status: 'ok', recent: true }];
+        if (age < 60)
+          return [
+            lane,
+            { label: `seen ${age}s ago`, status: 'muted', recent: false },
+          ];
         return [
           lane,
-          { label: `seen ${Math.floor(age / 60)}m ago`, status: 'muted', recent: false },
+          {
+            label: `seen ${Math.floor(age / 60)}m ago`,
+            status: 'muted',
+            recent: false,
+          },
         ];
       }),
     );
   }
 
   function describeRoutingDestinations(config = {}) {
-    const oscName = shortString(config.oscDestinationName, 80) || 'OSC destination';
-    const midiName = shortString(config.midiDestinationName, 80) || 'MIDI destination';
+    const oscName =
+      shortString(config.oscDestinationName, 80) || 'OSC destination';
+    const midiName =
+      shortString(config.midiDestinationName, 80) || 'MIDI destination';
     const oscHost = shortString(config.oscHost, 256) || '127.0.0.1';
     const oscPort = integerInRange(config.oscPort, 1, 65535, 9000);
     const midiPort = shortString(config.midiLabel, 256) || 'MN42 Bridge';
@@ -303,7 +339,8 @@
     for (let index = 0; index < count; index += 1) {
       const before = Number(previous[index]);
       const after = Number(current[index]);
-      if (Number.isFinite(before) && Number.isFinite(after) && before !== after) changed.push(index);
+      if (Number.isFinite(before) && Number.isFinite(after) && before !== after)
+        changed.push(index);
     }
     return changed;
   }
@@ -312,13 +349,61 @@
     const observed = new Set();
     routes.forEach((route) => {
       if (!['serial->osc', 'serial->midi'].includes(route?.flow)) return;
-      const traceMatches = detection.traceId && route?.traceId === detection.traceId;
-      const timestamp = Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
-      const timeMatches = !detection.traceId && Number.isFinite(timestamp) &&
-        timestamp >= Number(detection.detectedAt || detection.startedAt || 0) - 1000;
+      if (String(route?.kind || '').startsWith('drop_')) return;
+      if (route?.kind && route.kind !== 'telemetry') return;
+      const traceMatches =
+        detection.traceId && route?.traceId === detection.traceId;
+      const timestamp =
+        Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
+      const timeMatches =
+        !detection.traceId &&
+        Number.isFinite(timestamp) &&
+        timestamp >=
+          Number(detection.detectedAt || detection.startedAt || 0) - 1000;
       if (traceMatches || timeMatches) observed.add(ROUTE_LANES[route.flow]);
     });
     return observed;
+  }
+
+  function parseOutboundRouteDraft(raw) {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length > 128) {
+      throw new Error('Provide an array of up to 128 routes.');
+    }
+    const ids = new Set();
+    return parsed.map((entry, index) => {
+      const route = normalizeOutboundMidiMapping(entry, index);
+      if (
+        !route ||
+        [
+          entry.sourceIndex ?? entry.index,
+          entry.channel,
+          entry.controller ?? entry.cc,
+        ].some((value) => value == null || String(value).trim() === '')
+      ) {
+        throw new Error(
+          `Route ${index + 1}: choose a source, index 0–127, channel 1–16, and CC 0–127.`,
+        );
+      }
+      if (ids.has(route.id))
+        throw new Error(`Route ${index + 1}: route IDs must be unique.`);
+      ids.add(route.id);
+      return route;
+    });
+  }
+
+  function expectedSoundcheckLanes(config = {}, slotIndices = []) {
+    const expected = ['deviceOsc'];
+    if (
+      config.midiTelemetryMode !== 'mapped' ||
+      (config.outboundMidiMappings || []).some(
+        (route) =>
+          route.source === 'slots' && slotIndices.includes(route.sourceIndex),
+      )
+    ) {
+      expected.push('deviceMidi');
+    }
+    return expected;
   }
 
   function isActionVisibleInMode(modeList, mode) {
@@ -355,11 +440,7 @@
       const controller = Number(route?.slot);
       const value = Number(route?.value);
       if (!Number.isInteger(status) || (status & 0xf0) !== 0xb0) continue;
-      if (
-        !Number.isInteger(controller) ||
-        controller < 0 ||
-        controller > 127
-      ) {
+      if (!Number.isInteger(controller) || controller < 0 || controller > 127) {
         continue;
       }
       return {
@@ -408,6 +489,8 @@
     latestLearnableMidiCc,
     normalizeHostSetupConfig,
     observedSoundcheckLanes,
+    expectedSoundcheckLanes,
+    parseOutboundRouteDraft,
     operatorConfirmationMessage,
     parseSlotTelemetryLine,
     parseHostSetupEnvelope,

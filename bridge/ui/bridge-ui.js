@@ -5,7 +5,8 @@ const MODE_KEY = 'mn42-bridge-console-mode';
 const CUSTOM_SETUPS_KEY = 'mn42-bridge-custom-host-setups-v1';
 const RAW_LINE_LIMIT = 200;
 const STRUCTURED_EVENT_LIMIT = 120;
-const controlToken = new URL(window.location.href).searchParams.get('token') || '';
+const controlToken =
+  new URL(window.location.href).searchParams.get('token') || '';
 const {
   activeAlerts: selectActiveAlerts,
   describeAuthority,
@@ -20,6 +21,8 @@ const {
   latestLearnableMidiCc,
   normalizeHostSetupConfig,
   observedSoundcheckLanes,
+  expectedSoundcheckLanes,
+  parseOutboundRouteDraft,
   operatorConfirmationMessage,
   parseHostSetupEnvelope,
   parseSlotTelemetryLine,
@@ -72,7 +75,9 @@ const customSetupName = document.getElementById('custom-setup-name');
 const customSetupProfile = document.getElementById('custom-setup-profile');
 const customSetupNotes = document.getElementById('custom-setup-notes');
 const customSetupStatus = document.getElementById('custom-setup-status');
-const stagePerformanceSetup = document.getElementById('stage-performance-setup');
+const stagePerformanceSetup = document.getElementById(
+  'stage-performance-setup',
+);
 const newCustomSetupButton = document.getElementById('new-custom-setup');
 const saveCustomSetupButton = document.getElementById('save-custom-setup');
 const loadCustomSetupButton = document.getElementById('load-custom-setup');
@@ -80,13 +85,17 @@ const deleteCustomSetupButton = document.getElementById('delete-custom-setup');
 const exportCustomSetupsButton = document.getElementById(
   'export-custom-setups',
 );
-const importCustomSetupsInput = document.getElementById(
-  'import-custom-setups',
+const importCustomSetupsInput = document.getElementById('import-custom-setups');
+const outboundMidiMappingsInput = document.getElementById(
+  'outbound-midi-mappings',
 );
-const outboundMidiMappingsInput = document.getElementById('outbound-midi-mappings');
-const outboundMidiMappingStatus = document.getElementById('outbound-midi-mapping-status');
+const outboundMidiMappingStatus = document.getElementById(
+  'outbound-midi-mapping-status',
+);
 const midiTelemetryModeSelect = document.getElementById('midi-telemetry-mode');
-const setupMidiRouteSummary = document.getElementById('setup-midi-route-summary');
+const setupMidiRouteSummary = document.getElementById(
+  'setup-midi-route-summary',
+);
 const setupOscRouteSummary = document.getElementById('setup-osc-route-summary');
 
 const routeHeartbeatNodes = {
@@ -98,7 +107,9 @@ const routeHeartbeatNodes = {
 
 const modeTabs = [...document.querySelectorAll('.mode-tab')];
 const modeViews = [...document.querySelectorAll('[data-mode-view]')];
-const modeScopedActions = [...document.querySelectorAll('[data-console-modes]')];
+const modeScopedActions = [
+  ...document.querySelectorAll('[data-console-modes]'),
+];
 
 const statusNodes = {
   running: document.getElementById('status-running'),
@@ -168,6 +179,8 @@ let eventSocket = null;
 let soundcheck = null;
 let mappingLearn = null;
 let hostFormDirty = false;
+let outboundDraftError = '';
+let startingBridge = false;
 let customSetupNotice = '';
 const SOUNDCHECK_WINDOW_MS = 15_000;
 const MAPPING_LEARN_WINDOW_MS = 10_000;
@@ -236,6 +249,137 @@ function persistCustomSetups() {
   }
 }
 
+function jumpTo(mode, targetId) {
+  updateMode(mode);
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.tabIndex = -1;
+  target.focus();
+  target.scrollIntoView({ block: 'start' });
+}
+
+function renderRecallSetup() {
+  const panel = document.getElementById('recall-setup');
+  const select = document.getElementById('recall-select');
+  const previousId = select.value;
+  panel.hidden = !consoleState.customSetups.length;
+  select.replaceChildren();
+  const setups = [...consoleState.customSetups].sort((a, b) =>
+    String(b.lastUsedAt || b.updatedAt || '').localeCompare(
+      String(a.lastUsedAt || a.updatedAt || ''),
+    ),
+  );
+  setups.forEach((setup) => {
+    const option = document.createElement('option');
+    option.value = setup.id;
+    option.textContent = setup.name;
+    select.appendChild(option);
+  });
+  if (setups.some((setup) => setup.id === previousId))
+    select.value = previousId;
+  renderRecallSummary();
+}
+
+function renderRecallSummary() {
+  const setup = consoleState.customSetups.find(
+    (entry) => entry.id === document.getElementById('recall-select').value,
+  );
+  const summary = document.getElementById('recall-summary');
+  summary.replaceChildren();
+  if (!setup) return;
+  const destinations = describeRoutingDestinations(setup.config);
+  Object.entries({
+    MN42:
+      setup.config.serialName || 'Choose a serial port in Edit saved setups',
+    MIDI: destinations.deviceMidi,
+    OSC: destinations.deviceOsc,
+    'Suggested MN42 profile': setup.suggestedDeviceProfile || 'None specified',
+    'Last used': setup.lastUsedAt
+      ? formatWhen(setup.lastUsedAt)
+      : 'Not started from this setup yet',
+    Notes: setup.notes || 'None',
+  }).forEach(([label, value]) => {
+    const row = document.createElement('div');
+    const term = document.createElement('dt');
+    const detail = document.createElement('dd');
+    term.textContent = label;
+    detail.textContent = value;
+    row.append(term, detail);
+    summary.appendChild(row);
+  });
+  document.getElementById('start-saved-setup').disabled =
+    Boolean(consoleState.bridge?.running) || startingBridge;
+}
+
+function renderOutboundRoutes() {
+  const list = document.getElementById('outbound-route-list');
+  list.replaceChildren();
+  const routes = consoleState.outboundMidiMappings;
+  if (!routes.length) {
+    const empty = document.createElement('li');
+    empty.textContent = 'No configured routes. Add a Slot or EF source below.';
+    list.appendChild(empty);
+  }
+  routes.forEach((route, index) => {
+    const row = document.createElement('li');
+    const label = document.createElement('span');
+    const source = `${route.source === 'slots' ? 'Slot' : 'EF'} ${route.sourceIndex + 1}`;
+    label.textContent = `${source} → CC ${route.controller} · Ch ${route.channel}`;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = 'Remove';
+    remove.setAttribute(
+      'aria-label',
+      `Remove ${source} to CC ${route.controller} channel ${route.channel}`,
+    );
+    remove.addEventListener('click', () => {
+      if (!validateOutboundDraft()) return;
+      consoleState.outboundMidiMappings.splice(index, 1);
+      commitOutboundDraft();
+    });
+    row.append(label, remove);
+    list.appendChild(row);
+  });
+  outboundMidiMappingStatus.textContent =
+    outboundDraftError ||
+    `${routes.length} configured route${routes.length === 1 ? '' : 's'} · ${
+      midiTelemetryModeSelect.value === 'mapped'
+        ? 'pending until next Bridge start'
+        : 'inactive in legacy compatibility mode'
+    }.`;
+}
+
+function validateOutboundDraft() {
+  try {
+    consoleState.outboundMidiMappings = parseOutboundRouteDraft(
+      outboundMidiMappingsInput.value,
+    );
+    outboundDraftError = '';
+    outboundMidiMappingsInput.setCustomValidity('');
+    return true;
+  } catch (error) {
+    outboundDraftError = `Route definition invalid: ${error.message}`;
+    outboundMidiMappingsInput.setCustomValidity(outboundDraftError);
+    outboundMidiMappingStatus.textContent = outboundDraftError;
+    return false;
+  }
+}
+
+function commitOutboundDraft() {
+  outboundMidiMappingsInput.value = JSON.stringify(
+    consoleState.outboundMidiMappings,
+    null,
+    2,
+  );
+  outboundDraftError = '';
+  outboundMidiMappingsInput.setCustomValidity('');
+  hostFormDirty = true;
+  consoleState.loadedCustomSetupId = '';
+  saveConfig(formValues());
+  renderOutboundRoutes();
+  renderCustomSetupStatus();
+}
+
 function renderCustomSetupStatus() {
   const selected = selectedCustomSetup();
   loadCustomSetupButton.disabled = !selected;
@@ -249,11 +393,13 @@ function renderCustomSetupStatus() {
     hostSetupConfigFingerprint(formValues()) !==
       hostSetupConfigFingerprint(selected.config) ||
     customSetupName.value.trim() !== selected.name ||
-    customSetupProfile.value.trim() !== (selected.suggestedDeviceProfile || '') ||
+    customSetupProfile.value.trim() !==
+      (selected.suggestedDeviceProfile || '') ||
     customSetupNotes.value.trim() !== (selected.notes || '');
   customSetupStatus.textContent = changed
     ? `${selected.name} selected · current form differs from the saved setup.`
-    : customSetupNotice || `${selected.name} selected · no unsaved setup changes.`;
+    : customSetupNotice ||
+      `${selected.name} selected · no unsaved setup changes.`;
 }
 
 function renderCustomSetups({ syncName = false } = {}) {
@@ -274,7 +420,8 @@ function renderCustomSetups({ syncName = false } = {}) {
     customSetupSelect.value = consoleState.activeCustomSetupId;
     if (syncName) {
       customSetupName.value = selectedCustomSetup().name;
-      customSetupProfile.value = selectedCustomSetup().suggestedDeviceProfile || '';
+      customSetupProfile.value =
+        selectedCustomSetup().suggestedDeviceProfile || '';
       customSetupNotes.value = selectedCustomSetup().notes || '';
     }
   } else {
@@ -288,6 +435,7 @@ function renderCustomSetups({ syncName = false } = {}) {
   }
   exportCustomSetupsButton.disabled = !consoleState.customSetups.length;
   renderCustomSetupStatus();
+  renderRecallSetup();
 }
 
 function beginNewCustomSetup() {
@@ -306,6 +454,11 @@ function customSetupId() {
 }
 
 function saveCurrentCustomSetup() {
+  if (!validateOutboundDraft()) {
+    customSetupNotice = outboundDraftError;
+    renderCustomSetupStatus();
+    return;
+  }
   const name = customSetupName.value.trim().slice(0, 80);
   const config = normalizeHostSetupConfig(formValues());
   if (!name || !config) {
@@ -317,7 +470,9 @@ function saveCurrentCustomSetup() {
   const current = selectedCustomSetup();
   if (
     current &&
-    !window.confirm(`Replace saved setup “${current.name}” with the current form?`)
+    !window.confirm(
+      `Replace saved setup “${current.name}” with the current form?`,
+    )
   ) {
     return;
   }
@@ -325,9 +480,11 @@ function saveCurrentCustomSetup() {
   const setup = {
     id: current?.id || customSetupId(),
     name,
-    suggestedDeviceProfile: customSetupProfile.value.trim().slice(0, 80) || null,
+    suggestedDeviceProfile:
+      customSetupProfile.value.trim().slice(0, 80) || null,
     notes: customSetupNotes.value.trim().slice(0, 500) || null,
     createdAt: current?.createdAt || now,
+    lastUsedAt: current?.lastUsedAt || null,
     updatedAt: now,
     config,
   };
@@ -342,7 +499,8 @@ function saveCurrentCustomSetup() {
   if (!persistCustomSetups()) {
     consoleState.customSetups = previousSetups;
     consoleState.activeCustomSetupId = previousActiveId;
-    customSetupNotice = 'Browser storage rejected the setup; export existing setups before retrying.';
+    customSetupNotice =
+      'Browser storage rejected the setup; export existing setups before retrying.';
     renderCustomSetups();
     return;
   }
@@ -367,7 +525,10 @@ function loadSelectedCustomSetup() {
 
 function deleteSelectedCustomSetup() {
   const setup = selectedCustomSetup();
-  if (!setup || !window.confirm(`Delete browser-local setup “${setup.name}”?`)) {
+  if (
+    !setup ||
+    !window.confirm(`Delete browser-local setup “${setup.name}”?`)
+  ) {
     return;
   }
   const previousSetups = consoleState.customSetups;
@@ -519,9 +680,16 @@ function populateForm(values) {
   if (Array.isArray(values.outboundMidiMappings)) {
     consoleState.outboundMidiMappings = clone(values.outboundMidiMappings);
     if (outboundMidiMappingsInput) {
-      outboundMidiMappingsInput.value = JSON.stringify(values.outboundMidiMappings, null, 2);
+      outboundMidiMappingsInput.value = JSON.stringify(
+        values.outboundMidiMappings,
+        null,
+        2,
+      );
     }
   }
+  outboundDraftError = '';
+  outboundMidiMappingsInput.setCustomValidity('');
+  renderOutboundRoutes();
   renderSetupRoutingSummary();
 }
 
@@ -553,7 +721,12 @@ function formatBooleanStatus(value, trueLabel = 'ok', falseLabel = 'warn') {
 function renderOperatorStatus(node, description) {
   if (!node) return;
   node.textContent = description?.label || '-';
-  node.classList.remove('status-ok', 'status-warn', 'status-error', 'status-muted');
+  node.classList.remove(
+    'status-ok',
+    'status-warn',
+    'status-error',
+    'status-muted',
+  );
   if (description?.status) node.classList.add(`status-${description.status}`);
 }
 
@@ -583,9 +756,12 @@ function formatRoute(route) {
   }`;
   const slotIndex = Number(route.slot);
   const slotMetadata = Number.isInteger(slotIndex)
-    ? consoleState.bridge?.appDisplayMetadata?.slots?.find((entry) => entry.index === slotIndex)
+    ? consoleState.bridge?.appDisplayMetadata?.slots?.find(
+        (entry) => entry.index === slotIndex,
+      )
     : null;
-  const advisoryLabel = slotMetadata?.routeDescription || slotMetadata?.label || '';
+  const advisoryLabel =
+    slotMetadata?.routeDescription || slotMetadata?.label || '';
   const tail = [route.traceId, advisoryLabel, route.source, route.destination]
     .filter(Boolean)
     .join(' · ');
@@ -604,23 +780,50 @@ function renderRouteOutput(routes = []) {
     .join('\n');
 }
 
-function finishSoundcheck() {
+function renderSoundcheckResults(check, finished = false) {
+  const list = document.getElementById('soundcheck-results');
+  list.replaceChildren();
+  const entries = [
+    [
+      'USB / Bridge',
+      check.detection
+        ? `✓ Slot ${check.detection.slotIndices.map((index) => index + 1).join(', ')} changed`
+        : 'Waiting for movement',
+    ],
+    ...['deviceOsc', 'deviceMidi'].map((lane) => [
+      lane === 'deviceOsc' ? 'OSC output' : 'MIDI output',
+      !check.detection
+        ? 'Waiting for movement'
+        : !check.expected.includes(lane)
+          ? 'Not configured for the detected slots'
+          : check.observed.has(lane)
+            ? '✓ Output observed'
+            : finished
+              ? 'Not observed — inspect routing and trace'
+              : 'Following signal…',
+    ]),
+  ];
+  entries.forEach(([label, value]) => {
+    const item = document.createElement('li');
+    item.textContent = `${label}: ${value}`;
+    list.appendChild(item);
+  });
+}
+
+function finishSoundcheck(reason = '') {
   if (!soundcheck) return;
   window.clearTimeout(soundcheck.timer);
-  const observed = soundcheck.observed;
-  if (!soundcheck.detection) {
-    soundcheckStatus.textContent =
-      'No slot-value change detected. Confirm live telemetry and try again.';
-  } else if (observed.has('deviceOsc') && observed.has('deviceMidi')) {
-    soundcheckStatus.textContent =
-      'Soundcheck complete: the detected slot change reached both OSC and MIDI.';
-  } else {
-    const seen = [
-      observed.has('deviceOsc') ? 'OSC observed' : 'OSC not observed',
-      observed.has('deviceMidi') ? 'MIDI observed' : 'MIDI not observed',
-    ];
-    soundcheckStatus.textContent = `Soundcheck finished: ${seen.join('; ')}.`;
-  }
+  const complete =
+    soundcheck.detection &&
+    soundcheck.expected.every((lane) => soundcheck.observed.has(lane));
+  soundcheckStatus.textContent =
+    reason ||
+    (!soundcheck.detection
+      ? 'No slot-value change detected. Confirm live telemetry and try again.'
+      : complete
+        ? 'Soundcheck complete: expected Bridge outputs observed alongside movement. Confirm sound or visuals in the destination app.'
+        : 'Soundcheck incomplete: an expected Bridge output was not observed. Inspect Routing or the route trace.');
+  renderSoundcheckResults(soundcheck, true);
   soundcheck = null;
   startSoundcheckButton.textContent = 'Start passive soundcheck';
   updateButtons(consoleState.bridge || {});
@@ -633,19 +836,52 @@ function renderRoutingHeartbeat(routes = []) {
   );
   Object.entries(routeHeartbeatNodes).forEach(([lane, card]) => {
     if (!card) return;
-    const description = heartbeat[lane];
+    const state = consoleState.bridge || {};
+    const config = state.config || formValues();
+    const noMidiRoutes =
+      lane === 'deviceMidi' &&
+      config.midiTelemetryMode === 'mapped' &&
+      !config.outboundMidiMappings?.length;
+    const description = !state.running
+      ? { label: 'Bridge stopped', status: 'muted' }
+      : !state.serialConnected
+        ? { label: 'USB disconnected', status: 'error' }
+        : noMidiRoutes
+          ? { label: 'No configured routes', status: 'muted' }
+          : heartbeat[lane];
+    const intent = card.querySelector('small');
+    if (intent)
+      intent.textContent =
+        lane === 'deviceMidi'
+          ? config.midiTelemetryMode === 'mapped'
+            ? `${config.outboundMidiMappings?.length || 0} configured MIDI routes`
+            : 'Legacy automatic CC routes'
+          : lane === 'oscDevice'
+            ? `Listening on ${config.oscBind || '127.0.0.1'}:${config.oscListen || 9000}`
+            : lane === 'midiDevice'
+              ? 'Configured MIDI input'
+              : 'Configured OSC output';
     const label = card.querySelector('span');
     if (label) label.textContent = destinations[lane];
     renderOperatorStatus(card.querySelector('strong'), description);
     card.classList.toggle('is-recent', Boolean(description?.recent));
   });
 
+  if (
+    soundcheck &&
+    (!consoleState.bridge?.running ||
+      !consoleState.bridge?.serialConnected ||
+      hostSetupConfigFingerprint(consoleState.bridge?.config) !==
+        soundcheck.configFingerprint)
+  ) {
+    finishSoundcheck(
+      'Soundcheck interrupted: connection or routing changed. Start a new check when ready.',
+    );
+  }
   if (!soundcheck?.detection) return;
   soundcheck.observed = observedSoundcheckLanes(routes, soundcheck.detection);
-  if (
-    soundcheck.observed.has('deviceOsc') &&
-    soundcheck.observed.has('deviceMidi')
-  ) {
+  renderSoundcheckResults(soundcheck);
+  if (soundcheck.expected.every((lane) => soundcheck.observed.has(lane))) {
     finishSoundcheck();
   }
 }
@@ -672,25 +908,36 @@ function observeSoundcheckTelemetry(line) {
   soundcheck.baseline = telemetry.slots;
   if (!changed.length) return;
   soundcheck.detection = {
+    slotIndices: changed,
     traceId: telemetry.traceId,
     detectedAt: Date.now(),
     startedAt: soundcheck.startedAt,
   };
-  soundcheckStatus.textContent = `Slot ${changed[0] + 1} telemetry changed. Confirming OSC and MIDI routes…`;
+  soundcheck.expected = expectedSoundcheckLanes(soundcheck.config, changed);
+  soundcheckStatus.textContent = `Slot ${changed[0] + 1} telemetry changed. Following configured outputs…`;
   renderRoutingHeartbeat(consoleState.bridge?.routes || []);
 }
 
 function startPassiveSoundcheck() {
-  if (soundcheck) return;
+  if (
+    soundcheck ||
+    !consoleState.bridge?.running ||
+    !consoleState.bridge?.serialConnected
+  )
+    return;
   const baseline = latestSlotTelemetry();
   soundcheck = {
     active: true,
+    config: clone(consoleState.bridge.config),
+    configFingerprint: hostSetupConfigFingerprint(consoleState.bridge.config),
+    expected: [],
     startedAt: Date.now(),
     baseline: baseline?.slots || null,
     detection: null,
     observed: new Set(),
     timer: window.setTimeout(finishSoundcheck, SOUNDCHECK_WINDOW_MS),
   };
+  renderSoundcheckResults(soundcheck);
   startSoundcheckButton.textContent = 'Soundcheck listening…';
   soundcheckStatus.textContent = baseline
     ? 'Listening. Move one stable, unmodulated hardware control now.'
@@ -713,7 +960,13 @@ function renderStateJson(state) {
   });
 
   if (stagePerformanceSetup) {
-    const setup = loadedCustomSetup();
+    const loaded = loadedCustomSetup();
+    const setup =
+      loaded &&
+      hostSetupConfigFingerprint(loaded.config) ===
+        hostSetupConfigFingerprint(state?.config)
+        ? loaded
+        : null;
     const details = setup
       ? [
           `Performance setup: ${setup.name}`,
@@ -724,7 +977,8 @@ function renderStateJson(state) {
         ].filter(Boolean)
       : ['Performance setup: unsaved current routing'];
     const metadata = consoleState.bridge?.appDisplayMetadata;
-    const activeProfileLabel = metadata?.profileLabels?.[metadata?.activeProfile];
+    const activeProfileLabel =
+      metadata?.profileLabels?.[metadata?.activeProfile];
     if (activeProfileLabel) details.push(`App profile: ${activeProfileLabel}`);
     stagePerformanceSetup.textContent = details.join(' · ');
   }
@@ -760,7 +1014,11 @@ function mappingFormValue() {
 function renderMappingPreview() {
   if (!mappingPreview) return;
   const mapping = mappingFormValue();
-  if (!mapping.id || !Number.isInteger(mapping.controller) || !mapping.address) {
+  if (
+    !mapping.id ||
+    !Number.isInteger(mapping.controller) ||
+    !mapping.address
+  ) {
     mappingPreview.textContent = 'No route ready yet.';
     return;
   }
@@ -922,7 +1180,9 @@ function wsUrl(pathname = '/ws') {
 
 function updateButtons(state) {
   const running = Boolean(state?.running);
-  startButton.disabled = running;
+  startButton.disabled = running || startingBridge;
+  document.getElementById('start-saved-setup').disabled =
+    running || startingBridge;
   stopButton.disabled = !running;
   openConfiguratorButton.disabled = !running;
   if (stageOpenConfiguratorButton) {
@@ -957,6 +1217,22 @@ function renderAlertHistory(alerts = []) {
       item.textContent = `[${severity}] ${formatWhen(alert?.at)} — ${
         alert?.message || alert?.code || 'alert'
       }`;
+      const action = document.createElement('button');
+      action.type = 'button';
+      const code = String(alert?.code || '');
+      const target = /serial|telemetry/.test(code)
+        ? 'raw-serial-heading'
+        : /route|osc|midi|feedback/.test(code)
+          ? 'routes-heading'
+          : 'runtime-heading';
+      action.textContent =
+        target === 'routes-heading'
+          ? 'View route trace'
+          : target === 'raw-serial-heading'
+            ? 'Inspect serial'
+            : 'Inspect problem';
+      action.addEventListener('click', () => jumpTo('advanced', target));
+      item.append(' ', action);
       alertHistory.appendChild(item);
     });
 }
@@ -1030,7 +1306,34 @@ function updateSession(session = {}) {
   renderOperatorStatus(sessionNodes.configValidation, validation);
   renderOperatorStatus(sessionNodes.authority, authority);
   renderOperatorStatus(sessionNodes.draftState, draft);
-  const recoveryRequired = validation.recoveryRequired || draft.recoveryRequired;
+  const recoveryRequired =
+    validation.recoveryRequired || draft.recoveryRequired;
+  const configVerdict = recoveryRequired
+    ? 'Config needs attention'
+    : authority.status === 'ok' && validation.status === 'ok'
+      ? 'Config verified'
+      : 'Config pending';
+  document.getElementById('patch-device-identity').textContent =
+    `${sessionNodes.deviceName.textContent} · fw ${sessionNodes.firmware.textContent}`;
+  renderOperatorStatus(document.getElementById('patch-config'), {
+    label: configVerdict,
+    status: recoveryRequired
+      ? 'warn'
+      : configVerdict === 'Config verified'
+        ? 'ok'
+        : 'muted',
+  });
+  document.getElementById('device-verdict').textContent =
+    `${consoleState.bridge?.ready ? 'Device ready' : 'Device not ready'} · ${configVerdict} · Power profile: ${session?.powerSafety?.power_profile || 'unknown'}.`;
+  const usb = document.getElementById('patch-usb');
+  usb.classList.toggle(
+    'is-connected',
+    Boolean(consoleState.bridge?.serialConnected),
+  );
+  usb.classList.toggle(
+    'is-disconnected',
+    !consoleState.bridge?.serialConnected,
+  );
   if (stageRecoveryNeeded) {
     stageRecoveryNeeded.hidden = !recoveryRequired;
     stageRecoveryNeeded.textContent = validation.recoveryRequired
@@ -1380,7 +1683,8 @@ function applyPreset(preset) {
     renderMappingOutput(consoleState.bridge || {});
   }
   hostFormDirty = true;
-  customSetupNotice = 'Bundled recipe loaded into the form; routing was not restarted.';
+  customSetupNotice =
+    'Bundled recipe loaded into the form; routing was not restarted.';
   renderCustomSetupStatus();
   saveConfig(formValues());
 }
@@ -1436,20 +1740,40 @@ async function refreshMidiPorts() {
   return payload;
 }
 
-async function startBridge() {
-  await refreshPorts().catch(() => {});
-  await refreshMidiPorts().catch(() => {});
-  const values = formValues();
-  saveConfig(values);
-  const payload = await api('/api/connect', {
-    method: 'POST',
-    body: JSON.stringify(values),
-  });
-  updateStatus(payload.state);
-  populateForm(payload.state?.config);
-  hostFormDirty = false;
-  customSetupNotice = 'Current host form applied to the Bridge.';
-  renderCustomSetupStatus();
+async function startBridge({ preservePorts = false } = {}) {
+  if (startingBridge || consoleState.bridge?.running) return;
+  if (!validateOutboundDraft()) throw new Error(outboundDraftError);
+  startingBridge = true;
+  updateButtons(consoleState.bridge || {});
+  try {
+    if (!preservePorts) {
+      await refreshPorts().catch(() => {});
+      await refreshMidiPorts().catch(() => {});
+    }
+    const values = formValues();
+    if (!values.serialName) throw new Error('Choose a serial port in Setup.');
+    saveConfig(values);
+    const payload = await api('/api/connect', {
+      method: 'POST',
+      body: JSON.stringify(values),
+    });
+    updateStatus(payload.state);
+    populateForm(payload.state?.config);
+    hostFormDirty = false;
+    customSetupNotice = 'Current host form applied to the Bridge.';
+    const setup = loadedCustomSetup();
+    if (setup && payload.state?.running) {
+      setup.lastUsedAt = new Date().toISOString();
+      if (!persistCustomSetups())
+        customSetupNotice +=
+          ' Last-used time could not be saved in this browser.';
+      renderRecallSetup();
+    }
+    renderCustomSetupStatus();
+  } finally {
+    startingBridge = false;
+    updateButtons(consoleState.bridge || {});
+  }
 }
 
 async function stopBridge() {
@@ -1671,21 +1995,72 @@ function bindEvents() {
   });
 
   outboundMidiMappingsInput?.addEventListener('input', () => {
-    try {
-      const parsed = JSON.parse(outboundMidiMappingsInput.value || '[]');
-      const normalized = normalizeHostSetupConfig({
-        ...formValues(),
-        outboundMidiMappings: parsed,
-      });
-      consoleState.outboundMidiMappings = normalized?.outboundMidiMappings || [];
-      outboundMidiMappingStatus.textContent = `${consoleState.outboundMidiMappings.length} valid outbound MIDI route${consoleState.outboundMidiMappings.length === 1 ? '' : 's'} ready for the next Bridge start.`;
-      hostFormDirty = true;
+    hostFormDirty = true;
+    if (validateOutboundDraft()) {
+      consoleState.loadedCustomSetupId = '';
       saveConfig(formValues());
-    } catch (error) {
-      outboundMidiMappingStatus.textContent = `Route JSON is not valid: ${error.message}`;
+      renderOutboundRoutes();
+      renderCustomSetupStatus();
     }
   });
+  document
+    .getElementById('add-outbound-route')
+    .addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!validateOutboundDraft()) return;
+      const data = new FormData(event.currentTarget);
+      const route = {
+        id: customSetupId(),
+        source: data.get('source'),
+        sourceIndex: Number(data.get('sourceNumber')) - 1,
+        channel: Number(data.get('channel')),
+        controller: Number(data.get('controller')),
+      };
+      try {
+        consoleState.outboundMidiMappings = parseOutboundRouteDraft(
+          JSON.stringify([...consoleState.outboundMidiMappings, route]),
+        );
+        commitOutboundDraft();
+      } catch (error) {
+        outboundMidiMappingStatus.textContent = error.message;
+      }
+    });
+  document.querySelectorAll('[data-jump-mode]').forEach((button) => {
+    button.addEventListener('click', () =>
+      jumpTo(button.dataset.jumpMode, button.dataset.jumpTarget),
+    );
+  });
+  document
+    .getElementById('recall-select')
+    .addEventListener('change', renderRecallSummary);
+  document.getElementById('edit-saved-setup').addEventListener('click', () => {
+    consoleState.activeCustomSetupId =
+      document.getElementById('recall-select').value;
+    renderCustomSetups({ syncName: true });
+    loadSelectedCustomSetup();
+    jumpTo('setup', 'custom-setups-heading');
+  });
+  document
+    .getElementById('start-saved-setup')
+    .addEventListener('click', async () => {
+      if (consoleState.bridge?.running || startingBridge) return;
+      consoleState.activeCustomSetupId =
+        document.getElementById('recall-select').value;
+      renderCustomSetups({ syncName: true });
+      loadSelectedCustomSetup();
+      const status = document.getElementById('recall-status');
+      status.textContent = 'Starting saved rig…';
+      try {
+        await startBridge({ preservePorts: true });
+        status.textContent =
+          'Saved host setup started. MN42 profile remains unchanged.';
+        updateMode('stage');
+      } catch (error) {
+        status.textContent = `Setup start failed: ${error.message}. Edit the saved setup to check its ports.`;
+      }
+    });
   midiTelemetryModeSelect?.addEventListener('change', () => {
+    renderOutboundRoutes();
     hostFormDirty = true;
     consoleState.loadedCustomSetupId = '';
     saveConfig(formValues());
@@ -1706,7 +2081,8 @@ function bindEvents() {
       : 'Enter a name, then save the current host form.';
     if (selectedCustomSetup()) {
       customSetupName.value = selectedCustomSetup().name;
-      customSetupProfile.value = selectedCustomSetup().suggestedDeviceProfile || '';
+      customSetupProfile.value =
+        selectedCustomSetup().suggestedDeviceProfile || '';
       customSetupNotes.value = selectedCustomSetup().notes || '';
     }
     renderCustomSetupStatus();
@@ -1738,6 +2114,8 @@ function bindEvents() {
 
 async function boot() {
   consoleState.customSetups = loadCustomSetups();
+  document.getElementById('first-run-guide').open =
+    !consoleState.customSetups.length;
   renderCustomSetups();
   populateForm(loadSavedConfig());
   updateMode(loadMode());
