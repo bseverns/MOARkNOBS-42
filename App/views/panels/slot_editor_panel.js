@@ -34,12 +34,12 @@ const SLOT_DATA1_PRESENTATION = Object.freeze({
 
 const LFO_GENERATOR_SHAPES = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold', 'Random Slew'];
 
-function formatSharedGenerator(entry, index) {
+function formatSharedGenerator(entry, index, { draftDirty = false } = {}) {
   const fallback = index === 0 ? { shape: 0, frequency_hz: 1 } : { shape: 1, frequency_hz: 0.5 };
   const shape = LFO_GENERATOR_SHAPES[Number(entry?.shape)] ?? LFO_GENERATOR_SHAPES[fallback.shape];
   const rate = Number(entry?.frequency_hz ?? fallback.frequency_hz);
   const rateLabel = Number.isFinite(rate) ? rate.toFixed(rate < 10 ? 2 : 1) : String(fallback.frequency_hz);
-  return `${shape} · ${rateLabel} Hz · shared generator`;
+  return `${shape} · ${rateLabel} Hz · ${draftDirty ? 'local draft' : 'shared generator'}`;
 }
 
 export function createSlotEditorPanel({
@@ -59,7 +59,7 @@ export function createSlotEditorPanel({
   setStatus = () => {},
   getUiMode = () => 'basic',
   getEditorTab = () => 'mapping',
-  getSharedLfos = () => [],
+  getSharedLfoState = () => ({ entries: [], draftDirty: false }),
   openLabTab = () => {},
   openLfoGenerator = () => {}
 } = {}) {
@@ -719,6 +719,7 @@ export function createSlotEditorPanel({
 
   function makeConfigureTuningSurface(slot) {
     const ef = normalizeEf(slot);
+    const arg = normalizeArg(slot);
     const manifest = runtime.getState().manifest ?? localManifest;
     const followerCount = Math.max(0, Number(manifest?.envelope_count) || 0);
     const fieldset = makeFieldset(
@@ -731,7 +732,7 @@ export function createSlotEditorPanel({
     const sourceOptions = [-1, ...Array.from({ length: followerCount }, (_, index) => index)];
     fieldset.appendChild(
       makeSelect(
-        'Source',
+        arg.enabled ? 'Reactive assignment' : 'Source',
         sourceOptions,
         Number(ef.index),
         (value) => {
@@ -740,7 +741,9 @@ export function createSlotEditorPanel({
           stageSlotEnvelopeField(slotState.selected, 'index', next);
         },
         {
-          help: 'Select which envelope follower moves this slot. Unassigned leaves EF modulation disconnected.',
+          help: arg.enabled
+            ? 'Keeps this slot’s reactive path assigned. ARG below supplies the combined follower value.'
+            : 'Choose the follower that drives this reactive path. Unassigned leaves EF modulation disconnected.',
           configPaths: ['slots.*.efIndex', 'slots.*.ef.index'],
           formatOptionLabel: (value) =>
             Number(value) < 0 ? 'Unassigned' : `EF ${Number(value) + 1}`
@@ -748,7 +751,7 @@ export function createSlotEditorPanel({
       )
     );
 
-    fieldset.appendChild(makeConfigureArgSurface(slot));
+    fieldset.appendChild(makeConfigureArgSurface(slot, arg));
 
     const character = document.createElement('section');
     character.className = 'tuning-character';
@@ -850,8 +853,7 @@ export function createSlotEditorPanel({
     return button;
   }
 
-  function makeConfigureArgSurface(slot) {
-    const arg = normalizeArg(slot);
+  function makeConfigureArgSurface(slot, arg = normalizeArg(slot)) {
     const section = document.createElement('section');
     section.className = 'reactive-relationship';
     section.dataset.configureZone = 'arg';
@@ -905,7 +907,7 @@ export function createSlotEditorPanel({
     );
     fieldset.classList.add('configure-motion');
     fieldset.dataset.configureZone = 'lfo';
-    const sharedLfos = getSharedLfos();
+    const sharedLfoState = getSharedLfoState();
     normalizeSlotLfo(slot).forEach((lane, index) => {
       const card = document.createElement('section');
       card.className = 'configure-lfo-lane';
@@ -914,7 +916,7 @@ export function createSlotEditorPanel({
       title.textContent = `LFO ${index + 1}`;
       const generator = document.createElement('p');
       generator.className = 'shared-generator-summary';
-      generator.textContent = formatSharedGenerator(sharedLfos[index], index);
+      generator.textContent = formatSharedGenerator(sharedLfoState.entries?.[index], index, sharedLfoState);
       card.append(
         title,
         generator,

@@ -68,7 +68,7 @@ Configure exposes:
 - **Amount** — Adaptive explicitly enables auto-gain; Subtle, Moderate, and Strong explicitly disable auto-gain and stage gain 0.5, 1, or 2. The summary retains the exact mechanism.
 - **Direction** — a musical translation of the firmware destination mode, such as **Louder → more** or **Signal replaces value**; Lab retains the exact token.
 - **Reactive relationship / ARG** — inside Reactive, enable two followers, choose source A/B, and stage Strongest Wins, Average Together, Difference, or Interaction recipes. ARG chooses the reactive input before the slot’s EF shaping; it is not an additional independent output delta. An EF assignment still gates this path.
-- **Motion / LFO** — each fixed lane has its own switch and signed depth. Configure also shows the current shared generator shape and rate. **Movement & recipes** discloses combine mode and centered-motion recipes; generator editing remains in Lab’s Profile LFO & Routes.
+- **Motion / LFO** — each fixed lane has its own switch and signed depth. Configure shows the current shared generator shape and rate, or marks an unsaved generator edit as a **local draft**. **Movement & recipes** discloses combine mode and centered-motion recipes; generator editing remains in Lab’s Profile LFO & Routes.
 
 Lab keeps every underlying control. Enum choices lead with musical language while retaining the exact token, for example **Smooth · LOWPASS**, **Punchy · EXPONENTIAL**, **Average Together · AVG**, and **Strongest Wins · MAXX**.
 

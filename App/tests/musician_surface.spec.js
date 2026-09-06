@@ -31,20 +31,46 @@ test('selected slot explains measured contributions without synthesizing missing
   await expect(page.locator('.configure-modulation > [data-configure-zone=arg]')).toHaveCount(0);
   await expect(page.locator('[data-configure-zone=envelope] [data-configure-zone=arg]')).toBeVisible();
   await expect(page.locator('.shared-generator-summary').first()).toContainText('shared generator');
+  const reactive = page.locator('[data-configure-zone=envelope]');
+  const relationshipToggle = reactive.getByRole('checkbox', {
+    name: 'Use two followers',
+    exact: true
+  });
+  await expect(reactive.getByLabel(/Reactive assignment/)).toBeVisible();
+  await expect(
+    reactive
+      .locator('label')
+      .filter({ hasText: 'Reactive assignment' })
+      .locator('.help-badge')
+  ).toHaveAttribute('data-tooltip', /ARG below supplies the combined follower value/);
+  await relationshipToggle.uncheck();
+  await page.locator('.slot-signal-heading').click();
+  await expect(reactive.getByLabel('Source')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
 test('causal signal links focus the matching reactive or motion controls', async ({ page }) => {
   const errors = await boot(page);
   await page.getByRole('button', { name: 'Focus Reactive · EF / ARG controls' }).click();
-  await expect(page.locator('[data-configure-zone=envelope]').getByLabel('Source')).toBeFocused();
+  await expect(
+    page.locator('[data-configure-zone=envelope]').getByLabel(/Reactive assignment/)
+  ).toBeFocused();
   await page.getByRole('button', { name: 'Focus LFO 2 controls' }).click();
   await expect(page.getByRole('checkbox', { name: 'Use LFO 2', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Edit generator in Lab →', exact: true }).first().click();
   await expect(
     page.getByRole('tab', { name: 'Profile LFO & Routes', exact: true })
   ).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#lfo-editor .lfo-section').first().locator('select').first()).toBeFocused();
+  const generator = page.locator('#lfo-editor .lfo-section').first();
+  await expect(generator.locator('select').first()).toBeFocused();
+  const frequency = generator.getByLabel('Frequency (Hz)');
+  await frequency.fill('0.35');
+  await frequency.dispatchEvent('change');
+  await expect(page.locator('#lfo-status')).toContainText('edited locally');
+  await page.locator('#return-configure').click();
+  await expect(page.locator('.shared-generator-summary').first()).toContainText(
+    '0.35 Hz · local draft'
+  );
   expect(errors).toEqual([]);
 });
 

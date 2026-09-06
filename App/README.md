@@ -43,7 +43,7 @@ Bridge session for configuration while OSC and MIDI routing remain active.
 
 ## Everyday workflow
 
-- Use **Configure** to select a physical slot, map its output, build the **Reactive** path (source, ARG relationship, and EF character), then add **Motion**. Each Motion lane shows its shared generator’s current shape and rate; editing that generator remains in Lab. The selected-slot strip separates staged settings from measured device contributions and follows their causal order.
+- Use **Configure** to select a physical slot, map its output, build the **Reactive** path (source, ARG relationship, and EF character), then add **Motion**. With ARG off, Source drives the path; with ARG on, Reactive assignment keeps the path assigned while ARG supplies its combined value. Each Motion lane shows its shared generator’s current shape and rate, or labels an unsaved generator change as a local draft; editing remains in Lab. The selected-slot strip separates staged settings from measured device contributions and follows their causal order.
 - Use **Stage** for a compact performance dashboard and safe recall controls.
 - Use **Lab** for exact envelope, ARG, LFO, filter, scope, monitor, and diagnostic controls. Continuous slot controls pair exact numbers with sliders; timing sliders use logarithmic travel. Reset to confirmed stages the last confirmed field value.
 - Importing JSON stages a draft; it does not write the device until Apply succeeds.

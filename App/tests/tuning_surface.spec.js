@@ -16,7 +16,7 @@ test('Configure translates selected-slot tuning into staged musician-facing acti
 
   const tuning = page.getByRole('group', { name: 'Tune This Slot' });
   await expect(tuning).toBeVisible();
-  await expect(tuning.getByLabel('Source')).toHaveValue('0');
+  await expect(tuning.getByLabel(/Reactive assignment/)).toHaveValue('0');
   await expect(tuning.locator('.tuning-character-current')).toContainText('Literal · LINEAR');
   await expect(tuning.locator('.tuning-response-summary')).toContainText('Response');
   await expect(tuning.locator('.tuning-amount-summary')).toContainText('Amount');
@@ -62,7 +62,7 @@ test('Configure translates selected-slot tuning into staged musician-facing acti
     .poll(() => page.evaluate(() => window.__MN42_RUNTIME.getState().staged.slots[0].ef.destination_mode))
     .toBe('subtract');
 
-  await tuning.getByLabel('Source').selectOption('2');
+  await tuning.getByLabel(/Reactive assignment/).selectOption('2');
   await expect
     .poll(() => page.evaluate(() => {
       const slot = window.__MN42_RUNTIME.getState().staged.slots[0];

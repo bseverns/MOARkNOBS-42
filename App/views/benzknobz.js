@@ -878,7 +878,7 @@ const boot = () => {
     setStatus,
     getUiMode: () => uiModeController.getUiMode(),
     getEditorTab: () => uiModeController.getEditorTab(),
-    getSharedLfos: () => profileMacroScenePanel.getLfoEntries(),
+    getSharedLfoState: () => profileMacroScenePanel.getLfoGeneratorState(),
     openLabTab: (tab, laneIndex = null) => {
       docRoot.dataset.configureReturnTab = tab;
       docRoot.dataset.configureReturnLane = laneIndex === null ? '' : String(laneIndex);
