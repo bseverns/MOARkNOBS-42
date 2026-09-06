@@ -1,0 +1,18 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "top": {
+    "modeSwitch": { "x": 547.859375, "y": 116.1875, "width": 344.265625, "height": 54 },
+    "connectionIdentity": { "x": 1065.671875, "y": 133.09375, "width": 321.328125, "height": 37.953125 },
+    "stateDrawer": { "x": 54, "y": 266.390625, "width": 1332, "height": 48.40625 },
+    "signalPath": { "x": 410.28125, "y": 510.53125, "width": 997.71875, "height": 193.625 }
+  },
+  "workbench": {
+    "liveSlots": { "x": 49, "y": 530.578125, "width": 326.28125, "height": 574 },
+    "signalPath": { "x": 410.28125, "y": 510.53125, "width": 997.71875, "height": 193.625 },
+    "reactivePath": { "x": 429.28125, "y": 979.703125, "width": 471.859375, "height": 1249.890625 },
+    "motion": { "x": 917.140625, "y": 979.703125, "width": 471.859375, "height": 626.984375 }
+  }
+}

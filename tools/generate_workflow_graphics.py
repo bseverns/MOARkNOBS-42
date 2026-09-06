@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 
@@ -28,6 +29,8 @@ DOC_UI_DIR = Path("docs/assets/ui")
 WIKI_UI_DIR = Path("wiki/assets/ui")
 DOC_FLOW_DIR = Path("docs/assets/workflows")
 WIKI_FLOW_DIR = Path("wiki/assets/workflows")
+CONFIGURATOR_LAYOUT_PATH = DOC_UI_DIR / "configurator-layout.json"
+WORKBENCH_CROP_TOP = 320
 
 
 def title_font(size: int = 24):
@@ -51,6 +54,28 @@ def save_ui(image: Image.Image, filename: str) -> None:
 def save_flow(image: Image.Image, filename: str) -> None:
     image.save(DOC_FLOW_DIR / filename)
     image.save(WIKI_FLOW_DIR / filename)
+
+
+def load_configurator_layout() -> dict:
+    with CONFIGURATOR_LAYOUT_PATH.open(encoding="utf-8") as source:
+        return json.load(source)
+
+
+def layout_box(
+    layout: dict,
+    section: str,
+    name: str,
+    *,
+    offset_x: int = 0,
+    offset_y: int = 0,
+) -> tuple[int, int, int, int]:
+    box = layout[section][name]
+    return (
+        round(box["x"] + offset_x),
+        round(box["y"] + offset_y),
+        round(box["x"] + box["width"] + offset_x),
+        round(box["y"] + box["height"] + offset_y),
+    )
 
 
 def draw_round_panel(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str = BG) -> None:
@@ -156,43 +181,44 @@ def draw_heading(draw: ImageDraw.ImageDraw, image: Image.Image, heading: str, su
     draw.text((40, 26 + tf.size + 10), subheading, fill=SUBTITLE, font=bf)
 
 
-def annotate_configurator_top() -> None:
+def annotate_configurator_top(layout: dict) -> None:
     src = DOC_UI_DIR / "configurator-sim.png"
     base = Image.open(src).convert("RGBA")
-    crop = base.crop((0, 0, 1600, 930))
-    left_gutter = 60
-    right_gutter = 420
+    crop = base.crop((0, 0, base.width, min(930, base.height)))
+    left_gutter = 32
+    right_gutter = 360
     canvas = Image.new("RGBA", (left_gutter + crop.width + right_gutter, crop.height + 140), PANEL_BG)
     canvas.paste(crop, (left_gutter, 90))
     draw = ImageDraw.Draw(canvas)
     draw_heading(
         draw,
         canvas,
-        "Configurator top half",
-        "Identity, apply controls, and recovery/profile tools from the simulator-driven UI.",
+        "Configurator overview",
+        "Connection identity, State, and the selected-slot signal path from the simulator-driven UI.",
     )
 
     ox, oy = left_gutter, 90
     bf = body_font(16)
 
-    gutter_x = ox + crop.width + 40
-    label_w = 320
+    gutter_x = ox + crop.width + 24
+    label_w = 300
     label_h = 48
     right_callouts = [
-        ((ox + 1110, oy + 10, ox + 1525, oy + 58), (gutter_x, 112, gutter_x + label_w, 112 + label_h), "Connection + identity", ACCENT),
-        ((ox + 1080, oy + 56, ox + 1572, oy + 126), (gutter_x, 176, gutter_x + label_w, 176 + label_h), "Apply / Rollback", GOLD),
-        ((ox + 18, oy + 150, ox + 1515, oy + 892), (gutter_x, 270, gutter_x + label_w, 270 + label_h), "Recovery & Profiles", MINT),
+        (layout_box(layout, "top", "modeSwitch", offset_x=ox, offset_y=oy), (gutter_x, 112, gutter_x + label_w, 112 + label_h), "Mode switch", ACCENT),
+        (layout_box(layout, "top", "connectionIdentity", offset_x=ox, offset_y=oy), (gutter_x, 178, gutter_x + label_w, 178 + label_h), "Connection identity", GOLD),
+        (layout_box(layout, "top", "stateDrawer", offset_x=ox, offset_y=oy), (gutter_x, 270, gutter_x + label_w, 270 + label_h), "State drawer", MINT),
+        (layout_box(layout, "top", "signalPath", offset_x=ox, offset_y=oy), (gutter_x, 500, gutter_x + label_w, 500 + label_h), "Selected-slot signal path", CYAN),
     ]
     for target, label_box, text, color in right_callouts:
         draw_callout(draw, target, label_box, text, color, bf)
     save_ui(canvas, "configurator-top-annotated.png")
 
 
-def annotate_configurator_bottom() -> None:
+def annotate_configurator_bottom(layout: dict) -> None:
     src = DOC_UI_DIR / "configurator-workbench-sim.png"
     crop = Image.open(src).convert("RGBA")
-    left_gutter = 320
-    right_gutter = 420
+    left_gutter = 260
+    right_gutter = 360
     canvas = Image.new("RGBA", (left_gutter + crop.width + right_gutter, crop.height + 140), PANEL_BG)
     canvas.paste(crop, (left_gutter, 90))
     draw = ImageDraw.Draw(canvas)
@@ -200,22 +226,22 @@ def annotate_configurator_bottom() -> None:
         draw,
         canvas,
         "Configurator workbench",
-        "Scrolled lower work area with live slots, selected-slot editing, the utility rail, and staged diff.",
+        "Configure keeps live slots beside the reactive path and shared LFO motion for the selected slot.",
     )
 
     ox, oy = left_gutter, 90
     bf = body_font(16)
     gutter_x = ox + crop.width + 40
-    label_w = 320
+    label_w = 300
     label_h = 48
 
     right_callouts = [
-        ((ox + 431, oy + 0, ox + 880, oy + 1014), (gutter_x, 140, gutter_x + label_w, 140 + label_h), "Selected Slot", PURPLE),
-        ((ox + 886, oy + 0, ox + 1211, oy + 118), (gutter_x, 206, gutter_x + label_w, 206 + label_h), "Utility rail", CORAL),
-        ((ox + 886, oy + 132, ox + 1211, oy + 620), (gutter_x, 272, gutter_x + label_w, 272 + label_h), "Staged Diff", CYAN),
+        (layout_box(layout, "workbench", "signalPath", offset_x=ox, offset_y=oy - WORKBENCH_CROP_TOP), (gutter_x, 140, gutter_x + label_w, 140 + label_h), "Signal path", PURPLE),
+        (layout_box(layout, "workbench", "reactivePath", offset_x=ox, offset_y=oy - WORKBENCH_CROP_TOP), (gutter_x, 270, gutter_x + label_w, 270 + label_h), "Reactive path", CORAL),
+        (layout_box(layout, "workbench", "motion", offset_x=ox, offset_y=oy - WORKBENCH_CROP_TOP), (gutter_x, 336, gutter_x + label_w, 336 + label_h), "Shared LFO motion", CYAN),
     ]
     left_callouts = [
-        ((ox + 0, oy + 0, ox + 425, oy + 650), (24, 160, 24 + 220, 160 + label_h), "Live Slots", BLUE),
+        (layout_box(layout, "workbench", "liveSlots", offset_x=ox, offset_y=oy - WORKBENCH_CROP_TOP), (24, 250, 24 + 210, 250 + label_h), "Live Slots", BLUE),
     ]
     for target, label_box, text, color in right_callouts + left_callouts:
         draw_callout(draw, target, label_box, text, color, bf)
@@ -407,8 +433,9 @@ def webserial_workflow() -> None:
 
 def main() -> None:
     ensure_dirs()
-    annotate_configurator_top()
-    annotate_configurator_bottom()
+    layout = load_configurator_layout()
+    annotate_configurator_top(layout)
+    annotate_configurator_bottom(layout)
     connectivity_decision()
     bridge_routing()
     validation_gates()

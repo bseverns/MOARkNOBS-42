@@ -11,7 +11,7 @@ If you mix those up, the configurator feels unpredictable. If you keep them sepa
 
 ## The profile panel as a workflow
 
-![Browser configurator screenshot showing staged edits, telemetry, and slot controls.](../assets/ui/profiles-ui.png)
+![Browser configurator State drawer showing presets, Profile A–D selection, save and recall controls, and JSON backup actions.](../assets/ui/profiles-ui.png)
 
 Use the profile area as a four-step process, not as a pile of unrelated buttons.
 

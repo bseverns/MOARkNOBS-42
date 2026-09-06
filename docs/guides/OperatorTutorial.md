@@ -9,9 +9,9 @@ The browser configurator is not just a settings page. It is the live operating s
 - deciding when to apply those edits to the device
 - managing profiles and backups
 
-![Annotated configurator screenshot showing the connection banner, apply and rollback controls, and the recovery and profile area.](../assets/ui/configurator-top-annotated.png)
+![Annotated configurator screenshot showing connection identity, the State drawer, and the selected-slot signal path.](../assets/ui/configurator-top-annotated.png)
 
-![Annotated configurator screenshot showing live slots, the selected-slot editor, the utility rail, and the staged-diff panel.](../assets/ui/configurator-workbench-annotated.png)
+![Annotated configurator screenshot showing live slots, the selected-slot signal path, Reactive shaping, and shared LFO Motion.](../assets/ui/configurator-workbench-annotated.png)
 
 ## The three states you need to keep separate
 

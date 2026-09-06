@@ -184,7 +184,7 @@ These classics ruin weekends. Keep them in mind and you'll spend more time makin
 
 The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot stores pot mappings, LED brightness/color, envelope routing (including follower-to-multi-slot mappings), ARG/filter details, and the entire modulation matrix (arpeggiator timing + shape, LFO shapes/depths/routes, and per-slot MIDI channel/EF payloads). The WebSerial [`GET_PROFILE`](../guides/WebSerial.md#profiles-and-modulation-snapshots) response exposes this snapshot so editors can replay the same state in software, and `SET_PROFILE` lets you persist a partial or complete payload back to the board. When you load a profile, the firmware replays the stored LED color, LFO routes, and slot envelope parameters instantly before your pots/docs move again.
 
-![Profile toolbar](../assets/ui/profiles-ui.png)
+![Browser configurator State drawer showing Profile A–D selection, save and recall controls, and JSON backup actions.](../assets/ui/profiles-ui.png)
 
 The hero banner mirrors those slots: tap A–D to pick the active profile, then use **Save profile**, **Load profile**, or **Reset profile** to call the UI’s RPC helpers. Save will stage the current diff and then invoke `SET_PROFILE` for that slot, while Load clears the diff and re-fetches the stored snapshot via `GET_PROFILE`. Reset restores the slot to factory defaults and pushes them back through `SET_PROFILE` so the desk stays tidy.
 

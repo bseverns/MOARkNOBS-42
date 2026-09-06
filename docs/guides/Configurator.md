@@ -4,9 +4,9 @@ Current App contract/support boundary: [App/README.md](https://github.com/bsever
 
 The browser app is not just a remote control. It is the safest place to understand the firmware contract because it has to negotiate identity, schema compatibility, staged edits, and confirmation from the device before pretending anything changed.
 
-![Annotated browser configurator screenshot showing the connection banner, apply and rollback controls, and the recovery and profile workspace.](../assets/ui/configurator-top-annotated.png)
+![Annotated browser configurator screenshot showing connection identity, the State drawer, and the selected-slot signal path.](../assets/ui/configurator-top-annotated.png)
 
-![Annotated browser configurator screenshot showing live slots, the selected-slot editor, the utility rail, and the staged-diff panel.](../assets/ui/configurator-workbench-annotated.png)
+![Annotated browser configurator screenshot showing live slots, the selected-slot signal path, Reactive shaping, and shared LFO Motion.](../assets/ui/configurator-workbench-annotated.png)
 
 ## The core idea
 
@@ -62,7 +62,7 @@ The App's `tuning_catalog.js` is presentation metadata only. It supplies musicia
 
 Configure exposes:
 
-- **Source** — the exact EF assignment for this slot
+- **Source / Reactive assignment** — the exact EF assignment for this slot; when ARG is enabled, the assignment keeps the reactive path connected while ARG supplies its combined follower value
 - **Character** — small selected-slot EF recipes such as Clean / Neutral, Smooth, Punchy, Gate, and Experimental
 - **Response** — a readable summary derived from the exact smoothing, detector, attack, and release values; it is not a new firmware parameter
 - **Amount** — Adaptive explicitly enables auto-gain; Subtle, Moderate, and Strong explicitly disable auto-gain and stage gain 0.5, 1, or 2. The summary retains the exact mechanism.

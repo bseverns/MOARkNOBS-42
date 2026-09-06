@@ -80,7 +80,7 @@ Required proof:
 - at least one real OSC or virtual MIDI command reaches the board through the live-control command path
 - if staged config over the bridge is part of the intended workflow, prove one structured bridge-session apply/ACK cycle too
 
-![Simulated bridge console screenshot showing a running bridge, connected serial path, confirmed device handshake, detected ports, and bridge log output.](../assets/ui/bridge-console-sim.png)
+![Simulated Bridge Patchbay monitor showing the live device path, configured OSC and MIDI routes, soundcheck actions, and device verdict.](../assets/ui/bridge-console-sim.png)
 
 Outcome:
 

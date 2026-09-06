@@ -93,7 +93,7 @@ This matters because the configurator is not a static settings form. It is a liv
 - LFO values animate
 - diagnostics tell you when the firmware is under pressure
 
-![Screenshot of the browser configurator showing live slot controls, staged edits, and telemetry cards.](../assets/ui/profiles-ui.png)
+![Screenshot of the browser configurator State drawer showing presets, device profiles, and JSON backup actions.](../assets/ui/profiles-ui.png)
 
 ## Step 6: verify or resynchronize
 

@@ -32,6 +32,35 @@ async function openModeAtViewport(page, mode, viewport) {
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
 }
 
+async function writeConfigureLayout(page, screenshotDir) {
+  const layout = await page.evaluate(() => {
+    const boxFor = (selector) => {
+      const rect = document.querySelector(selector)?.getBoundingClientRect();
+      if (!rect) return null;
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    };
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      top: {
+        modeSwitch: boxFor('.global-mode-switch'),
+        connectionIdentity: boxFor('#connection-banner'),
+        stateDrawer: boxFor('#recovery-drawer > summary'),
+        signalPath: boxFor('#selected-slot-signal')
+      },
+      workbench: {
+        liveSlots: boxFor('#slots'),
+        signalPath: boxFor('#selected-slot-signal'),
+        reactivePath: boxFor('.configure-tuning'),
+        motion: boxFor('.configure-motion')
+      }
+    };
+  });
+  await fs.writeFile(
+    path.join(screenshotDir, 'configure-layout.json'),
+    `${JSON.stringify(layout, null, 2)}\n`
+  );
+}
+
 test.describe('Mode screenshots', () => {
   for (const mode of ['stage', 'basic', 'advanced']) {
     test(`${mode} mode screenshot artifact`, async ({ page }) => {
@@ -42,6 +71,7 @@ test.describe('Mode screenshots', () => {
         path: path.join(screenshotDir, `${mode}-mode.png`),
         fullPage: true
       });
+      if (mode === 'basic') await writeConfigureLayout(page, screenshotDir);
     });
   }
 
@@ -55,6 +85,18 @@ test.describe('Mode screenshots', () => {
     await fs.mkdir(screenshotDir, { recursive: true });
     await page.screenshot({
       path: path.join(screenshotDir, 'stage-motion-open.png'),
+      fullPage: true
+    });
+  });
+
+  test('Configure State drawer screenshot artifact', async ({ page }) => {
+    await openMode(page, 'basic');
+    await page.locator('#recovery-drawer > summary').click();
+    await expect(page.locator('#recovery-drawer')).toHaveAttribute('open', '');
+    const screenshotDir = path.resolve('test-results/screenshots');
+    await fs.mkdir(screenshotDir, { recursive: true });
+    await page.screenshot({
+      path: path.join(screenshotDir, 'configure-state-open.png'),
       fullPage: true
     });
   });

@@ -12,7 +12,7 @@ Canonical source: `App/README.md`
 - `App/config_schema.json` - configuration schema contract
 - `App/views/form_renderer.js` - schema-driven editor controls
 
-![Annotated top of the configurator showing transport quality, connection actions, profile controls, Apply and Rollback, recovery status, and power information.](assets/ui/configurator-top-annotated.png)
+![Annotated top of the configurator showing the mode switch, connection identity, State drawer, and selected-slot signal path.](assets/ui/configurator-top-annotated.png)
 
 ## Local run
 
@@ -35,7 +35,7 @@ For a finished instrument, start with [Getting Started](Getting-Started.md) or
 the [First Playable Walkthrough](Playable-Walkthrough.md) before reading the
 runtime architecture below.
 
-![Annotated configurator workbench showing the 42 live slots, selected-slot editor, Basic and Advanced mode switch, utility rail, and staged diff.](assets/ui/configurator-workbench-annotated.png)
+![Annotated configurator workbench showing live slots, the selected-slot signal path, Reactive shaping, and shared LFO Motion.](assets/ui/configurator-workbench-annotated.png)
 
 ## User-facing capabilities
 

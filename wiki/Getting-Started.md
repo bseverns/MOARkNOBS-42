@@ -44,7 +44,7 @@ In the configurator:
 In the Bridge console, wait until **Bridge**, **Serial**, and **Device** all
 report ready, then choose **Open configurator**.
 
-![Annotated configurator overview identifying the transport and contract banner, connection controls, profile workspace, Apply and Rollback actions, and recovery status.](assets/ui/configurator-top-annotated.png)
+![Annotated configurator overview identifying the mode switch, connection identity, State drawer, and selected-slot signal path.](assets/ui/configurator-top-annotated.png)
 
 For an already-configured instrument at a performance, select **Stage** in the
 top mode switch. It shows connection/telemetry health, profile and scene
