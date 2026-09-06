@@ -55,7 +55,7 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
 
 - **Stage** is the performance surface: connection, live profile/scene recall, power safety, slot activity, envelope
   levels, motion, and panic help.
-- **Configure** is the default selected-slot workspace: Mapping, Reactive/EF, Combine/ARG, and Motion/fixed LFO lanes.
+- **Configure** is the default selected-slot workspace: Mapping, one Reactive path (EF source, ARG relationship, then EF character), and Motion/fixed LFO lanes. ARG constructs the Reactive input before EF shaping; it is not a peer output stage. Motion shows each shared generator’s shape and rate while generator edits remain in Lab.
   The signal strip displays device observations separately from staged settings.
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must

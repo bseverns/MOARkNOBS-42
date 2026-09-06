@@ -878,12 +878,20 @@ const boot = () => {
     setStatus,
     getUiMode: () => uiModeController.getUiMode(),
     getEditorTab: () => uiModeController.getEditorTab(),
+    getSharedLfos: () => profileMacroScenePanel.getLfoEntries(),
     openLabTab: (tab, laneIndex = null) => {
       docRoot.dataset.configureReturnTab = tab;
       docRoot.dataset.configureReturnLane = laneIndex === null ? '' : String(laneIndex);
       uiModeController.setUIMode('advanced');
       uiModeController.setEditorTab(tab);
       slotEditorPanel.focusControl('', laneIndex);
+    },
+    openLfoGenerator: (laneIndex) => {
+      uiModeController.setUIMode('advanced');
+      setPerformanceTab('lfo');
+      const lane = document.querySelector(`#lfo-editor .lfo-section:nth-child(${laneIndex + 1})`);
+      lane?.scrollIntoView({ block: 'center' });
+      lane?.querySelector('select, input, button')?.focus();
     }
   });
   const slotWorkspaceController = createSlotWorkspaceController({

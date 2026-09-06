@@ -28,6 +28,23 @@ test('selected slot explains measured contributions without synthesizing missing
   await expect(page.locator('[data-configure-zone=envelope]')).toBeVisible();
   await expect(page.locator('[data-configure-zone=arg]')).toBeVisible();
   await expect(page.locator('[data-configure-zone=lfo]')).toBeVisible();
+  await expect(page.locator('.configure-modulation > [data-configure-zone=arg]')).toHaveCount(0);
+  await expect(page.locator('[data-configure-zone=envelope] [data-configure-zone=arg]')).toBeVisible();
+  await expect(page.locator('.shared-generator-summary').first()).toContainText('shared generator');
+  expect(errors).toEqual([]);
+});
+
+test('causal signal links focus the matching reactive or motion controls', async ({ page }) => {
+  const errors = await boot(page);
+  await page.getByRole('button', { name: 'Focus Reactive · EF / ARG controls' }).click();
+  await expect(page.locator('[data-configure-zone=envelope]').getByLabel('Source')).toBeFocused();
+  await page.getByRole('button', { name: 'Focus LFO 2 controls' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Use LFO 2', exact: true })).toBeFocused();
+  await page.getByRole('button', { name: 'Edit generator in Lab →', exact: true }).first().click();
+  await expect(
+    page.getByRole('tab', { name: 'Profile LFO & Routes', exact: true })
+  ).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#lfo-editor .lfo-section').first().locator('select').first()).toBeFocused();
   expect(errors).toEqual([]);
 });
 
@@ -121,7 +138,7 @@ test('Review focuses the exact staged field and logarithmic Lab sliders reset to
   const errors = await boot(page);
   await page
     .locator('[data-configure-zone=envelope]')
-    .getByRole('button', { name: 'Customize in Lab' })
+    .locator(':scope > .tuning-customize')
     .click();
   const attack = page.getByRole('spinbutton', { name: 'Attack time (ms)', exact: true });
   const original = Number(await attack.inputValue());

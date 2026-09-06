@@ -57,7 +57,7 @@ export function describeSlotSignal({
 
 export function renderSlotSignal(
   container,
-  { slot, liveSlot, telemetry, index, connected, dirty } = {}
+  { slot, liveSlot, telemetry, index, connected, dirty, onNavigate = () => {} } = {}
 ) {
   const signal = describeSlotSignal({ slot: liveSlot, telemetry, index, connected });
   container.replaceChildren();
@@ -76,15 +76,27 @@ export function renderSlotSignal(
   const strip = document.createElement('div');
   strip.className = 'signal-contributions';
   const parts = [
-    ['Hand / base', textValue(signal.baseline), signal.baseline, false],
-    ['Reactive · EF / ARG', signedValue(signal.reactive), signal.reactive, true],
-    ['Motion · LFO 1', signedValue(signal.lfos[0]), signal.lfos[0], true],
-    ['Motion · LFO 2', signedValue(signal.lfos[1]), signal.lfos[1], true],
-    ['Resolved output', textValue(signal.output), signal.output, false]
+    ['Hand', textValue(signal.baseline), signal.baseline, false, null],
+    ['Reactive · EF / ARG', signedValue(signal.reactive), signal.reactive, true, 'reactive'],
+    ['LFO 1', signedValue(signal.lfos[0]), signal.lfos[0], true, 'lfo-0'],
+    ['LFO 2', signedValue(signal.lfos[1]), signal.lfos[1], true, 'lfo-1'],
+    ['Output', textValue(signal.output), signal.output, false, null]
   ];
-  parts.forEach(([label, value, amount, bipolar]) => {
-    const item = document.createElement('div');
-    item.className = 'signal-contribution';
+  parts.forEach(([label, value, amount, bipolar, destination], partIndex) => {
+    if (partIndex) {
+      const arrow = document.createElement('span');
+      arrow.className = 'signal-flow-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      strip.appendChild(arrow);
+    }
+    const item = document.createElement(destination ? 'button' : 'div');
+    item.className = `signal-contribution${destination ? ' signal-navigation' : ''}`;
+    if (destination) {
+      item.type = 'button';
+      item.setAttribute('aria-label', `Focus ${label} controls`);
+      item.addEventListener('click', () => onNavigate(destination));
+    }
     const name = document.createElement('span');
     name.textContent = label;
     const reading = document.createElement('strong');
@@ -100,6 +112,6 @@ export function renderSlotSignal(
   });
   const route = document.createElement('p');
   route.className = 'microcopy signal-source';
-  route.textContent = `Confirmed path: ${signal.source} → LFO 1 → LFO 2 → output. ${signal.measured ? 'Values are measured deltas after clamping.' : 'Separate contributions are not reported in the current snapshot.'}`;
+  route.textContent = `${signal.source} → LFO 1 → LFO 2 → output. ${signal.measured ? 'Measured deltas after clamping; select Reactive or an LFO to focus its controls.' : 'Separate contributions are not reported in the current snapshot.'}`;
   container.append(heading, caption, strip, route);
 }

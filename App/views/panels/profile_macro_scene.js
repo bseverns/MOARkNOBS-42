@@ -2440,6 +2440,7 @@ export function createProfileMacroScenePanel({
 
   return {
     bind,
+    getLfoEntries: () => lfoDraft.lfos.map((entry) => ({ ...entry })),
     setLiveArpSlot,
     onConfigChanged,
     onManifest,

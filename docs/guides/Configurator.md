@@ -52,7 +52,7 @@ Some controls can also issue field-level writes through the runtime patch lane, 
 
 ## Selected-slot tuning translates Lab; it does not replace it
 
-Configure centers the selected slot with a persistent identity, mapping, measured output, and three musical shaping zones. It follows this progression:
+Configure centers the selected slot with a persistent identity, mapping, measured output, and two musical shaping zones. It follows this progression:
 
 ```text
 recipe -> musical feel -> translated summary -> exact Lab parameters
@@ -67,8 +67,8 @@ Configure exposes:
 - **Response** — a readable summary derived from the exact smoothing, detector, attack, and release values; it is not a new firmware parameter
 - **Amount** — Adaptive explicitly enables auto-gain; Subtle, Moderate, and Strong explicitly disable auto-gain and stage gain 0.5, 1, or 2. The summary retains the exact mechanism.
 - **Direction** — a musical translation of the firmware destination mode, such as **Louder → more** or **Signal replaces value**; Lab retains the exact token.
-- **Combine / ARG** — enable two followers, choose source A/B, and stage Strongest Wins, Average Together, Difference, or Interaction recipes. ARG chooses the reactive input before the slot’s EF shaping; it is not an additional independent output delta. An EF assignment still gates this path.
-- **Motion / LFO** — each fixed lane has its own switch and signed depth. **Movement & recipes** discloses combine mode and centered-motion recipes. Shape/rate remain shared generator settings in Lab’s Profile LFO & Routes.
+- **Reactive relationship / ARG** — inside Reactive, enable two followers, choose source A/B, and stage Strongest Wins, Average Together, Difference, or Interaction recipes. ARG chooses the reactive input before the slot’s EF shaping; it is not an additional independent output delta. An EF assignment still gates this path.
+- **Motion / LFO** — each fixed lane has its own switch and signed depth. Configure also shows the current shared generator shape and rate. **Movement & recipes** discloses combine mode and centered-motion recipes; generator editing remains in Lab’s Profile LFO & Routes.
 
 Lab keeps every underlying control. Enum choices lead with musical language while retaining the exact token, for example **Smooth · LOWPASS**, **Punchy · EXPONENTIAL**, **Average Together · AVG**, and **Strongest Wins · MAXX**.
 

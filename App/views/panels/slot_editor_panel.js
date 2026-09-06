@@ -32,6 +32,16 @@ const SLOT_DATA1_PRESENTATION = Object.freeze({
   }
 });
 
+const LFO_GENERATOR_SHAPES = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold', 'Random Slew'];
+
+function formatSharedGenerator(entry, index) {
+  const fallback = index === 0 ? { shape: 0, frequency_hz: 1 } : { shape: 1, frequency_hz: 0.5 };
+  const shape = LFO_GENERATOR_SHAPES[Number(entry?.shape)] ?? LFO_GENERATOR_SHAPES[fallback.shape];
+  const rate = Number(entry?.frequency_hz ?? fallback.frequency_hz);
+  const rateLabel = Number.isFinite(rate) ? rate.toFixed(rate < 10 ? 2 : 1) : String(fallback.frequency_hz);
+  return `${shape} · ${rateLabel} Hz · shared generator`;
+}
+
 export function createSlotEditorPanel({
   runtime,
   localManifest,
@@ -49,7 +59,9 @@ export function createSlotEditorPanel({
   setStatus = () => {},
   getUiMode = () => 'basic',
   getEditorTab = () => 'mapping',
-  openLabTab = () => {}
+  getSharedLfos = () => [],
+  openLabTab = () => {},
+  openLfoGenerator = () => {}
 } = {}) {
   const {
     slotDetailIndex = null,
@@ -292,7 +304,6 @@ export function createSlotEditorPanel({
       modulation.className = 'configure-modulation';
       modulation.append(
         makeConfigureTuningSurface(slot),
-        makeConfigureArgSurface(slot),
         makeConfigureMotionSurface(slot)
       );
       form.appendChild(modulation);
@@ -737,6 +748,8 @@ export function createSlotEditorPanel({
       )
     );
 
+    fieldset.appendChild(makeConfigureArgSurface(slot));
+
     const character = document.createElement('section');
     character.className = 'tuning-character';
     character.dataset.stagedPath = `slots.${slotState.selected}.ef`;
@@ -825,11 +838,11 @@ export function createSlotEditorPanel({
     return fieldset;
   }
 
-  function makeCustomizeButton(tab, laneIndex = null) {
+  function makeCustomizeButton(tab, laneIndex = null, text = 'Customize in Lab') {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'tuning-customize';
-    button.textContent = 'Customize in Lab';
+    button.textContent = text;
     button.addEventListener('click', () => {
       button.blur();
       openLabTab(tab, laneIndex);
@@ -839,13 +852,18 @@ export function createSlotEditorPanel({
 
   function makeConfigureArgSurface(slot) {
     const arg = normalizeArg(slot);
-    const fieldset = makeFieldset(
-      'Combine · ARG',
-      'Relate two followers before EF shaping. An assigned EF source still gates the reactive path.'
-    );
-    fieldset.classList.add('configure-combine');
-    fieldset.dataset.configureZone = 'arg';
-    fieldset.appendChild(
+    const section = document.createElement('section');
+    section.className = 'reactive-relationship';
+    section.dataset.configureZone = 'arg';
+    const heading = document.createElement('strong');
+    heading.textContent = 'Relationship';
+    const description = document.createElement('p');
+    description.className = 'microcopy';
+    description.textContent =
+      'ARG relates two envelope followers before this slot’s EF shaping. It constructs the reactive source; it is not a separate modulation stage.';
+    section.append(
+      heading,
+      description,
       makeToggle(
         'Use two followers',
         arg.enabled,
@@ -854,16 +872,16 @@ export function createSlotEditorPanel({
       )
     );
     const current = document.createElement('p');
-    current.className = 'tuning-response-summary';
+    current.className = 'relationship-summary';
     current.textContent = arg.enabled
       ? formatArgMethodLabel(arg.method_name).split(' · ')[0]
       : 'Off · one assigned follower';
     current.dataset.stagedPath = `slots.${slotState.selected}.arg.method slots.${slotState.selected}.arg.method_name`;
-    fieldset.append(current, makeRecipeButtons('arg'));
+    section.append(current, makeRecipeButtons('arg'));
     const count = runtime.getState().manifest?.envelope_count ?? localManifest.envelope_count ?? 6;
     const followers = Array.from({ length: count }, (_, index) => index);
     ['sourceA', 'sourceB'].forEach((key, index) => {
-      fieldset.appendChild(
+      section.appendChild(
         makeSelect(
           `Follower ${index ? 'B' : 'A'}`,
           followers,
@@ -876,25 +894,30 @@ export function createSlotEditorPanel({
         )
       );
     });
-    fieldset.appendChild(makeCustomizeButton('arg'));
-    return fieldset;
+    section.appendChild(makeCustomizeButton('arg', null, 'Customize ARG in Lab'));
+    return section;
   }
 
   function makeConfigureMotionSurface(slot) {
     const fieldset = makeFieldset(
       'Motion · LFO',
-      'Two fixed lanes, applied in order. Shape and rate belong to shared generators in Lab’s Profile LFO & Routes.'
+      'Two fixed lanes, applied in order. Each lane shows its shared generator here; edit that generator in Lab’s Profile LFO & Routes.'
     );
     fieldset.classList.add('configure-motion');
     fieldset.dataset.configureZone = 'lfo';
+    const sharedLfos = getSharedLfos();
     normalizeSlotLfo(slot).forEach((lane, index) => {
       const card = document.createElement('section');
       card.className = 'configure-lfo-lane';
       card.dataset.lfoLane = String(index);
       const title = document.createElement('h4');
       title.textContent = `LFO ${index + 1}`;
+      const generator = document.createElement('p');
+      generator.className = 'shared-generator-summary';
+      generator.textContent = formatSharedGenerator(sharedLfos[index], index);
       card.append(
         title,
+        generator,
         makeToggle(
           `Use LFO ${index + 1}`,
           lane.enabled,
@@ -909,7 +932,19 @@ export function createSlotEditorPanel({
           1,
           (value) => stageSlotLfoField(slotState.selected, index, 'amount', value),
           { configPaths: `slots.*.lfo.${index}.amount` }
-        ),
+        )
+      );
+      const detail = document.createElement('details');
+      detail.className = 'motion-composition';
+      const detailKey = `${slotState.selected}:${index}`;
+      detail.open = Boolean(motionDetailsOpen.get(detailKey));
+      detail.addEventListener('toggle', () => {
+        if (detail.isConnected) motionDetailsOpen.set(detailKey, detail.open);
+      });
+      const summary = document.createElement('summary');
+      summary.textContent = 'Movement & recipes';
+      detail.append(
+        summary,
         makeSelect(
           `LFO ${index + 1} movement`,
           lfoModeValues,
@@ -926,19 +961,15 @@ export function createSlotEditorPanel({
         makeRecipeButtons('lfo', index),
         makeCustomizeButton('lfo', index)
       );
-      const detail = document.createElement('details');
-      detail.className = 'motion-composition';
-      const detailKey = `${slotState.selected}:${index}`;
-      detail.open = Boolean(motionDetailsOpen.get(detailKey));
-      detail.addEventListener('toggle', () => {
-        if (detail.isConnected) motionDetailsOpen.set(detailKey, detail.open);
+      const editGenerator = document.createElement('button');
+      editGenerator.type = 'button';
+      editGenerator.className = 'shared-generator-link';
+      editGenerator.textContent = 'Edit generator in Lab →';
+      editGenerator.addEventListener('click', () => {
+        editGenerator.blur();
+        openLfoGenerator(index);
       });
-      const summary = document.createElement('summary');
-      summary.textContent = 'Movement & recipes';
-      detail.appendChild(summary);
-      const extras = [...card.children].slice(3, -1);
-      extras.forEach((node) => detail.appendChild(node));
-      card.insertBefore(detail, card.lastElementChild);
+      card.append(detail, editGenerator);
       fieldset.appendChild(card);
     });
     return fieldset;
@@ -957,7 +988,15 @@ export function createSlotEditorPanel({
       connected: document.documentElement.dataset.connected === 'true',
       dirty: runtime
         .diff()
-        .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`))
+        .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`)),
+      onNavigate: (destination) => {
+        const paths = {
+          reactive: `slots.${index}.ef.index`,
+          'lfo-0': `slots.${index}.lfo.0.enabled`,
+          'lfo-1': `slots.${index}.lfo.1.enabled`
+        };
+        focusControl(paths[destination], destination.startsWith('lfo-') ? Number(destination.at(-1)) : null);
+      }
     });
   }
 
