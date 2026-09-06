@@ -4369,3 +4369,70 @@ footer {
     animation-duration: 0.001ms !important;
   }
 }
+
+/* Configure centers the selected instrument voice; Lab retains its bench layout. */
+html[data-ui-mode='basic'] main { grid-template-columns: minmax(0, 1fr); }
+html[data-ui-mode='basic'] #stage-panel { grid-template-columns: minmax(290px, .65fr) minmax(0, 1.8fr); }
+html[data-ui-mode='basic'] #connect-card { grid-column: 1 / -1; }
+html[data-ui-mode='basic'] #live-panel { position: sticky; top: 12px; }
+#selected-slot-signal { display: grid; gap: 8px; padding: 14px; border: 1px solid rgba(45,226,230,.3);
+  border-radius: var(--radius-sm); background: #101b23; min-width: 0; }
+html[data-ui-mode='basic'] #selected-slot-signal { position: sticky; top: 8px; z-index: 4; }
+.slot-signal-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.slot-signal-heading strong { overflow-wrap: anywhere; }
+.slot-signal-output { color: var(--color-accent); font-family: var(--font-mono); }
+#selected-slot-signal .microcopy { margin: 0; }
+.signal-contributions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.signal-contribution { min-width: 0; display: grid; gap: 5px; border-left: 2px solid rgba(45,226,230,.25); padding-left: 8px; }
+.signal-contribution span { color: var(--color-muted); font-size: .65rem; }
+.signal-contribution strong { font-family: var(--font-mono); font-size: .8rem; overflow-wrap: anywhere; }
+.signal-contribution meter { width: 100%; height: 12px; }
+.signal-contribution meter[hidden] { display: none; }
+#selected-slot-signal:not([data-freshness='Live telemetry']) .signal-contributions { opacity: .65; }
+.configure-modulation { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 12px; align-items: start; }
+.configure-modulation > .slot-fieldset { min-width: 0; grid-template-columns: minmax(0, 1fr); padding: 12px; }
+.configure-modulation .slot-fieldset > * { min-width: 0; }
+.configure-combine { border-color: rgba(255,206,107,.3); }
+.configure-motion { border-color: rgba(172,140,255,.35); }
+.configure-lfo-lane { display: grid; gap: 10px; }
+.configure-lfo-lane + .configure-lfo-lane { border-top: 1px solid var(--color-border); padding-top: 14px; margin-top: 4px; }
+.configure-lfo-lane h4 { margin: 0; }
+.configure-modulation .tuning-recipes { gap: 6px; }
+.configure-modulation .tuning-recipes button { padding: 7px 9px; font-size: .72rem; }
+.configure-modulation .tuning-response-summary, .configure-modulation .tuning-amount-summary { font-size: .78rem; }
+.configure-modulation .selected-tuning-evidence { font-size: .72rem; padding: 8px; }
+.recipe-explanation { flex-basis: 100%; margin: 4px 0; color: var(--color-muted); font-size: .76rem; line-height: 1.5; }
+.tuning-recipes button[aria-pressed='true'] { border-color: var(--color-accent); background: rgba(45,226,230,.1); }
+.staged-control-marker { display: inline-block; align-self: start; width: fit-content; color: var(--color-hot);
+  border: 1px solid rgba(255,95,150,.3); border-radius: 4px; padding: 1px 5px; font-size: .65rem; font-weight: 700; }
+.staged-control-marker[hidden] { display: none; }
+.is-staged > .control-label { color: var(--color-hot); }
+.control-focus-target { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+.slot-fieldset label input.lab-continuous-control { padding: 0; width: 100%; min-height: 32px; accent-color: var(--color-accent); }
+.reset-confirmed { font-size: .68rem; padding: 6px 8px; justify-self: start; }
+.control-description { color: var(--color-muted); }
+.state-starting-point { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 16px; }
+.state-starting-point h3, .state-starting-point p { grid-column: 1 / -1; margin: 0; }
+.state-starting-point label { align-self: center; }
+.change-bar { width: min(540px, calc(100% - 24px)); padding: 7px 10px; gap: 8px; }
+.change-bar > strong { font-size: .78rem; white-space: nowrap; }
+.change-bar-actions button { min-height: 36px; padding: 6px 10px; font-size: .75rem; }
+html[data-ui-mode='basic'][data-dirty='true'] #page-shell,
+html[data-ui-mode='advanced'][data-dirty='true'] #page-shell { padding-bottom: var(--apply-dock-space, 100px); }
+html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
+@media (max-width: 1000px) {
+  html[data-ui-mode='basic'] #stage-panel { grid-template-columns: minmax(0, 1fr); }
+  html[data-ui-mode='basic'] #live-panel { position: static; }
+  html[data-ui-mode='basic'] #selected-slot-signal { position: static; }
+}
+@media (max-width: 560px) {
+  .signal-contributions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .signal-contribution:last-child { grid-column: 1 / -1; }
+  .configure-modulation { grid-template-columns: minmax(0, 1fr); }
+  .state-starting-point { grid-template-columns: minmax(0, 1fr); }
+  .change-bar { left: 12px; width: calc(100% - 24px); transform: none; gap: 4px; }
+}
+.motion-composition { display: grid; gap: 10px; }
+.motion-composition summary { cursor: pointer; font-size: .78rem; color: var(--color-accent); }
+.motion-composition > * + * { margin-top: 10px; }
+.state-file-actions { display: flex; flex-wrap: wrap; gap: 8px; }

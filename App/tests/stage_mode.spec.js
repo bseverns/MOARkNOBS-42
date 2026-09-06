@@ -10,7 +10,7 @@ test.describe('Stage mode', () => {
       'true'
     );
     await expect(page.locator('#performer-panel')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Configure' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Configure', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Lab', exact: true })).toBeVisible();
     await expect(page.locator('#performer-panel')).toContainText(
       'Performance-safe status and recovery. No staged editors or Apply controls here.'
@@ -327,7 +327,7 @@ test.describe('Stage mode', () => {
     await page.locator('#stage-connect').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
-    await page.getByRole('button', { name: 'Configure' }).click();
+    await page.getByRole('button', { name: 'Configure', exact: true }).click();
 
     await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('#stage-panel')).toBeVisible();

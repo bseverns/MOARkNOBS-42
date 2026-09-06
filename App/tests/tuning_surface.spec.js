@@ -136,6 +136,6 @@ test('Lab keeps exact controls, technical tokens, recipes, and deck shortcut hin
   await lane.getByRole('button', { name: 'Subtle Centered Motion', exact: true }).click();
   await expect(lane.getByLabel('Enable LFO 1')).toBeChecked();
   await expect(lane.getByLabel('LFO 1 combine mode')).toHaveValue('4');
-  await expect(lane.getByLabel('LFO 1 amount (%)')).toHaveValue('25');
+  await expect(lane.getByLabel('LFO 1 amount (%)', { exact: true })).toHaveValue('25');
   await expect(lane).toContainText('Deck shortcut: Ctrl5 double');
 });

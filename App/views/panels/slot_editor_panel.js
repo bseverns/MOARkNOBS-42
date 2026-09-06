@@ -1,3 +1,5 @@
+import { renderSlotSignal } from '../slot_signal_path.js';
+import { updateStagedControlMarkers, normalizeConfigPath } from '../staged_control_markers.js';
 import {
   EF_DESTINATION_PRESENTATION,
   SLOT_TUNING_RECIPES,
@@ -91,7 +93,9 @@ export function createSlotEditorPanel({
   let slotEditorRenderPending = false;
   let slotEditorFocusGuardBound = false;
   let lastRecipeResult = '';
+  const recipeSelections = new Map();
   const efLastActiveAt = new Map();
+  const motionDetailsOpen = new Map();
 
   function bindSlotEditorFocusGuard() {
     if (!formContainer || slotEditorFocusGuardBound) return;
@@ -143,6 +147,7 @@ export function createSlotEditorPanel({
     if (slotDetailLfo) slotDetailLfo.textContent = formatSlotLfoSummary(slot);
     const value = Array.isArray(telemetry.slots) ? telemetry.slots[slotState.selected] : null;
     if (slotDetailValue) slotDetailValue.textContent = value ?? '—';
+    updateSignalPath();
     if (renderEditor) renderSlotEditor();
     else updateSelectedTuningEvidence();
   }
@@ -151,6 +156,7 @@ export function createSlotEditorPanel({
   function renderSlotEditor() {
     if (!formContainer) return;
     bindSlotEditorFocusGuard();
+    updateStagedControlMarkers(formContainer, runtime.diff());
     if (isSlotEditorEditing()) {
       slotEditorRenderPending = true;
       return;
@@ -171,7 +177,7 @@ export function createSlotEditorPanel({
 
     const basics = makeFieldset(
       'Knob -> MIDI Mapping',
-      'Pick what this knob sends. Switch to Lab for EF, ARG, fixed LFO modulation, and deep filter controls.'
+      'Choose what leaves the instrument. Reactive, Combine, and Motion shape the value before it is sent.'
     );
     basics.appendChild(
       makeSelect(
@@ -273,7 +279,8 @@ export function createSlotEditorPanel({
     if (activeUiMode !== 'advanced') {
       const hint = document.createElement('p');
       hint.className = 'slot-hint';
-      hint.textContent = 'Configure translates common musical choices; Lab keeps every exact parameter.';
+      hint.textContent =
+        'Configure translates common musical choices; Lab keeps every exact parameter.';
       basics.appendChild(hint);
     }
     if (activeUiMode !== 'advanced' || activeEditorTab === 'mapping') {
@@ -281,7 +288,14 @@ export function createSlotEditorPanel({
     }
 
     if (activeUiMode === 'basic') {
-      form.appendChild(makeConfigureTuningSurface(slot));
+      const modulation = document.createElement('div');
+      modulation.className = 'configure-modulation';
+      modulation.append(
+        makeConfigureTuningSurface(slot),
+        makeConfigureArgSurface(slot),
+        makeConfigureMotionSurface(slot)
+      );
+      form.appendChild(modulation);
     }
 
     if (activeUiMode === 'advanced') {
@@ -621,6 +635,7 @@ export function createSlotEditorPanel({
       normalizeSlotLfo(slot).forEach((lane, laneIndex) => {
         const card = document.createElement('section');
         card.className = 'slot-lfo-lane';
+        card.dataset.lfoLane = String(laneIndex);
         const heading = document.createElement('h4');
         heading.textContent = `LFO ${laneIndex + 1}`;
         card.appendChild(heading);
@@ -640,8 +655,7 @@ export function createSlotEditorPanel({
             `LFO ${laneIndex + 1} combine mode`,
             lfoModeValues,
             lane.mode,
-            (value) =>
-              stageSlotLfoField(slotState.selected, laneIndex, 'mode', Number(value)),
+            (value) => stageSlotLfoField(slotState.selected, laneIndex, 'mode', Number(value)),
             {
               help: 'Choose how this lane composes with the value produced before it.',
               formatOptionLabel: (value) =>
@@ -670,6 +684,9 @@ export function createSlotEditorPanel({
         if (laneIndex === 0) {
           card.appendChild(makeDeckShortcut('Ctrl5 double', 'Toggle this slot’s fixed LFO 1 lane'));
         }
+        card.querySelectorAll('[data-staged-path]').forEach((node) => {
+          node.dataset.stagedPath = node.dataset.stagedPath.replaceAll('lfo.*', `lfo.${laneIndex}`);
+        });
         lfoFieldset.appendChild(card);
       });
       if (activeEditorTab === 'lfo') {
@@ -685,6 +702,8 @@ export function createSlotEditorPanel({
     }
 
     formContainer.appendChild(form);
+    updateStagedControlMarkers(formContainer, runtime.diff());
+    updateSignalPath();
   }
 
   function makeConfigureTuningSurface(slot) {
@@ -692,10 +711,11 @@ export function createSlotEditorPanel({
     const manifest = runtime.getState().manifest ?? localManifest;
     const followerCount = Math.max(0, Number(manifest?.envelope_count) || 0);
     const fieldset = makeFieldset(
-      'Tune This Slot',
+      'Reactive · Tune This Slot',
       'Choose a source and a starting character. These actions stage exact Lab parameters for review before Apply.'
     );
     fieldset.classList.add('configure-tuning');
+    fieldset.dataset.configureZone = 'envelope';
 
     const sourceOptions = [-1, ...Array.from({ length: followerCount }, (_, index) => index)];
     fieldset.appendChild(
@@ -710,13 +730,16 @@ export function createSlotEditorPanel({
         },
         {
           help: 'Select which envelope follower moves this slot. Unassigned leaves EF modulation disconnected.',
-          formatOptionLabel: (value) => Number(value) < 0 ? 'Unassigned' : `EF ${Number(value) + 1}`
+          configPaths: ['slots.*.efIndex', 'slots.*.ef.index'],
+          formatOptionLabel: (value) =>
+            Number(value) < 0 ? 'Unassigned' : `EF ${Number(value) + 1}`
         }
       )
     );
 
     const character = document.createElement('section');
     character.className = 'tuning-character';
+    character.dataset.stagedPath = `slots.${slotState.selected}.ef`;
     const characterLabel = document.createElement('strong');
     characterLabel.textContent = 'Character';
     const current = document.createElement('p');
@@ -734,6 +757,21 @@ export function createSlotEditorPanel({
     amount.className = 'tuning-amount-summary';
     amount.textContent = formatAmountSummary(ef);
     fieldset.appendChild(amount);
+    fieldset.appendChild(
+      makeSelect(
+        'Amount',
+        ['adaptive', 'subtle', 'moderate', 'strong'],
+        ef.autoGain ? 'adaptive' : ef.gain < 0.8 ? 'subtle' : ef.gain > 1.5 ? 'strong' : 'moderate',
+        (value) =>
+          runtime.stage((draft) => {
+            const target = draft.slots[slotState.selected].ef;
+            target.autoGain = value === 'adaptive';
+            if (value !== 'adaptive') target.gain = { subtle: 0.5, moderate: 1, strong: 2 }[value];
+            return draft;
+          }),
+        { configPaths: ['slots.*.ef.autoGain', 'slots.*.ef.gain'] }
+      )
+    );
 
     fieldset.appendChild(
       makeSelect(
@@ -743,7 +781,8 @@ export function createSlotEditorPanel({
         (value) => stageSlotEnvelopeField(slotState.selected, 'destination_mode', value),
         {
           help: 'Direction maps directly to the firmware destination mode shown after the musical label.',
-          formatOptionLabel: formatEfDestinationLabel
+          configPaths: 'slots.*.ef.destination_mode',
+          formatOptionLabel: (value) => EF_DESTINATION_PRESENTATION[value]?.musicalLabel || value
         }
       )
     );
@@ -753,14 +792,15 @@ export function createSlotEditorPanel({
     const recipeResult = document.createElement('p');
     recipeResult.className = 'tuning-recipe-result';
     recipeResult.setAttribute('aria-live', 'polite');
-    recipeResult.textContent = lastRecipeResult;
+    recipeResult.textContent = recipeSelections.get(`${slotState.selected}:ef:0`)?.result || '';
     fieldset.appendChild(recipeResult);
 
     if (runtime.getState().canStagePreviousApply) {
       const returnButton = document.createElement('button');
       returnButton.type = 'button';
       returnButton.textContent = 'Return to pre-Apply state';
-      returnButton.title = 'Stage the last confirmed state from immediately before Apply. Review and Apply again to send it.';
+      returnButton.title =
+        'Stage the last confirmed state from immediately before Apply. Review and Apply again to send it.';
       returnButton.addEventListener('click', () => {
         returnButton.blur();
         if (!runtime.stagePreviousApply()) return;
@@ -785,23 +825,197 @@ export function createSlotEditorPanel({
     return fieldset;
   }
 
+  function makeCustomizeButton(tab, laneIndex = null) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tuning-customize';
+    button.textContent = 'Customize in Lab';
+    button.addEventListener('click', () => {
+      button.blur();
+      openLabTab(tab, laneIndex);
+    });
+    return button;
+  }
+
+  function makeConfigureArgSurface(slot) {
+    const arg = normalizeArg(slot);
+    const fieldset = makeFieldset(
+      'Combine · ARG',
+      'Relate two followers before EF shaping. An assigned EF source still gates the reactive path.'
+    );
+    fieldset.classList.add('configure-combine');
+    fieldset.dataset.configureZone = 'arg';
+    fieldset.appendChild(
+      makeToggle(
+        'Use two followers',
+        arg.enabled,
+        (value) => stageSlotArgField(slotState.selected, 'enabled', value),
+        { configPaths: 'slots.*.arg.enabled' }
+      )
+    );
+    const current = document.createElement('p');
+    current.className = 'tuning-response-summary';
+    current.textContent = arg.enabled
+      ? formatArgMethodLabel(arg.method_name).split(' · ')[0]
+      : 'Off · one assigned follower';
+    current.dataset.stagedPath = `slots.${slotState.selected}.arg.method slots.${slotState.selected}.arg.method_name`;
+    fieldset.append(current, makeRecipeButtons('arg'));
+    const count = runtime.getState().manifest?.envelope_count ?? localManifest.envelope_count ?? 6;
+    const followers = Array.from({ length: count }, (_, index) => index);
+    ['sourceA', 'sourceB'].forEach((key, index) => {
+      fieldset.appendChild(
+        makeSelect(
+          `Follower ${index ? 'B' : 'A'}`,
+          followers,
+          arg[key],
+          (value) => stageSlotArgField(slotState.selected, key, Number(value)),
+          {
+            configPaths: `slots.*.arg.${key}`,
+            formatOptionLabel: (value) => `EF ${Number(value) + 1}`
+          }
+        )
+      );
+    });
+    fieldset.appendChild(makeCustomizeButton('arg'));
+    return fieldset;
+  }
+
+  function makeConfigureMotionSurface(slot) {
+    const fieldset = makeFieldset(
+      'Motion · LFO',
+      'Two fixed lanes, applied in order. Shape and rate belong to shared generators in Lab’s Profile LFO & Routes.'
+    );
+    fieldset.classList.add('configure-motion');
+    fieldset.dataset.configureZone = 'lfo';
+    normalizeSlotLfo(slot).forEach((lane, index) => {
+      const card = document.createElement('section');
+      card.className = 'configure-lfo-lane';
+      card.dataset.lfoLane = String(index);
+      const title = document.createElement('h4');
+      title.textContent = `LFO ${index + 1}`;
+      card.append(
+        title,
+        makeToggle(
+          `Use LFO ${index + 1}`,
+          lane.enabled,
+          (value) => stageSlotLfoField(slotState.selected, index, 'enabled', value),
+          { configPaths: `slots.*.lfo.${index}.enabled` }
+        ),
+        makeNumber(
+          `LFO ${index + 1} depth (%)`,
+          lane.amount,
+          -100,
+          100,
+          1,
+          (value) => stageSlotLfoField(slotState.selected, index, 'amount', value),
+          { configPaths: `slots.*.lfo.${index}.amount` }
+        ),
+        makeSelect(
+          `LFO ${index + 1} movement`,
+          lfoModeValues,
+          lane.mode,
+          (value) => stageSlotLfoField(slotState.selected, index, 'mode', Number(value)),
+          {
+            configPaths: `slots.*.lfo.${index}.mode`,
+            formatOptionLabel: (value) =>
+              ['Add movement', 'Pull down', 'Take over', 'Scale with motion', 'Around the knob'][
+                value
+              ]
+          }
+        ),
+        makeRecipeButtons('lfo', index),
+        makeCustomizeButton('lfo', index)
+      );
+      const detail = document.createElement('details');
+      detail.className = 'motion-composition';
+      const detailKey = `${slotState.selected}:${index}`;
+      detail.open = Boolean(motionDetailsOpen.get(detailKey));
+      detail.addEventListener('toggle', () => {
+        if (detail.isConnected) motionDetailsOpen.set(detailKey, detail.open);
+      });
+      const summary = document.createElement('summary');
+      summary.textContent = 'Movement & recipes';
+      detail.appendChild(summary);
+      const extras = [...card.children].slice(3, -1);
+      extras.forEach((node) => detail.appendChild(node));
+      card.insertBefore(detail, card.lastElementChild);
+      fieldset.appendChild(card);
+    });
+    return fieldset;
+  }
+
+  function updateSignalPath() {
+    const index = slotState.selected;
+    const slot = slotState.slots[index];
+    const container = document.getElementById('selected-slot-signal');
+    if (!container || !slot) return;
+    renderSlotSignal(container, {
+      slot,
+      liveSlot: runtime.getState().live?.slots?.[index],
+      telemetry: slotState.telemetry,
+      index,
+      connected: document.documentElement.dataset.connected === 'true',
+      dirty: runtime
+        .diff()
+        .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`))
+    });
+  }
+
+  function focusControl(path, laneIndex = null) {
+    document.activeElement?.blur?.();
+    renderSlotEditor();
+    const normalized = normalizeConfigPath(path);
+    const nodes = [...formContainer.querySelectorAll('[data-staged-path]')];
+    const target =
+      nodes.find((node) => node.dataset.stagedPath.split(' ').includes(normalized)) ||
+      (laneIndex !== null ? formContainer.querySelector(`[data-lfo-lane="${laneIndex}"]`) : null) ||
+      formContainer;
+    target.classList.add('control-focus-target');
+    target.scrollIntoView({ block: 'center' });
+    target.querySelector('input:not([type="range"]), select, button')?.focus();
+    window.setTimeout(() => target.classList.remove('control-focus-target'), 1800);
+  }
+
   function makeRecipeButtons(target, laneIndex = 0) {
     const container = document.createElement('div');
     container.className = 'tuning-recipes';
     container.setAttribute('role', 'group');
     container.setAttribute('aria-label', `${target.toUpperCase()} tuning recipes`);
-    SLOT_TUNING_RECIPES.filter((recipe) => recipe.target === target).forEach((recipe) => {
+    const recipes = SLOT_TUNING_RECIPES.filter((recipe) => recipe.target === target);
+    const selection = recipeSelections.get(`${slotState.selected}:${target}:${laneIndex}`);
+    const current =
+      target === 'lfo'
+        ? slotState.slots[slotState.selected]?.lfo?.[laneIndex]
+        : slotState.slots[slotState.selected]?.[target];
+    const selected =
+      recipes.find(
+        (recipe) =>
+          recipe.id === selection?.id &&
+          Object.entries(recipe.patch).every(([key, value]) => current?.[key] === value)
+      ) ||
+      recipes.find((recipe) =>
+        Object.entries(recipe.patch).every(([key, value]) => current?.[key] === value)
+      );
+    recipes.forEach((recipe) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.recipeId = recipe.id;
       button.textContent = recipe.label;
       button.title = recipe.explanation;
+      button.setAttribute('aria-pressed', String(recipe.id === selected?.id));
       button.addEventListener('click', () => {
         button.blur();
         stageTuningRecipe(recipe.id, laneIndex);
       });
       container.appendChild(button);
     });
+    const explanation = document.createElement('p');
+    explanation.className = 'recipe-explanation';
+    explanation.setAttribute('role', 'status');
+    explanation.textContent = selected
+      ? `${selected.label} — ${selected.explanation}`
+      : 'Custom settings. Choose a recipe to stage a musical starting point.';
+    container.appendChild(explanation);
     return container;
   }
 
@@ -813,6 +1027,10 @@ export function createSlotEditorPanel({
       stagedResult = applySlotTuningRecipe(current, recipeId, { laneIndex });
       draft.slots[slotState.selected] = stagedResult.slot;
       lastRecipeResult = formatRecipeResult(stagedResult);
+      recipeSelections.set(`${slotState.selected}:${stagedResult.recipe.target}:${laneIndex}`, {
+        id: recipeId,
+        result: lastRecipeResult
+      });
       return draft;
     });
     if (!stagedResult) return;
@@ -834,13 +1052,14 @@ export function createSlotEditorPanel({
   function formatResponseSummary(ef) {
     const smoothing = Number(ef.smoothing);
     const mode = resolveEfModeName(ef);
-    const feel = mode === 'GATE'
-      ? 'Gate'
-      : smoothing >= 0.4
-        ? 'Tight'
-        : smoothing <= 0.15
-          ? 'Flowing'
-          : 'Balanced';
+    const feel =
+      mode === 'GATE'
+        ? 'Gate'
+        : smoothing >= 0.4
+          ? 'Tight'
+          : smoothing <= 0.15
+            ? 'Flowing'
+            : 'Balanced';
     return `Response · ${feel} · smoothing ${formatNumberField(ef.smoothing, 2)} · attack ${formatNumberField(ef.attackMs, 0)} ms · release ${formatNumberField(ef.releaseMs, 0)} ms`;
   }
 
@@ -874,10 +1093,12 @@ export function createSlotEditorPanel({
     const observedAt = Date.now();
     const active = efIndex >= 0 && Boolean(Number(telemetry.efStatus?.[efIndex]));
     if (active) efLastActiveAt.set(efIndex, observedAt);
-    const recent = !active && efIndex >= 0 && observedAt - (efLastActiveAt.get(efIndex) ?? 0) <= 1500;
+    const recent =
+      !active && efIndex >= 0 && observedAt - (efLastActiveAt.get(efIndex) ?? 0) <= 1500;
     const state = active ? 'Active' : recent ? 'Recent' : 'Inactive';
     const currentValue = efIndex >= 0 ? telemetry.envelopes?.[efIndex] : null;
-    const output = telemetry.slotOutputs?.[slotState.selected] ?? telemetry.slots?.[slotState.selected];
+    const output =
+      telemetry.slotOutputs?.[slotState.selected] ?? telemetry.slots?.[slotState.selected];
     const contribution = Array.isArray(telemetry.slotContributions)
       ? telemetry.slotContributions.find((entry) => Number(entry?.index) === slotState.selected)
       : null;
@@ -926,20 +1147,21 @@ export function createSlotEditorPanel({
       select.appendChild(option);
     });
     select.onchange = () => onChange(select.value);
+    if (describeOption) {
+      const description = document.createElement('small');
+      description.className = 'control-description';
+      description.textContent = describeOption(current);
+      select.addEventListener('change', () => {
+        description.textContent = describeOption(select.value);
+      });
+      wrap.appendChild(description);
+    }
     wrap.appendChild(select);
     return wrap;
   }
 
   // Build a numeric input with keyboard-friendly coarse/fine stepping.
-  function makeNumber(
-    labelText,
-    current,
-    min,
-    max,
-    step,
-    onCommit,
-    { help, configPaths } = {}
-  ) {
+  function makeNumber(labelText, current, min, max, step, onCommit, { help, configPaths } = {}) {
     const wrap = document.createElement('label');
     markDeviceConfigPaths(wrap, configPaths);
     wrap.appendChild(makeControlLabel(labelText, help));
@@ -949,10 +1171,70 @@ export function createSlotEditorPanel({
     if (max !== undefined && max !== null) input.max = String(max);
     if (step !== undefined && step !== null) input.step = String(step);
     input.value = current;
+    input.setAttribute('aria-label', labelText);
     input.onchange = () => onCommit(Number(input.value));
     const coarseStep = step ?? 1;
     attachCoarseFine(input, coarseStep);
     wrap.appendChild(input);
+    const continuous =
+      getUiMode() === 'advanced' &&
+      /attackMs|releaseMs|rmsWindowMs|TauMs|smoothing|gain$|lfo.*amount/.test(String(configPaths));
+    if (continuous) {
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'lab-continuous-control';
+      slider.setAttribute('aria-label', `${labelText} slider`);
+      const logarithmic = min > 0 && /Ms/.test(String(configPaths));
+      slider.min = logarithmic ? '0' : String(min);
+      slider.max = logarithmic ? '1000' : String(max);
+      slider.step = logarithmic ? '1' : String(step);
+      const position = (value) =>
+        logarithmic
+          ? (Math.log(Math.max(min, Number(value)) / min) / Math.log(max / min)) * 1000
+          : Number(value);
+      const sync = () => {
+        slider.value = String(position(input.value));
+        slider.setAttribute(
+          'aria-valuetext',
+          `${input.value}${/Ms/.test(String(configPaths)) ? ' ms' : ''}`
+        );
+      };
+      sync();
+      slider.addEventListener('input', () => {
+        const raw = logarithmic
+          ? min * Math.pow(max / min, Number(slider.value) / 1000)
+          : Number(slider.value);
+        const value = Math.max(
+          min,
+          Math.min(max, Number((Math.round(raw / step) * step).toFixed(6)))
+        );
+        input.value = String(value);
+        sync();
+        onCommit(value);
+      });
+      input.addEventListener('change', sync);
+      const reset = () => {
+        let path = wrap.dataset.stagedPath?.split(' ')[0];
+        const lane = wrap.closest('[data-lfo-lane]')?.dataset.lfoLane;
+        if (lane !== undefined) path = path?.replace('lfo.*', `lfo.${lane}`);
+        const confirmed = path
+          ?.split('.')
+          .reduce((value, key) => value?.[key], runtime.getState().live);
+        if (typeof confirmed !== 'number') return;
+        input.value = String(confirmed);
+        sync();
+        onCommit(confirmed);
+      };
+      slider.addEventListener('dblclick', reset);
+      input.addEventListener('dblclick', reset);
+      const resetButton = document.createElement('button');
+      resetButton.type = 'button';
+      resetButton.className = 'reset-confirmed';
+      resetButton.textContent = 'Reset to confirmed';
+      resetButton.setAttribute('aria-label', `Reset ${labelText} to confirmed value`);
+      resetButton.addEventListener('click', reset);
+      wrap.append(slider, resetButton);
+    }
     return wrap;
   }
 
@@ -988,7 +1270,12 @@ export function createSlotEditorPanel({
   // slot schema so a newly configurable firmware field cannot stay invisible.
   function markDeviceConfigPaths(element, paths) {
     const values = (Array.isArray(paths) ? paths : [paths]).filter(Boolean);
-    if (values.length) element.dataset.deviceConfigPath = values.join(' ');
+    if (values.length) {
+      element.dataset.deviceConfigPath = values.join(' ');
+      element.dataset.stagedPath = values
+        .map((path) => path.replace('slots.*', `slots.${slotState.selected}`))
+        .join(' ');
+    }
   }
 
   function parkNoteDynamicsCard() {
@@ -1218,9 +1505,8 @@ export function createSlotEditorPanel({
   function normalizeSlotLfo(slot) {
     const lanes = Array.isArray(slot?.lfo) ? slot.lfo : [];
     return Array.from({ length: 2 }, (_, laneIndex) => {
-      const source = lanes[laneIndex] && typeof lanes[laneIndex] === 'object'
-        ? lanes[laneIndex]
-        : {};
+      const source =
+        lanes[laneIndex] && typeof lanes[laneIndex] === 'object' ? lanes[laneIndex] : {};
       const mode = Number(source.mode);
       const amount = Number(source.amount);
       return {
@@ -1447,6 +1733,8 @@ export function createSlotEditorPanel({
 
   return {
     populateDetail,
-    renderSlotEditor
+    renderSlotEditor,
+    focusControl,
+    updateSignalPath
   };
 }

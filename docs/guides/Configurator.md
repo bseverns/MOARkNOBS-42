@@ -52,7 +52,7 @@ Some controls can also issue field-level writes through the runtime patch lane, 
 
 ## Selected-slot tuning translates Lab; it does not replace it
 
-Configure now adds a musician-facing tuning surface beside the selected slot. It follows this progression:
+Configure centers the selected slot with a persistent identity, mapping, measured output, and three musical shaping zones. It follows this progression:
 
 ```text
 recipe -> musical feel -> translated summary -> exact Lab parameters
@@ -65,10 +65,20 @@ Configure exposes:
 - **Source** — the exact EF assignment for this slot
 - **Character** — small selected-slot EF recipes such as Clean / Neutral, Smooth, Punchy, Gate, and Experimental
 - **Response** — a readable summary derived from the exact smoothing, detector, attack, and release values; it is not a new firmware parameter
-- **Amount** — a summary of auto-gain target or manual gain; Configure does not pretend those different mechanisms are one universal strength knob
-- **Direction** — a direct translation of the firmware destination mode, such as **Louder -> more · ADD_CLAMP** or **Signal replaces value · REPLACE**
+- **Amount** — Adaptive explicitly enables auto-gain; Subtle, Moderate, and Strong explicitly disable auto-gain and stage gain 0.5, 1, or 2. The summary retains the exact mechanism.
+- **Direction** — a musical translation of the firmware destination mode, such as **Louder → more** or **Signal replaces value**; Lab retains the exact token.
+- **Combine / ARG** — enable two followers, choose source A/B, and stage Strongest Wins, Average Together, Difference, or Interaction recipes. ARG chooses the reactive input before the slot’s EF shaping; it is not an additional independent output delta. An EF assignment still gates this path.
+- **Motion / LFO** — each fixed lane has its own switch and signed depth. **Movement & recipes** discloses combine mode and centered-motion recipes. Shape/rate remain shared generator settings in Lab’s Profile LFO & Routes.
 
 Lab keeps every underlying control. Enum choices lead with musical language while retaining the exact token, for example **Smooth · LOWPASS**, **Punchy · EXPONENTIAL**, **Average Together · AVG**, and **Strongest Wins · MAXX**.
+
+### State and exact Lab controls
+
+**State · Presets, profiles & backups** groups starting presets, profile switching/saving, and JSON backups. Presets and imports stage a draft; Apply sends it; profile save persists it. Existing dirty-draft and capability guards remain in force. Opening the drawer does not issue a write.
+
+Lab’s continuous slot parameters pair exact numeric inputs with sliders. Attack/release and other millisecond time constants use logarithmic travel; smoothing, gain, and lane depth use linear travel. Double-click a continuous control, or use its **Reset to confirmed** button, to stage the last confirmed field value. No reset writes immediately.
+
+The smaller Apply dock reserves scroll space and keeps focused controls clear of it. Screenshot checks include the dock when dirty, rather than hiding it.
 
 ### Recipe boundaries
 
@@ -80,9 +90,11 @@ Recipes use the same staged config path as manual edits. They do not write immed
 | ARG | selected slot's enable + method | source A/B and every other slot |
 | Fixed LFO | one selected slot-local lane | the other lane and every other slot |
 
-After a recipe, Configure names the exact changed paths and the normal Review dialog remains the complete diff. **Customize in Lab** opens the exact controls rather than creating a second hidden configuration system.
+Recipes show a persistent explanation below their controls, including on touch devices. Staged markers identify affected controls; Review remains the complete diff and focuses the corresponding Lab tab, slot, lane, and field. **Customize in Lab** opens the relevant exact controls, and **Return to Configure** preserves the selected slot and lane.
 
-The compact evidence line reuses the App's current telemetry snapshot: EF identity, active/recent/inactive state, current level, resolved slot output, EF contribution when reported, and gate threshold when relevant. It is host-observed visualization, not physical-device validation or latency measurement.
+The signal strip displays hand/base → reactive EF/ARG delta → LFO 1 delta → LFO 2 delta → resolved output. Contribution graphics use one coherent device snapshot, never arithmetic reconstructed from staged settings. Missing or stale contribution data is explicitly unreported; no ARG-specific delta is invented.
+
+The compact EF evidence line reuses the App's current telemetry snapshot: EF identity, active/recent/inactive state, current level, resolved slot output, EF contribution when reported, and gate threshold when relevant. It is host-observed visualization, not physical-device validation or latency measurement.
 
 Simulator modulation is behavioral rehearsal, not analog calibration or hardware-validation evidence. Its deterministic LFO traces follow the declared shape, and its EF model intentionally maps only enough existing tuning fields to make recipe differences visible without claiming circuit fidelity.
 

@@ -115,6 +115,8 @@ export function createSlotWorkspaceController({
       slotOutputs: Array.isArray(frame.slotOutputs)
         ? frame.slotOutputs
         : slotState.telemetry?.slotOutputs,
+      contributionsReceivedAt: Array.isArray(frame.slotContributions)
+        ? frame.receivedAt ?? Date.now() : slotState.telemetry?.contributionsReceivedAt,
       slotContributions: Array.isArray(frame.slotContributions)
         ? frame.slotContributions
         : slotState.telemetry?.slotContributions,

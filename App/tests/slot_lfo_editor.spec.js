@@ -20,8 +20,8 @@ test('fixed slot LFO lanes can be staged, applied, and read back', async ({ page
   await expect(lane.getByRole('heading', { name: 'LFO 1' })).toBeVisible();
   await lane.getByLabel('Enable LFO 1').check();
   await lane.getByLabel('LFO 1 combine mode').selectOption('4');
-  await lane.getByLabel('LFO 1 amount (%)').fill('35');
-  await lane.getByLabel('LFO 1 amount (%)').dispatchEvent('change');
+  await lane.getByLabel('LFO 1 amount (%)', { exact: true }).fill('35');
+  await lane.getByLabel('LFO 1 amount (%)', { exact: true }).dispatchEvent('change');
 
   await expect(page.locator('#dirty-badge')).toBeVisible();
   await expect(page.locator('#slot-detail-lfo')).toContainText('L1 Centered +35%');
@@ -38,7 +38,7 @@ test('fixed slot LFO lanes can be staged, applied, and read back', async ({ page
 test('fixed slot LFO lane edits survive profile save and reload', async ({ page }) => {
   await bootAdvancedSimulator(page);
   await page.locator('#editor-panel').getByRole('tab', { name: 'Slot LFO', exact: true }).click();
-  const amount = page.locator('.slot-lfo-lane').nth(1).getByLabel('LFO 2 amount (%)');
+  const amount = page.locator('.slot-lfo-lane').nth(1).getByLabel('LFO 2 amount (%)', { exact: true });
   await page.locator('.slot-lfo-lane').nth(1).getByLabel('Enable LFO 2').check();
   await amount.fill('-24');
   await amount.dispatchEvent('change');

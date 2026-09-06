@@ -12,11 +12,6 @@ async function bootConfigureSimulator(page) {
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
-  // Element captures should show the tuning surface itself, not the global
-  // fixed Apply bar that normally overlays the viewport once a recipe is staged.
-  await page.locator('#change-bar').evaluate((element) => {
-    element.style.display = 'none';
-  });
 }
 
 test('selected-slot tuning screenshot states', async ({ page }) => {

@@ -118,6 +118,7 @@ test('config JSON can be imported before connecting and exported afterward', asy
   await page.goto('/benzknobz.html');
   await waitForBoot(page);
 
+  await page.locator('#recovery-drawer > summary').click();
   const importButton = page.getByRole('button', { name: 'Import config JSON' });
   const exportButton = page.getByRole('button', { name: 'Export config JSON' });
   await expect(importButton).toBeEnabled();

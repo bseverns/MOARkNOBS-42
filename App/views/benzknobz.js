@@ -878,9 +878,12 @@ const boot = () => {
     setStatus,
     getUiMode: () => uiModeController.getUiMode(),
     getEditorTab: () => uiModeController.getEditorTab(),
-    openLabTab: (tab) => {
+    openLabTab: (tab, laneIndex = null) => {
+      docRoot.dataset.configureReturnTab = tab;
+      docRoot.dataset.configureReturnLane = laneIndex === null ? '' : String(laneIndex);
       uiModeController.setUIMode('advanced');
       uiModeController.setEditorTab(tab);
+      slotEditorPanel.focusControl('', laneIndex);
     }
   });
   const slotWorkspaceController = createSlotWorkspaceController({
@@ -903,6 +906,14 @@ const boot = () => {
 
   transportToolbarController.bind();
   performerPanelController.bind();
+  document.getElementById('return-configure')?.addEventListener('click', () => {
+    uiModeController.setUIMode('basic');
+    const zone = docRoot.dataset.configureReturnTab || 'envelope';
+    const lane = docRoot.dataset.configureReturnLane;
+    const target = document.querySelector(`[data-configure-zone="${zone}"]${lane ? ` [data-lfo-lane="${lane}"]` : ''}`);
+    target?.scrollIntoView({ block: 'center' });
+    target?.querySelector('input, select, button')?.focus();
+  });
   slotWorkspaceController.bind();
   uiModeController.bind();
   performanceTabButtons.forEach((button) => {
@@ -929,6 +940,7 @@ const boot = () => {
     profileMacroScenePanel.onTelemetry(frame);
   });
   runtime.on('telemetry-health', (health) => {
+    slotEditorPanel.updateSignalPath();
     deviceMonitorController.renderTelemetryHealth(health);
     updateStagePanel();
   });
@@ -1112,6 +1124,7 @@ const boot = () => {
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.
     setConnectionPill('disconnected', 'Disconnected');
+    slotEditorPanel.updateSignalPath();
     setConnectionBanner('disconnected', runtime.getState().manifest);
     if (applyBtn) applyBtn.disabled = true;
     syncConfigFileButtons();
@@ -1126,6 +1139,7 @@ const boot = () => {
   runtime.on('error', (err) => {
     // Runtime errors are treated as hard disconnects from the UI perspective.
     setConnectionPill('disconnected', 'Disconnected');
+    slotEditorPanel.updateSignalPath();
     setConnectionBanner('disconnected', runtime.getState().manifest);
     connectFailHelp?.setAttribute('open', '');
     setStatus('err', 'Runtime error', err.message || String(err));
@@ -1248,20 +1262,21 @@ const boot = () => {
   }
 
   function focusChangedPath(path) {
-    const slotMatch = String(path ?? '').match(/^slots[.\[]+(\d+)/);
-    if (slotMatch) {
-      selectSlot(Number(slotMatch[1]));
-      changeReviewDialog?.close?.();
-      document.getElementById('editor-panel')?.scrollIntoView?.({ block: 'start' });
+    const parts = String(path ?? '').replace(/\[(\d+)\]/g, '.$1').split('.');
+    changeReviewDialog?.close?.();
+    document.activeElement?.blur?.();
+    if (parts[0] === 'slots' && /^\d+$/.test(parts[1] || '')) {
+      selectSlot(Number(parts[1]));
+      uiModeController.setUIMode('advanced');
+      uiModeController.setEditorTab(parts[2] === 'ef' || parts[2] === 'efIndex' ? 'envelope' : parts[2] === 'arg' ? 'arg' : parts[2] === 'lfo' ? 'lfo' : 'mapping');
+      slotEditorPanel.focusControl(path, parts[2] === 'lfo' ? Number(parts[3]) : null);
       return;
     }
-    const subsystem = String(path ?? '').split(/[.[]/, 1)[0];
-    const target = document.querySelector(`[data-schema-section="${subsystem}"]`);
-    if (target) {
-      changeReviewDialog?.close?.();
-      target.scrollIntoView?.({ block: 'center' });
-      target.querySelector('input, select, button')?.focus?.();
-    }
+    uiModeController.setUIMode('advanced');
+    const target = [...document.querySelectorAll('[data-device-config-path]')].find((node) => node.dataset.deviceConfigPath === parts.join('.')) ||
+      [...document.querySelectorAll('[data-schema-section]')].find((node) => node.dataset.schemaSection === parts[0]);
+    target?.scrollIntoView?.({ block: 'center' });
+    target?.querySelector('input:not([type="range"]), select, button')?.focus();
   }
 
   // Fill the slot detail card from the selected slot plus latest telemetry.

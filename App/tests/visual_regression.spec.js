@@ -42,7 +42,10 @@ function dynamicMasks(page) {
     page.locator('.meter-value'),
     page.locator('progress'),
     page.locator('canvas'),
-    page.locator('.selected-tuning-evidence')
+    page.locator('.selected-tuning-evidence'),
+    page.locator('.signal-contributions'),
+    page.locator('.slot-signal-output'),
+    page.locator('.signal-source')
   ];
 }
 
@@ -78,9 +81,6 @@ test('approved open Incoming MIDI workspace at 1356 px', async ({ page }) => {
   await expect(workspace.locator('.midi-binding-card')).toBeVisible();
   await page.locator('#apply').click();
   await expect(page.locator('#status-label')).toHaveText('Synced');
-  await page.locator('#change-bar').evaluate((element) => {
-    element.style.display = 'none';
-  });
   await page.clock.pauseAt('2026-08-25T12:00:00-05:00');
   await expect(workspace).toHaveScreenshot('incoming-midi-open-1356.png', SNAPSHOT_OPTIONS);
 });

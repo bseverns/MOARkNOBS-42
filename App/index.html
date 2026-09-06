@@ -56,9 +56,20 @@
       </div>
       <details class="recovery-drawer" id="recovery-drawer" data-ui-modes="basic advanced">
         <summary>
-          <span>Recovery &amp; Profiles</span>
+          <span>State · Presets, profiles &amp; backups</span>
           <span class="microcopy profile-slot-meta" id="profile-slot-status">Slot A • local target</span>
         </summary>
+          <section class="state-starting-point" aria-label="Starting point and config files">
+            <h3>Starting point &amp; save</h3>
+            <p class="microcopy">Presets and imports stage a draft for review. Apply sends it to the instrument; profile save persists it. Files are backups.</p>
+            <label for="preset-picker">Starting preset</label>
+            <select id="preset-picker">
+              <option value="">Select a preset…</option>
+            </select>
+            <button id="apply-save-profile" class="action-primary" type="button" disabled>Apply and save to Profile A</button>
+            <div class="state-file-actions"><button id="export-preset" disabled>Export config JSON</button>
+            <button id="import-preset">Import config JSON</button></div>
+          </section>
         <div class="profile-bar" id="profile-bar" aria-label="Profile manager panel">
           <div class="profile-switch" role="group" aria-label="Profile slot selector">
             <strong>Profile slot</strong>
@@ -329,13 +340,14 @@
         <section id="editor-panel" data-ui-modes="basic advanced">
           <header class="editor-shell-header">
             <div>
-              <h2><span class="configure-editor-title">Slot Mapping</span><span class="lab-editor-title">Selected Slot</span></h2>
+              <h2><span class="configure-editor-title">Shape this slot</span><span class="lab-editor-title">Selected Slot</span></h2>
               <p class="microcopy">Keep the slot grid visible while editing one target at a time.</p>
             </div>
             <div class="section-lane-tags" aria-label="Selected slot boundaries">
               <span class="lane-tag" data-runtime-lane="staged">Staged config</span>
               <span class="lane-tag" data-runtime-lane="browser">Labels stay local</span>
             </div>
+            <button id="return-configure" type="button" data-ui-tier="advanced">Return to Configure</button>
             <div class="editor-tabbar" role="tablist" aria-label="Selected slot editor sections">
               <button type="button" class="editor-tab" data-editor-tab="mapping" aria-pressed="true">Mapping</button>
               <button type="button" class="editor-tab" data-editor-tab="envelope" aria-pressed="false"
@@ -346,6 +358,7 @@
                 data-ui-tier="advanced">Slot LFO</button>
             </div>
           </header>
+          <section id="selected-slot-signal" aria-label="Selected slot signal path" data-ui-modes="basic advanced"></section>
           <div id="form" data-device-config-root="slots">
             <section class="schema-section" id="ef-form" data-ui-tier="advanced">
               <header>
@@ -457,15 +470,7 @@
             </header>
             <div class="monitor-grid" id="device-monitor"></div>
           </section>
-          <div class="stack">
-            <button id="export-preset" disabled>Export config JSON</button>
-            <button id="import-preset">Import config JSON</button>
-            <select id="preset-picker">
-              <option value="">Select a preset…</option>
-            </select>
-            <button id="apply-save-profile" class="action-primary" type="button" disabled>Apply and save to Profile A</button>
-            <button id="simulator-toggle" type="button" data-ui-modes="advanced">Start simulator</button>
-          </div>
+          <button id="simulator-toggle" type="button" data-ui-modes="advanced">Start simulator</button>
           <section class="live-toggle-card live-boundary" aria-labelledby="usb-midi-toggle-title" data-ui-modes="advanced">
             <header class="live-toggle-card-header">
               <div>
@@ -917,8 +922,8 @@
       <strong id="change-count">0 staged changes</strong>
       <div class="change-bar-actions">
         <button id="change-review" type="button">Review</button>
-        <button id="change-discard" class="action-destructive" type="button">Discard draft</button>
-        <button id="apply" class="action-primary" type="button" disabled>Apply staged changes</button>
+        <button id="change-discard" class="action-destructive" type="button">Discard</button>
+        <button id="apply" class="action-primary" type="button" disabled>Apply</button>
       </div>
     </div>
     <dialog id="change-review-dialog" class="change-review-dialog" aria-labelledby="change-review-title">

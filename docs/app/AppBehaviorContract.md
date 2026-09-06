@@ -55,7 +55,8 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
 
 - **Stage** is the performance surface: connection, live profile/scene recall, power safety, slot activity, envelope
   levels, motion, and panic help.
-- **Configure** is the default everyday mapping and profile workspace.
+- **Configure** is the default selected-slot workspace: Mapping, Reactive/EF, Combine/ARG, and Motion/fixed LFO lanes.
+  The signal strip displays device observations separately from staged settings.
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
   account for every slot-schema leaf.
@@ -74,6 +75,11 @@ compatibility/OLED label; changing it must not rewrite any slot's detector mode.
 
 The persisted compatibility values remain `stage`, `basic`, and `advanced`. A mode may hide complexity, but it must not
 change the authority or write semantics of the underlying state.
+
+The State drawer groups presets, profile persistence, and file backups without merging their authority. Selected-slot
+markers reflect exact staged diffs. Review focuses the matching Lab field; Customize/Return preserve slot and lane.
+Continuous Lab slot controls support sliders and reset-to-confirmed staging, with logarithmic millisecond travel.
+Signal contribution graphics require a coherent, recent measured snapshot; missing components remain unreported.
 
 ## Device-backed and browser-local state
 

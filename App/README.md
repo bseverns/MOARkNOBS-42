@@ -27,7 +27,7 @@ See [Host Compatibility](../docs/reference/HostCompatibility.md) before widening
 3. Open <http://localhost:8000/> in a Chromium-based browser.
 4. Select **Check compatibility**, then **Connect**, and choose the MN42 serial device.
 5. Wait for the identity, manifest, schema, and configuration handshake to finish.
-6. Stage an edit, review the diff, select **Apply staged changes**, and wait for verified readback.
+6. Stage an edit, review the diff, select **Apply**, and wait for verified readback.
 
 The legacy `benzknobz.html` URL remains a supported local/test entry point.
 
@@ -43,13 +43,23 @@ Bridge session for configuration while OSC and MIDI routing remain active.
 
 ## Everyday workflow
 
-- Use **Configure** for mapping and profile work.
+- Use **Configure** to select a physical slot, map its output, and shape it with **Reactive**, **Combine**, and **Motion**. The selected-slot strip separates staged settings from measured device contributions.
 - Use **Stage** for a compact performance dashboard and safe recall controls.
-- Use **Lab** for envelope, ARG, LFO, filter, scope, monitor, import/export, and diagnostic surfaces.
+- Use **Lab** for exact envelope, ARG, LFO, filter, scope, monitor, and diagnostic controls. Continuous slot controls pair exact numbers with sliders; timing sliders use logarithmic travel. Reset to confirmed stages the last confirmed field value.
 - Importing JSON stages a draft; it does not write the device until Apply succeeds.
 - Export saves the current staged state, including unsent changes.
 - Profile, scene, macro, and transport actions that could replace a dirty draft are blocked until it is applied or discarded.
 - If Apply becomes uncertain, keep the candidate visible and let authoritative readback resolve device truth.
+
+**State · Presets, profiles & backups** groups starting presets, device profile actions, and configuration/profile files.
+Opening the drawer writes nothing. Presets and imports stage changes; profile save persists configuration on the device.
+
+Changed controls carry **Staged** markers. The compact **Review / Discard / Apply** dock keeps the transaction available;
+Review can focus the exact changed slot field in Lab. **Customize in Lab** and **Return to Configure** preserve the
+selected slot and LFO lane. Recipe explanations remain visible on touch screens.
+
+The App explains how a slot’s value is shaped; the Bridge explains where that value goes. Neither surface infers
+missing device measurements or confirms receipt by an external host application.
 
 ## Troubleshooting
 

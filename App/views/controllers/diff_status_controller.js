@@ -1,3 +1,4 @@
+import { updateStagedControlMarkers } from '../staged_control_markers.js';
 function summarizeDiffValue(value) {
   if (value === undefined) return 'undefined';
   if (value === null) return 'null';
@@ -55,7 +56,24 @@ function describeChangeGroup(path) {
 function describeChangePath(path) {
   const parts = splitDiffPath(path);
   const visible = parts[0] === 'slots' ? parts.slice(2) : parts.slice(1);
-  return visible.length ? visible.map(humanizePathPart).join(' › ') : humanizePathPart(parts[0]);
+  const names = {
+    ef: 'Reactive / EF',
+    arg: 'Combine / ARG',
+    lfo: 'Motion / LFO',
+    attackMs: 'Attack (ms)',
+    releaseMs: 'Release (ms)'
+  };
+  return visible.length
+    ? visible
+        .map(
+          (part, index) =>
+            names[part] ||
+            (/^\d+$/.test(part) && visible[index - 1] === 'lfo'
+              ? String(Number(part) + 1)
+              : humanizePathPart(part))
+        )
+        .join(' › ')
+    : humanizePathPart(parts[0]);
 }
 
 export function createDiffStatusController({
@@ -81,6 +99,21 @@ export function createDiffStatusController({
   let validationErrors = [];
   let transactionState = 'clean';
   let dirtyStartedAt = 0;
+  const reserveDockSpace = () => {
+    const height =
+      changeBar && !changeBar.hidden ? changeBar.getBoundingClientRect().height + 24 : 0;
+    docRoot?.style.setProperty('--apply-dock-space', `${height}px`);
+  };
+  if (changeBar && typeof ResizeObserver === 'function')
+    new ResizeObserver(reserveDockSpace).observe(changeBar);
+  document.addEventListener('focusin', (event) => {
+    if (!changeBar || changeBar.hidden || changeBar.contains(event.target)) return;
+    if (!event.target.matches?.('input, select, textarea, button')) return;
+    const rect = event.target.getBoundingClientRect();
+    if (rect.bottom > changeBar.getBoundingClientRect().top && !event.target.closest('dialog')) {
+      event.target.scrollIntoView({ block: 'center' });
+    }
+  });
 
   function setStatus(state, label, message) {
     if (!statusEl || !statusLabel || !statusMessage) return;
@@ -93,18 +126,19 @@ export function createDiffStatusController({
     console.debug('[UI] markDirty', isDirty);
     if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
     if (changeBar) changeBar.toggleAttribute('hidden', !isDirty);
+    reserveDockSpace();
     if (docRoot) docRoot.dataset.dirty = isDirty ? 'true' : 'false';
     if (isDirty && !dirtyStartedAt) dirtyStartedAt = Date.now();
     if (!isDirty) dirtyStartedAt = 0;
-    const applyAllowed = ['verified', 'simulator'].includes(
-      runtime?.getState?.()?.contractQuality
-    );
+    const applyAllowed = ['verified', 'simulator'].includes(runtime?.getState?.()?.contractQuality);
     const state = runtime?.getState?.() ?? {};
     // Older runtime snapshots only expose the compatibility transactionState.
     // Newer snapshots keep device authority separate from local draft dirtiness.
     const transactionWritable = state.deviceAuthority
       ? ['verified', 'verified-device-different'].includes(state.deviceAuthority)
-      : ['dirty', 'verified', 'verified-device-different', 'clean'].includes(state.transactionState);
+      : ['dirty', 'verified', 'verified-device-different', 'clean'].includes(
+          state.transactionState
+        );
     const transactionBusy = ['preflighting', 'applying', 'uncertain', 'resynchronizing'].includes(
       transactionState
     );
@@ -118,8 +152,9 @@ export function createDiffStatusController({
   function updateDiff(isDirty) {
     if (!diffPanel || !diffOutput) return;
     const changes = runtime.diff();
+    updateStagedControlMarkers(document, changes);
     if (changeCount) {
-      changeCount.textContent = `${changes.length} staged change${changes.length === 1 ? '' : 's'}`;
+      changeCount.textContent = `● ${changes.length} staged`;
     }
     if (!isDirty || !changes.length) {
       diffPanel.setAttribute('hidden', '');
@@ -171,7 +206,7 @@ export function createDiffStatusController({
       'verified-device-different': 'Device differs'
     };
     if (applyBtn) {
-      applyBtn.textContent = labels[nextState] ?? 'Apply staged changes';
+      applyBtn.textContent = labels[nextState] ?? 'Apply';
     }
     markDirty(Boolean(runtime?.getState?.()?.dirty));
   }

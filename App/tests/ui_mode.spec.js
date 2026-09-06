@@ -4,7 +4,7 @@ test.describe('UI mode', () => {
   test('basic mode hides advanced sections and mode persists', async ({ page }) => {
     await page.goto('/benzknobz.html');
 
-    const basicButton = page.getByRole('button', { name: 'Configure' });
+    const basicButton = page.getByRole('button', { name: 'Configure', exact: true });
     const advancedButton = page.getByRole('button', { name: 'Lab', exact: true });
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
@@ -18,7 +18,7 @@ test.describe('UI mode', () => {
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeHidden();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeHidden();
     await expect(page.locator('.editor-tabbar')).toBeHidden();
-    await expect(page.locator('#editor-panel')).toContainText('Slot Mapping');
+    await expect(page.locator('#editor-panel')).toContainText('Shape this slot');
     await expect(page.locator('#check-compatibility')).toBeHidden();
     await expect(page.locator('#config-mode')).toBeHidden();
     await expect(page.locator('#rollback')).toHaveCount(0);
@@ -85,9 +85,9 @@ test.describe('UI mode', () => {
       .toBe('simulator');
     await expect(page.locator('.slot-editor')).toBeVisible();
     await expect(page.locator('#slot-detail-panel')).toBeHidden();
+    await page.locator('#recovery-drawer > summary').click();
     await expect(page.locator('#export-preset')).toBeVisible();
     await expect(page.locator('#import-preset')).toBeVisible();
-    await page.locator('#recovery-drawer > summary').click();
     await expect(page.locator('#profile-save')).toBeVisible();
     await expect(page.locator('#profile-load')).toBeVisible();
     await expect(page.locator('#profile-download')).toBeVisible();
@@ -99,7 +99,7 @@ test.describe('UI mode', () => {
 
     await expect(page.locator('#dirty-badge')).toBeVisible();
     await expect(page.locator('#change-bar')).toBeVisible();
-    await expect(page.locator('#change-count')).toHaveText('1 staged change');
+    await expect(page.locator('#change-count')).toHaveText('● 1 staged');
     await expect(page.locator('#change-bar')).toHaveCSS('position', 'fixed');
     const initialBarBox = await page.locator('#change-bar').boundingBox();
     const initialViewport = page.viewportSize();

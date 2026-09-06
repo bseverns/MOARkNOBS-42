@@ -44,7 +44,7 @@ async function collectSlotPaths(page, collected) {
 function selectedSlotControl(page, label) {
   return page
     .locator(`.slot-editor label:has(.control-label:text-is("${label}"))`)
-    .locator('input, select');
+    .locator('input:not([type=range]), select');
 }
 
 async function setSelectedSlotEfMode(page, mode) {
