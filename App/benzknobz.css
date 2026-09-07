@@ -2651,14 +2651,38 @@ html[data-ui-mode='advanced'] #connect-card {
 }
 
 .lab-bench-tabbar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
   gap: 8px;
+  width: min(100%, 1040px);
 }
 
 .lab-bench-tabbar .utility-tab {
-  text-align: center;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  min-height: 78px;
+  padding: 11px 13px;
+  text-align: left;
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+.lab-bench-tabbar .utility-tab strong {
+  color: inherit;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lab-bench-tabbar .utility-tab small {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.lab-bench-tabbar .utility-tab[aria-pressed='true'] small {
+  color: rgba(232, 255, 255, 0.78);
 }
 
 .lab-bench-panel.utility-panel-active {
@@ -4277,6 +4301,11 @@ footer {
   .lab-bench-header {
     align-items: start;
     flex-direction: column;
+  }
+
+  .lab-bench-tabbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
 
   .lab-bench-panel--instrument,

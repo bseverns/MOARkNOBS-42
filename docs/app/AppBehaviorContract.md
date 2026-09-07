@@ -59,7 +59,9 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   The signal strip displays device observations separately from staged settings.
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
-  account for every slot-schema leaf.
+  account for every slot-schema leaf. Its full-width Bench separates Instrument, Profile, Observe, and Evidence
+  workspaces while keeping each room's major tools named in the Bench navigation. Scope, MIDI Monitor, Device Monitor,
+  Modulation Matrix, Staged Diff, Slot Inspector, and Debug Log must remain discoverable even when their room is closed.
 
 Lab presents profile-owned incoming MIDI routes as the **Incoming MIDI** tab in **Profile Performance**, beside the
 profile arpeggiator and LFO/routes tabs. It must not place those routes inside **Selected Slot**: a route can target any

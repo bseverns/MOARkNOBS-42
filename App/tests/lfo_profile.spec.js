@@ -29,12 +29,11 @@ test('profile performance controls live in the Profile Lab Bench workspace', asy
   await expect(workspace.locator('[data-performance-panel="arp"]')).toBeVisible();
   await expect(page.locator('#connect-card [data-performance-panel]')).toHaveCount(0);
   await expect(page.locator('#connect-card [data-utility-tab]')).toHaveCount(0);
-  await expect(bench.locator('[data-utility-tab]')).toHaveText([
-    'Instrument',
-    'Profile',
-    'Observe',
-    'Evidence'
-  ]);
+  await expect(bench.locator('[data-utility-tab="instrument"]')).toContainText('USB MIDI');
+  await expect(bench.locator('[data-utility-tab="profile"]')).toContainText('Incoming MIDI');
+  await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('EF/LFO Scope');
+  await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('MIDI Monitor');
+  await expect(bench.locator('[data-utility-tab="evidence"]')).toContainText('Debug Log');
   await expect(page.locator('[data-editor-tab="lfo"]')).toHaveText('Slot LFO');
 });
 

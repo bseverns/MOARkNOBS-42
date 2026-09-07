@@ -91,10 +91,22 @@ const boot = () => {
         <p class="microcopy">Instrument, profile, observation, and evidence each keep their own authority and purpose.</p>
       </div>
       <div class="lab-bench-tabbar" role="tablist" aria-label="Lab Bench workspaces">
-        <button type="button" class="utility-tab" data-utility-tab="instrument" aria-pressed="true">Instrument</button>
-        <button type="button" class="utility-tab" data-utility-tab="profile" aria-pressed="false">Profile</button>
-        <button type="button" class="utility-tab" data-utility-tab="observe" aria-pressed="false">Observe</button>
-        <button type="button" class="utility-tab" data-utility-tab="evidence" aria-pressed="false">Evidence</button>
+        <button type="button" class="utility-tab" data-utility-tab="instrument" aria-label="Instrument" aria-pressed="true">
+          <strong>Instrument</strong>
+          <small>Assignments · Filter · ARG · LEDs · USB MIDI · Clock</small>
+        </button>
+        <button type="button" class="utility-tab" data-utility-tab="profile" aria-label="Profile" aria-pressed="false">
+          <strong>Profile</strong>
+          <small>Arp · LFO generators &amp; routes · Incoming MIDI</small>
+        </button>
+        <button type="button" class="utility-tab" data-utility-tab="observe" aria-label="Observe" aria-pressed="false">
+          <strong>Observe</strong>
+          <small>EF/LFO Scope · MIDI Monitor · Device Monitor · Modulation Matrix</small>
+        </button>
+        <button type="button" class="utility-tab" data-utility-tab="evidence" aria-label="Evidence" aria-pressed="false">
+          <strong>Evidence</strong>
+          <small>Staged Diff · Slot Inspector · Debug Log</small>
+        </button>
       </div>
     </header>
   `;
