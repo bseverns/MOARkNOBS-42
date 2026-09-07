@@ -13,7 +13,7 @@ Target demo outcomes:
 If a feature already exists in firmware, it still gets a checkbox here as **VERIFY**. Demo risk is not
 “does code exist,” it’s “will it behave on demand.”
 
-Last edited: 2026-08-07
+Last edited: 2026-09-07
 
 ---
 
@@ -242,6 +242,16 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 - [ ] Polyphonic Aftertouch (0xA0)
 - [ ] Lightweight MPE fan-out slot type
 - [ ] Extra MIDI utilities: Song Select, MMC shims, routing/filter toggles
+
+### Simulator truth
+
+- [ ] Split the two simulator purposes into explicit entry states.
+  - **Start Simulator** boots a firmware-canonical reset: Profile A active, pot slots on channel 1 with CC 0,
+    and the firmware-default EF payloads. It must contain no illustrative mappings, ARG examples, or LFO routes.
+  - **Load Demo Rig** applies the deliberately illustrative mapping, EF/ARG, and LFO-route fixture used for
+    demonstrations and screenshots.
+  - Acceptance: simulator tests, UI labels, and screenshots name the selected fixture; a default simulator session
+    can be compared directly with the firmware reset path without mistaking demo state for untouched instrument truth.
 
 ### On-device “Config Mode”
 

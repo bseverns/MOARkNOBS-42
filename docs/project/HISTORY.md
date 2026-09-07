@@ -219,6 +219,27 @@ And I turned 40.
 - _The browser-surfaces may have started as an addendum or requisite evil, but they've really grown on me._
 - _MN42 wants to expose that stability is only temporary and structure is a nice idea._
 
+### Phase 9: Evidence Handoff and the End of Software Alibis (Late August - September 2026)
+
+By late summer, the software stack had become mature enough that adding another abstraction was increasingly less useful than putting the physical instrument under stress. Firmware, App, Bridge, simulator, deployment, documentation, and evidence tooling had spent months closing gaps where one surface could tell a different story from another. The remaining uncertainty increasingly belonged to copper, power, noise, timing, heat, physical controls, and prolonged use.
+
+* **Late August 2026:** Hardware-in-the-loop runners and bench receipts become more explicit about what they prove and, equally importantly, what they do not. Failed HIL runs remain evidence instead of being discarded, and live-control tests demonstrate real Teensy round-trips for USB MIDI, note dynamics, jitter, and clock without contaminating staged configuration state.
+* **Late August - early September 2026:** App and Bridge work shifts from feature expansion toward operator clarity. The Bridge increasingly presents the live host/session topology a performer actually needs, while the App resolves into three distinct surfaces: Stage for performance, Configure for instrument programming, and Lab for deeper technical inspection.
+* **Early September 2026:** Lab is reorganized around Instrument, Profile, Observe, and Evidence rather than accumulating technical panels in one undifferentiated workspace. Instrument controls explicitly distinguish staged machine configuration from immediate live firmware writes.
+* **Early September 2026:** Selected-slot visualization, modulation telemetry, Scope, Modulation Matrix, staged diff, and inspector surfaces increasingly describe the same underlying control path rather than separate debugging interpretations of it.
+* **September 7, 2026:** A false simulator LFO conflict exposes one of the remaining representational gaps: the simulator's startup fixture, telemetry, and Mod Matrix could describe different effective routing states. The fix removes seeded startup routes, makes the active profile authoritative, resolves fixed and legacy LFO routing through one effective graph, mirrors firmware shadowing semantics, and adds integration tests requiring telemetry and the Mod Matrix to agree.
+* **September 2026:** Browser deployment becomes a source-addressable artifact rather than a floating development page. Published App builds carry their originating commit SHA and immutable release path, allowing the public Configurator to identify exactly which repository state it represents.
+* **September 2026:** Interface work reaches an intentional slowdown. Further software changes remain possible, but the major unanswered release questions can no longer be answered by another simulator test, UI pass, documentation rewrite, or CI job. Rail topology, electrical behavior, EF stability, clock starvation, panic recovery, thermal/soak behavior, physical ergonomics, and fabrication evidence require the actual machine.
+
+> **Turning point:** The project finally paints itself into the corner it has been constructing since the first PCB: the remaining important questions require touching the instrument. Software can prepare the experiment, record it, and refuse unsupported claims, but it cannot perform the physical proof.
+
+**Reflections from this stretch**
+
+* *There is a point where improving the test harness becomes another way of avoiding the test.*
+* *The useful success of the software is that it has increasingly run out of excuses for the hardware.*
+* *If the machine says something happened now, I want to be able to ask which layer knows that, how it knows it, and what evidence survives afterward.*
+* *The next useful commits may be photographs, measurements, failed receipts, and corrections rather than features.*
+
 ## Current Repository Shape
 
 This is an orientation snapshot, not a contract. For current status, use [Repository Contents](RepositoryContents.md), [Release Boundary Index](../release/ReleaseBoundaryIndex.md), and [TESTING](../validation/TESTING.md).

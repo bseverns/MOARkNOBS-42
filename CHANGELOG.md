@@ -15,17 +15,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Frozen, deterministic browser App ZIPs now ship with the firmware, source, verification, provenance, checksum, and license artifacts.
 - Release-tag preflight now requires an annotated semantic tag and a matching dated changelog entry.
+- Added live hardware-in-the-loop receipts for firmware live-control lanes, including USB MIDI output, note dynamics, jitter, and clock round-trips with before/after configuration-state verification.
+- Added selected-slot modulation visualizations and expanded Lab observation/evidence surfaces for Scope, MIDI Monitor, Device Monitor, Modulation Matrix, staged diff, slot inspection, and debug logging.
+- Added integration coverage requiring simulator LFO routing, selected-slot telemetry, active-profile state, legacy-route shadowing, and Mod Matrix reporting to agree.
+Added compact visual landmarks to major Lab rooms and tools while keeping text labels authoritative and telemetry surfaces icon-free.
 
 ### Changed
 - GitHub prerelease creation and asset upload now run as one final gated publication job after every core and Bridge platform bundle succeeds.
 - Bridge outputs are preserved as four platform-specific ZIPs so manifests, checksums, READMEs, and license files cannot overwrite one another during collection.
+- Reworked the App around distinct Stage, Configure, and Lab operator roles rather than progressively denser versions of one editor.
+- Reorganized Lab around Instrument, Profile, Observe, and Evidence workspaces.
+- Split Lab Instrument controls into staged Machine configuration (Apply required) and immediate Live device controls (Writes now).
+- Refined Configure around a selected-slot signal path that separates hand position, Reactive/EF/ARG behavior, fixed LFO motion, and resolved output.
+- Refined Bridge surfaces around performer/session routing and live topology rather than duplicating configurator responsibilities.
+- Changed fresh simulator startup to use neutral profile LFO routing instead of a seeded demonstration route.
+- Changed simulator LFO resolution so telemetry and Mod Matrix reporting consume the same active-profile effective routing graph.
+- Browser App publication now produces source-addressable immutable releases and stamps the originating repository SHA into the deployed surface.
 
 ### Fixed
 - Packaged Bridge schema authority now includes the App tuning catalog and supports the named and async ES-module exports required by the staged runtime.
 - Release publication no longer depends on a GitHub Release already existing when the tag-triggered workflow starts.
+- Fixed simulator startup reporting a false Slot 6 LFO conflict caused by a hidden seeded profile route.
+- Fixed simulator Mod Matrix routing being read from Profile A regardless of the currently active profile.
+- Fixed disagreement between simulator telemetry and Mod Matrix reporting for profile SlotValue LFO routes.
+- Fixed simulator compatibility semantics for legacy profile LFO routes so fixed per-slot lanes shadow older routes in the same way as firmware.
+- The final GitHub Release upload now selects the repository explicitly, allowing the checkout-free publication job to attach its already-built asset bundles.
 
 ### Release Boundary
-- This remains a hardware-test/prerelease artifact set. Bridge binaries are unsigned, HIL may be skipped on hosted runners, and beta/public claims still require the documented signing and hardware evidence.
+- The repository remains a hardware-test package, not a beta/public hardware release.
+- Current software, simulator, App, Bridge, CI, and HIL tooling can prepare and record physical validation but do not substitute for it.
+- rail_topology_verified remains false.
+- Beta/public progression remains blocked on documented physical evidence including reworked-rail validation where applicable, soak testing, EF stability, EXT-clock starvation, panic-baseline validation, and the required fabrication/assembly artifacts.
+- Further feature work is not evidence that these physical gates have passed.
 
 ## [v0.9.7] - 2026-08-25
 
