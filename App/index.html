@@ -161,7 +161,11 @@
         <p class="workspace-kicker">Ready when you are</p>
         <h2>Connect a controller or start the simulator to inspect 42 slots.</h2>
         <p class="microcopy">Configure is the default path: connect, choose a slot, map it, review, and apply.</p>
-        <button id="empty-start-simulator" class="action-primary" type="button" data-ui-modes="basic">Start simulator</button>
+        <div class="simulator-start-actions" data-ui-modes="basic">
+          <button id="empty-start-simulator" class="action-primary" type="button">Start simulator</button>
+          <button id="empty-load-demo-rig" type="button">Load Demo Rig</button>
+        </div>
+        <p class="microcopy simulator-start-hint" data-ui-modes="basic">Start Simulator mirrors firmware defaults. Demo Rig loads illustrative mappings and motion.</p>
       </section>
       <section id="performer-panel" aria-labelledby="performer-title" hidden>
         <header class="performer-header">
@@ -471,6 +475,17 @@
             <div class="monitor-grid" id="device-monitor"></div>
           </section>
           <button id="simulator-toggle" type="button" data-ui-modes="advanced">Start simulator</button>
+          <section id="simulator-fixture-card" class="simulator-fixture-card" aria-labelledby="simulator-fixture-title" hidden>
+            <header>
+              <p class="workspace-kicker">Simulator fixture</p>
+              <h3 id="simulator-fixture-title">Firmware defaults</h3>
+            </header>
+            <p class="microcopy" id="simulator-fixture-detail">Canonical reset state: Profile A, channel 1, CC 0, and no active modulation.</p>
+            <div class="simulator-fixture-actions">
+              <button id="load-demo-rig" type="button">Load Demo Rig</button>
+              <button id="load-firmware-defaults" type="button">Load firmware defaults</button>
+            </div>
+          </section>
           <section class="live-toggle-card live-boundary" aria-labelledby="usb-midi-toggle-title" data-ui-modes="advanced">
             <header class="live-toggle-card-header">
               <div>

@@ -42,8 +42,14 @@ export const SIMULATOR_ONLY_RPCS = Object.freeze([
   'macro_command',
   'scene_command',
   'set_param',
+  'load_simulator_fixture',
   'hang'
 ]);
+
+export const SIMULATOR_FIXTURES = Object.freeze({
+  canonical: 'canonical',
+  demo: 'demo'
+});
 
 function deterministicUnit(seed, step) {
   let value = (Math.trunc(seed) ^ Math.imul(Math.trunc(step) + 1, 0x9e3779b1)) >>> 0;
@@ -171,7 +177,8 @@ export function createSimulator(simDeps = {}) {
     efFilterNames = [],
     cloneValue,
     setNested,
-    telemetryFrameMs = 16
+    telemetryFrameMs = 16,
+    fixture = SIMULATOR_FIXTURES.canonical
   } = simDeps;
 
   if (typeof createManifest !== 'function') {
@@ -213,95 +220,168 @@ export function createSimulator(simDeps = {}) {
     active_profile: activeProfile
   };
   const simulatedSlotEfValues = Array.from({ length: manifest.slot_count }, () => 0);
-  const slotValues = Array.from(
-    { length: manifest.slot_count },
-    (_, slotIndex) => (slotIndex * 3) % 128
-  );
-
-  let config = {
+  const slotValues = Array.from({ length: manifest.slot_count }, () => 0);
+  const defaultEfFilterName = efFilterNames[0] ?? 'LINEAR';
+  const defaultArgMethodName = argMethodNames[0] ?? 'PLUS';
+  const createDefaultSlotEf = () => ({
+    index: -1,
+    filter_index: 0,
+    filter_name: defaultEfFilterName,
+    frequency: 20,
+    q: 1,
+    oversample: 4,
+    smoothing: 0.2,
+    baseline: 0,
+    gain: 1,
+    mode: 0,
+    auto_baseline: true,
+    auto_gain: true,
+    attack_ms: 5,
+    release_ms: 20,
+    rms_ms: 50,
+    baseline_tau_ms: 2000,
+    gain_tau_ms: 3000,
+    gate_threshold: 16,
+    gate_hysteresis: 4,
+    activity_threshold: 4,
+    gain_target: 102,
+    destination_mode: 'add_clamp',
+    destination_mode_name: 'add_clamp'
+  });
+  const createCanonicalConfig = () => ({
     fw_version: manifest.fw_version,
     schema_version: manifest.schema_version,
-    pots: Array.from({ length: manifest.pot_count }, (_, idx) => ({
-      index: idx,
-      channel: (idx % 16) + 1,
-      cc: (idx * 7) % 128
-    })),
+    pots: Array.from({ length: manifest.pot_count }, (_, index) => ({ index, channel: 1, cc: 0 })),
     midiInputBindings: [],
-    slots: Array.from({ length: manifest.slot_count }, (_, idx) => {
-      const efIndex = idx % manifest.envelope_count;
-      const filterIndex = idx % efFilterNames.length;
-      const argMethod = idx % argMethodNames.length;
-      const type = idx === 1 ? 'Note' : 'CC';
-      return {
-        index: idx,
-        type,
-        type_name: type,
-        channel: (idx % 16) + 1,
-        data1: (idx % 120) + 1,
-        ef_index: efIndex,
-        ef: {
-          index: efIndex,
-          filter_index: filterIndex,
-          filter_name: efFilterNames[filterIndex],
-          frequency: 400 + (idx % 8) * 50,
-          q: 0.6 + (idx % 5) * 0.1,
-          oversample: 4,
-          smoothing: 0.2 + (idx % 3) * 0.1,
-          baseline: 0,
-          gain: 1,
-          destination_mode: 'add_clamp',
-          destination_mode_name: 'add_clamp'
-        },
-        ef_payload: {
-          type: efFilterNames[filterIndex],
-          freq: 400 + (idx % 8) * 50,
-          q: 0.6 + (idx % 5) * 0.1
-        },
-        arg: {
-          enabled: idx % 3 === 0,
-          method: argMethod,
-          method_name: argMethodNames[argMethod],
-          sourceA: efIndex,
-          sourceB: (efIndex + 1) % manifest.envelope_count
-        },
-        active: idx % 2 === 0,
-        arp_note: (idx * 3) % 128,
-        sysexTemplate: ''
-      };
-    }),
+    slots: Array.from({ length: manifest.slot_count }, (_, index) => ({
+      index,
+      type: 'OFF',
+      type_name: 'OFF',
+      channel: 1,
+      data1: 0,
+      ef_index: -1,
+      ef: createDefaultSlotEf(),
+      ef_payload: { type: defaultEfFilterName, freq: 20, q: 1 },
+      arg: {
+        enabled: false,
+        method: 0,
+        method_name: defaultArgMethodName,
+        sourceA: 0,
+        sourceB: 1
+      },
+      lfo: [
+        { enabled: false, mode: 4, amount: 0 },
+        { enabled: false, mode: 4, amount: 0 }
+      ],
+      active: false,
+      arp_note: 0,
+      sysexTemplate: ''
+    })),
     efSlots: Array.from({ length: manifest.envelope_count }, () => ({ slots: [] })),
     envelopes: {
-      routing: Array.from(
-        { length: manifest.pot_count },
-        (_, idx) => idx % manifest.envelope_count
-      ),
-      followers: Array.from({ length: manifest.envelope_count }, (_, idx) => ({
-        index: idx,
-        active: idx % 2 === 0,
-        filter: efFilterNames[idx % efFilterNames.length],
+      routing: Array.from({ length: manifest.pot_count }, () => -1),
+      followers: Array.from({ length: manifest.envelope_count }, (_, index) => ({
+        index,
+        active: false,
+        filter: defaultEfFilterName,
         baseline: 0,
         oversample: 4,
-        smoothing: 0.25
+        smoothing: 0.2
       })),
       mode: 0,
       mode_name: 'LINEAR',
       arg_method: 0,
-      arg_method_name: 'PLUS',
-      arg_enable: true,
+      arg_method_name: defaultArgMethodName,
+      arg_enable: false,
       arg_pair: { a: 0, b: 1 },
-      filter: { frequency: 800, q: 1, idle_floor: 24 },
+      filter: { frequency: 20, q: 1, idle_floor: 24 },
       idle_floor: 24
     },
-    led: {
-      brightness: 64,
-      hex: '#ff00ff',
-      rgb: { r: 255, g: 0, b: 255 }
-    }
+    filter: { type: defaultEfFilterName, freq: 20, q: 1, idle_floor: 24 },
+    arg: { method: defaultArgMethodName, a: 0, b: 1, enable: false },
+    led: { brightness: 128, hex: '#000000', rgb: { r: 0, g: 0, b: 0 }, mode: 'STATIC' }
+  });
+  const createDemoRigConfig = () => {
+    const slots = Array.from({ length: manifest.slot_count }, (_, index) => {
+      const efIndex = index % manifest.envelope_count;
+      const filterIndex = index % Math.max(1, efFilterNames.length);
+      const argMethod = index % Math.max(1, argMethodNames.length);
+      const type = index === 1 ? 'Note' : 'CC';
+      return {
+        index,
+        type,
+        type_name: type,
+        channel: (index % 16) + 1,
+        data1: (index % 120) + 1,
+        ef_index: efIndex,
+        ef: {
+          ...createDefaultSlotEf(),
+          index: efIndex,
+          filter_index: filterIndex,
+          filter_name: efFilterNames[filterIndex] ?? defaultEfFilterName,
+          frequency: 400 + (index % 8) * 50,
+          q: 0.6 + (index % 5) * 0.1,
+          smoothing: 0.2 + (index % 3) * 0.1
+        },
+        ef_payload: {
+          type: efFilterNames[filterIndex] ?? defaultEfFilterName,
+          freq: 400 + (index % 8) * 50,
+          q: 0.6 + (index % 5) * 0.1
+        },
+        arg: {
+          enabled: index % 3 === 0,
+          method: argMethod,
+          method_name: argMethodNames[argMethod] ?? defaultArgMethodName,
+          sourceA: efIndex,
+          sourceB: (efIndex + 1) % manifest.envelope_count
+        },
+        lfo: [
+          { enabled: false, mode: 4, amount: 0 },
+          { enabled: false, mode: 4, amount: 0 }
+        ],
+        active: index % 2 === 0,
+        arp_note: (index * 3) % 128,
+        sysexTemplate: ''
+      };
+    });
+    return {
+      fw_version: manifest.fw_version,
+      schema_version: manifest.schema_version,
+      pots: Array.from({ length: manifest.pot_count }, (_, index) => ({
+        index,
+        channel: (index % 16) + 1,
+        cc: (index * 7) % 128
+      })),
+      midiInputBindings: [],
+      slots,
+      efSlots: Array.from({ length: manifest.envelope_count }, (_, efIndex) => ({
+        slots: slots.filter((slot) => slot.ef_index === efIndex).map((slot) => slot.index)
+      })),
+      envelopes: {
+        routing: Array.from({ length: manifest.pot_count }, (_, index) => index % manifest.envelope_count),
+        followers: Array.from({ length: manifest.envelope_count }, (_, index) => ({
+          index,
+          active: index % 2 === 0,
+          filter: efFilterNames[index % Math.max(1, efFilterNames.length)] ?? defaultEfFilterName,
+          baseline: 0,
+          oversample: 4,
+          smoothing: 0.25
+        })),
+        mode: 0,
+        mode_name: 'LINEAR',
+        arg_method: 0,
+        arg_method_name: defaultArgMethodName,
+        arg_enable: true,
+        arg_pair: { a: 0, b: 1 },
+        filter: { frequency: 800, q: 1, idle_floor: 24 },
+        idle_floor: 24
+      },
+      filter: { type: defaultEfFilterName, freq: 800, q: 1, idle_floor: 24 },
+      arg: { method: defaultArgMethodName, a: 0, b: 1, enable: true },
+      led: { brightness: 64, hex: '#ff00ff', rgb: { r: 255, g: 0, b: 255 }, mode: 'STATIC' }
+    };
   };
-  let macroSnapshot = null;
-  const profileSlots = Array.from({ length: 4 }, () => cloneValue(config));
-  const defaultProfile = cloneValue(config);
-  const defaultProfileSettings = {
+  const createCanonicalProfileSettings = () => ({
     midiInputBindings: [],
     arp: {
       length_ticks: 12,
@@ -312,6 +392,30 @@ export function createSimulator(simDeps = {}) {
       pattern_length: 4,
       assigned_slots: []
     },
+    lfos: [
+      {
+        index: 0,
+        shape: 0,
+        frequency_hz: 1,
+        depth: 0,
+        bipolar: true,
+        sync: false,
+        sync_ratio: 0
+      },
+      {
+        index: 1,
+        shape: 0,
+        frequency_hz: 1,
+        depth: 0,
+        bipolar: true,
+        sync: false,
+        sync_ratio: 0
+      }
+    ],
+    routes: []
+  });
+  const createDemoProfileSettings = () => ({
+    ...createCanonicalProfileSettings(),
     lfos: [
       {
         index: 0,
@@ -332,11 +436,18 @@ export function createSimulator(simDeps = {}) {
         sync_ratio: 3
       }
     ],
-    // A fresh simulator is a neutral instrument. Deliberately rich LFO
-    // routing belongs in an explicitly loaded profile, never its startup truth.
-    routes: []
-  };
-  const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
+    routes: [
+      { type: 4, lfo: 0, slot: 2, target: 2, depth: 1, amount: 48, min: 0, max: 127 },
+      { type: 4, lfo: 1, slot: 4, target: 4, depth: 1, amount: 32, min: 0, max: 127 }
+    ]
+  });
+  const defaultProfile = createCanonicalConfig();
+  const defaultProfileSettings = createCanonicalProfileSettings();
+  let config = null;
+  let profileSlots = [];
+  let profileSettingsSlots = [];
+  let activeFixture = fixture === SIMULATOR_FIXTURES.demo ? SIMULATOR_FIXTURES.demo : SIMULATOR_FIXTURES.canonical;
+  let macroSnapshot = null;
   const activeArpSlots = new Set();
   let liveArp = {
     active: false,
@@ -358,6 +469,51 @@ export function createSimulator(simDeps = {}) {
   let clockOutEnabled = false;
   let tappedBpm = 120;
   let externalBpm = 123.4;
+  const applyFixture = (nextFixture) => {
+    activeFixture =
+      nextFixture === SIMULATOR_FIXTURES.demo
+        ? SIMULATOR_FIXTURES.demo
+        : SIMULATOR_FIXTURES.canonical;
+    config = cloneValue(
+      activeFixture === SIMULATOR_FIXTURES.demo ? createDemoRigConfig() : createCanonicalConfig()
+    );
+    profileSlots = Array.from({ length: 4 }, () => cloneValue(config));
+    const profileSettings =
+      activeFixture === SIMULATOR_FIXTURES.demo
+        ? createDemoProfileSettings()
+        : createCanonicalProfileSettings();
+    profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(profileSettings));
+    activeProfile = 0;
+    manifest.active_profile = activeProfile;
+    index = 0;
+    simulatedSlotEfValues.fill(0);
+    slotValues.forEach((_, slotIndex) => {
+      slotValues[slotIndex] = activeFixture === SIMULATOR_FIXTURES.demo ? (slotIndex * 3) % 128 : 0;
+    });
+    macroSnapshot = null;
+    activeArpSlots.clear();
+    liveArp = {
+      active: false,
+      slot: 0,
+      length_ticks: 12,
+      shape: 0,
+      shape_name: 'up',
+      swing_percent: 0,
+      gate_percent: 50,
+      octave_range: 0,
+      pattern_length: 4
+    };
+    usbMidiOutEnabled = activeFixture === SIMULATOR_FIXTURES.canonical;
+    velocityShift = 0;
+    changeProbability = 100;
+    jitterDepth = 1;
+    jitterSmoothness = 0.5;
+    followExternalClock = true;
+    clockOutEnabled = false;
+    tappedBpm = 120;
+    externalBpm = 123.4;
+  };
+  applyFixture(activeFixture);
   const lfoShapeNames = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold', 'Random Slew'];
   const lfoSyncRatioNames = ['1/1', '1/2', '1/4', '1/8', '1/16', '1/32', 'x2', 'x4'];
   const currentLfoConfig = () =>
@@ -552,19 +708,22 @@ export function createSimulator(simDeps = {}) {
     slots,
     slotOutputs,
     slotContributions,
-    slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
-      enabled: idx % 2 === 0,
-      method: idx % argMethodNames.length,
-      method_name: argMethodNames[idx % argMethodNames.length],
-      sourceA: idx % manifest.envelope_count,
-      sourceB: (idx + 1) % manifest.envelope_count
-    })),
+    slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => {
+      const arg = config.slots?.[idx]?.arg ?? {};
+      return {
+        enabled: Boolean(arg.enabled),
+        method: Number(arg.method) || 0,
+        method_name: arg.method_name ?? defaultArgMethodName,
+        sourceA: Number(arg.sourceA) || 0,
+        sourceB: Number(arg.sourceB) || 1
+      };
+    }),
     envelopes,
     lfos,
     lfo_config: currentLfoConfig(),
     currentSlot: index++ % manifest.slot_count,
-    argPair: [0, 1],
-    argEnabled: true,
+    argPair: [config.arg?.a ?? 0, config.arg?.b ?? 1],
+    argEnabled: Boolean(config.arg?.enable),
     efStatus,
     diagnostics: {
       loop_max_us: 702,
@@ -1038,6 +1197,15 @@ export function createSimulator(simDeps = {}) {
         setNested(config, request.path, request.value);
         respond({ ok: true, path: request.path, value: request.value });
         break;
+      case 'load_simulator_fixture': {
+        applyFixture(request.fixture);
+        respond({
+          fixture: activeFixture,
+          active_profile: activeProfile,
+          config: cloneValue(config)
+        });
+        break;
+      }
       case 'save_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
         activeProfile = slot;

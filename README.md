@@ -45,8 +45,8 @@ For a conceptual tour, use [Start Here](docs/getting-started/StartHere.md). For 
 ## Quick start without hardware
 
 1. Open the [hosted configurator](https://bseverns.github.io/MN42/).
-2. Select **Start simulator** from the Configure screen.
-3. Change a slot, inspect the staged diff, and apply it to the simulated device.
+2. Select **Start Simulator** for the firmware-default reset state, or **Load Demo Rig** for the illustrative example.
+3. Check the named simulator fixture in Session, then change a slot, inspect the staged diff, and apply it to the simulated device.
 
 The simulator demonstrates the browser workflow. It does not validate physical controls, timing, MIDI wiring, or
 electrical behavior.

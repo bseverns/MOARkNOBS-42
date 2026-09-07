@@ -5,6 +5,7 @@ import { createLocalManifest } from './manifest_contract.js';
 import {
   createTransportPort,
   createSimulator,
+  SIMULATOR_FIXTURES,
   createWebSocketTransport
 } from './runtime/transports.js';
 import { createRpcKernel } from './runtime/rpc_kernel.js';
@@ -80,6 +81,7 @@ export function createRuntime({
   localManifest,
   migrations = {},
   useSimulator = false,
+  simulatorFixture: requestedSimulatorFixture = SIMULATOR_FIXTURES.canonical,
   rpcTimeoutMs = RPC_TIMEOUT_MS,
   testHooks,
   wsUrl,
@@ -103,6 +105,10 @@ export function createRuntime({
   let bridgeSessionActive = false;
   let bridgeSessionRuntime = null;
   let liveControlsRuntime = null;
+  let simulatorFixture =
+    requestedSimulatorFixture === SIMULATOR_FIXTURES.demo
+      ? SIMULATOR_FIXTURES.demo
+      : SIMULATOR_FIXTURES.canonical;
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -174,7 +180,8 @@ export function createRuntime({
       efFilterNames: EF_FILTER_NAMES,
       cloneValue: clone,
       setNested: setNestedValue,
-      telemetryFrameMs: TELEMETRY_FRAME_MS
+      telemetryFrameMs: TELEMETRY_FRAME_MS,
+      fixture: simulatorFixture
     });
   }
 
@@ -572,6 +579,30 @@ export function createRuntime({
     return staged;
   }
 
+  async function loadSimulatorFixture(fixture) {
+    if (!useSimulator) throw new Error('Start the simulator before loading a simulator fixture.');
+    const nextFixture =
+      fixture === SIMULATOR_FIXTURES.demo
+        ? SIMULATOR_FIXTURES.demo
+        : SIMULATOR_FIXTURES.canonical;
+    if (!transport) {
+      simulatorFixture = nextFixture;
+      emit('simulator-fixture', { fixture: simulatorFixture, connected: false });
+      return { fixture: simulatorFixture, connected: false };
+    }
+    const response = await sendRpc({ rpc: 'load_simulator_fixture', fixture: nextFixture });
+    if (!response?.config || typeof response.config !== 'object') {
+      throw new Error('Simulator fixture did not return an authoritative configuration.');
+    }
+    simulatorFixture =
+      response.fixture === SIMULATOR_FIXTURES.demo
+        ? SIMULATOR_FIXTURES.demo
+        : SIMULATOR_FIXTURES.canonical;
+    configSession.hydrateAuthoritativeConfig(response.config);
+    emit('simulator-fixture', { fixture: simulatorFixture, connected: true });
+    return { ...response, fixture: simulatorFixture };
+  }
+
   const applyCoordinator = createApplyCoordinator({
     configSession,
     bridgeSessionRuntime,
@@ -587,7 +618,8 @@ export function createRuntime({
       bridgeSessionActive,
       bridgeSessionHealth: bridgeSessionRuntime.getHealth(),
       telemetryHealth: telemetryRuntime.getHealth(),
-      bridgeApiBaseUrl: resolvedBridgeApiBaseUrl
+      bridgeApiBaseUrl: resolvedBridgeApiBaseUrl,
+      simulatorFixture: useSimulator ? simulatorFixture : null
     };
   }
 
@@ -623,8 +655,16 @@ export function createRuntime({
     createThrottle,
     requestPort,
     forgetRememberedPort: portPreferenceStore.clear,
-    useSimulator(toggle) {
-      useSimulator = toggle;
+    loadSimulatorFixture,
+    useSimulator(toggle, { fixture = SIMULATOR_FIXTURES.canonical } = {}) {
+      useSimulator = Boolean(toggle);
+      if (useSimulator) {
+        simulatorFixture =
+          fixture === SIMULATOR_FIXTURES.demo
+            ? SIMULATOR_FIXTURES.demo
+            : SIMULATOR_FIXTURES.canonical;
+      }
+      emit('simulator-fixture', { fixture: useSimulator ? simulatorFixture : null, connected: false });
     }
   };
 }

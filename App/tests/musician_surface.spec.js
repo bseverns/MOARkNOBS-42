@@ -10,7 +10,7 @@ async function boot(page, mode = 'basic') {
   await page.addInitScript((uiMode) => {
     localStorage.clear();
     localStorage.setItem('moarknobs:ui-mode', uiMode);
-    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   }, mode);
   await page.goto('/');
   await page.getByRole('button', { name: 'Connect', exact: true }).click();

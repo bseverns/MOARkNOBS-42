@@ -85,6 +85,8 @@ test.describe('UI mode', () => {
     await expect
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
       .toBe('simulator');
+    await page.locator('#load-demo-rig').click();
+    await expect(page.locator('#simulator-fixture-title')).toHaveText('Demo Rig');
     await expect(page.locator('.slot-editor')).toBeVisible();
     await expect(page.locator('#slot-detail-panel')).toBeHidden();
     await page.locator('#recovery-drawer > summary').click();

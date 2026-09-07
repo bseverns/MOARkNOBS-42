@@ -35,6 +35,12 @@ export function createTransportToolbarController({
     applyBtn = null,
     simulatorToggle = null,
     emptySimulatorBtn = null,
+    emptyDemoRigBtn = null,
+    simulatorFixtureCard = null,
+    simulatorFixtureTitle = null,
+    simulatorFixtureDetail = null,
+    loadDemoRigBtn = null,
+    loadFirmwareDefaultsBtn = null,
     connectionPill = null,
     connectionBanner = null,
     transportLaneChip = null,
@@ -82,6 +88,7 @@ export function createTransportToolbarController({
   let clockSource = 'idle';
   let clockRunning = false;
   let clockExternalSignal = false;
+  let simulatorFixtureBusy = false;
 
   function currentTransportMode() {
     return (
@@ -158,6 +165,35 @@ export function createTransportToolbarController({
     };
     contractQualityChip.dataset.quality = quality;
     contractQualityChip.textContent = labels[quality] ?? 'Contract · Incompatible';
+  }
+
+  function simulatorFixturePresentation(fixture) {
+    if (fixture === 'demo') {
+      return {
+        title: 'Demo Rig',
+        detail: 'Illustrative mappings, EF/ARG examples, and active LFO routes for rehearsal.'
+      };
+    }
+    return {
+      title: 'Firmware defaults',
+      detail: 'Canonical reset state: Profile A, channel 1, CC 0, and no active modulation.'
+    };
+  }
+
+  function updateSimulatorFixtureSurface(fixture = runtime?.getState?.()?.simulatorFixture) {
+    const active = currentTransportMode() === 'simulator';
+    if (simulatorFixtureCard) simulatorFixtureCard.hidden = !active;
+    if (!active) return;
+    const presentation = simulatorFixturePresentation(fixture);
+    if (simulatorFixtureTitle) simulatorFixtureTitle.textContent = presentation.title;
+    if (simulatorFixtureDetail) simulatorFixtureDetail.textContent = presentation.detail;
+    const connected = connectionPill?.dataset.stage === 'live';
+    if (loadDemoRigBtn) {
+      loadDemoRigBtn.disabled = simulatorFixtureBusy || !connected || fixture === 'demo';
+    }
+    if (loadFirmwareDefaultsBtn) {
+      loadFirmwareDefaultsBtn.disabled = simulatorFixtureBusy || !connected || fixture !== 'demo';
+    }
   }
 
   function setConnectionPill(stage, text) {
@@ -771,14 +807,45 @@ export function createTransportToolbarController({
     }
   }
 
-  function setSimulatorEnabled(enabled) {
+  function setSimulatorEnabled(enabled, fixture = 'canonical') {
     simulatorToggle?.classList.toggle('active', enabled);
     if (simulatorToggle) {
       simulatorToggle.textContent = enabled ? 'Stop simulator' : 'Start simulator';
       simulatorToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
     }
-    runtime.useSimulator(enabled);
+    runtime.useSimulator(enabled, { fixture });
     updateTransportLaneChip();
+    updateSimulatorFixtureSurface();
+  }
+
+  async function startSimulatorFixture(fixture, button) {
+    if (!canReplaceStaged('Change transport')) return;
+    if (button) {
+      button.disabled = true;
+      button.textContent = fixture === 'demo' ? 'Loading Demo Rig…' : 'Starting simulator…';
+    }
+    setSimulatorEnabled(true, fixture);
+    await connect();
+    if (connectionPill?.dataset.stage !== 'live' && button) {
+      button.disabled = false;
+      button.textContent = fixture === 'demo' ? 'Load Demo Rig' : 'Start simulator';
+    }
+  }
+
+  async function loadSimulatorFixture(fixture) {
+    if (!canReplaceStaged('Load simulator fixture')) return;
+    simulatorFixtureBusy = true;
+    updateSimulatorFixtureSurface();
+    try {
+      const result = await runtime.loadSimulatorFixture(fixture);
+      const presentation = simulatorFixturePresentation(result.fixture);
+      setStatus('ok', `${presentation.title} loaded`, presentation.detail);
+    } catch (err) {
+      setStatus('err', 'Simulator fixture failed', err.message || String(err));
+    } finally {
+      simulatorFixtureBusy = false;
+      updateSimulatorFixtureSurface();
+    }
   }
 
   function initializeSimulatorToggle() {
@@ -793,25 +860,20 @@ export function createTransportToolbarController({
       simulatorToggle.addEventListener('click', () => {
         if (!canReplaceStaged('Change transport')) return;
         const toggled = !simulatorToggle.classList.contains('active');
-        setSimulatorEnabled(toggled);
+        setSimulatorEnabled(toggled, 'canonical');
         setStatus(
           toggled ? 'ok' : 'warn',
           toggled ? 'Simulator armed' : 'Simulator idle',
-          toggled ? 'Replay frames without hardware.' : 'Connect to the physical deck.'
+          toggled
+            ? 'Firmware-default fixture selected. Connect to inspect it without hardware.'
+            : 'Connect to the physical deck.'
         );
       });
     }
-    emptySimulatorBtn?.addEventListener('click', async () => {
-      if (!canReplaceStaged('Change transport')) return;
-      emptySimulatorBtn.disabled = true;
-      emptySimulatorBtn.textContent = 'Starting simulator…';
-      setSimulatorEnabled(true);
-      await connect();
-      if (connectionPill?.dataset.stage !== 'live') {
-        emptySimulatorBtn.disabled = false;
-        emptySimulatorBtn.textContent = 'Start simulator';
-      }
-    });
+    emptySimulatorBtn?.addEventListener('click', () => startSimulatorFixture('canonical', emptySimulatorBtn));
+    emptyDemoRigBtn?.addEventListener('click', () => startSimulatorFixture('demo', emptyDemoRigBtn));
+    loadDemoRigBtn?.addEventListener('click', () => loadSimulatorFixture('demo'));
+    loadFirmwareDefaultsBtn?.addEventListener('click', () => loadSimulatorFixture('canonical'));
   }
 
   function bind() {
@@ -852,6 +914,7 @@ export function createTransportToolbarController({
     updateJitterControls();
     updateClockControls();
     updateTransportLaneChip();
+    updateSimulatorFixtureSurface();
   }
 
   function onManifest(manifest) {
@@ -882,6 +945,7 @@ export function createTransportToolbarController({
   }
 
   function onConnected() {
+    updateSimulatorFixtureSurface();
     void refreshUsbMidiState();
     if (noteDynamicsSupported) {
       void refreshNoteDynamicsState();
@@ -920,6 +984,7 @@ export function createTransportToolbarController({
     updateNoteDynamicsControls();
     updateJitterControls();
     updateClockControls();
+    updateSimulatorFixtureSurface();
   }
 
   function onTelemetry(frame) {
@@ -1003,6 +1068,7 @@ export function createTransportToolbarController({
     setConnectionBanner,
     setConnectionPill,
     updateTransportLaneChip,
+    onSimulatorFixture: updateSimulatorFixtureSurface,
     primeCompatibilityStatus,
     syncConfigFileButtons
   };

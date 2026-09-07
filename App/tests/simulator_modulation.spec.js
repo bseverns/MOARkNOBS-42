@@ -71,23 +71,31 @@ test('simulator shares active-profile LFO routing between telemetry and the Mod 
       return JSON.parse(await simulator.nextLine()).result;
     };
     await simulator.open();
-    const neutralProfile = await rpc(1, 'get_profile');
-    const neutralMatrix = await rpc(2, 'get_mod_matrix');
+    const canonicalConfig = (await rpc(1, 'get_config')).config;
+    canonicalConfig.slots[6] = {
+      ...canonicalConfig.slots[6],
+      type: 'CC',
+      type_name: 'CC',
+      active: true
+    };
+    await rpc(2, 'set_config', { config: canonicalConfig });
+    const neutralProfile = await rpc(3, 'get_profile');
+    const neutralMatrix = await rpc(4, 'get_mod_matrix');
     const route = { type: 4, lfo: 0, depth: 1, amount: 100, min: 20, max: 110, slot: 6 };
-    await rpc(3, 'set_profile', { slot: 1, profile: { routes: [route] } });
-    await rpc(4, 'load_profile', { slot: 1 });
-    const activeMatrix = await rpc(5, 'get_mod_matrix');
+    await rpc(5, 'save_profile', { slot: 1 });
+    await rpc(6, 'set_profile', { slot: 1, profile: { routes: [route] } });
+    const activeMatrix = await rpc(7, 'get_mod_matrix');
     const frame = JSON.parse(await simulator.nextLine());
     const activeRoute = activeMatrix.routes.find((entry) => entry.id === 'lfo0_route0');
     const contribution = frame.slotContributions.find((entry) => entry.index === 6);
-    const configResponse = await rpc(6, 'get_config');
+    const configResponse = await rpc(8, 'get_config');
     const config = configResponse.config;
     config.slots[6].lfo = [
       { enabled: true, mode: 4, amount: 25 },
       { enabled: false, mode: 0, amount: 0 }
     ];
-    await rpc(7, 'set_config', { config });
-    const shadowedMatrix = await rpc(8, 'get_mod_matrix');
+    await rpc(9, 'set_config', { config });
+    const shadowedMatrix = await rpc(10, 'get_mod_matrix');
     await simulator.close();
     return {
       neutralRoutes: neutralProfile.routes,
@@ -134,7 +142,8 @@ test('simulator EF recipes produce distinct repeatable rehearsal telemetry', asy
       ],
       cloneValue: structuredClone,
       setNested: () => {},
-      telemetryFrameMs: 0
+      telemetryFrameMs: 0,
+      fixture: 'demo'
     };
 
     async function collect(recipeId, slotIndex = 0) {

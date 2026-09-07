@@ -22,7 +22,7 @@ async function openMode(page, mode, viewport, { freeze = true } = {}) {
   await page.addInitScript((nextMode) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', nextMode);
-    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   }, mode);
   await page.goto(`/?mode=${mode}`);
   await (mode === 'stage'

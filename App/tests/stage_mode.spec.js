@@ -46,7 +46,7 @@ test.describe('Stage mode', () => {
 
   test('shows simulator manifest power fields in the performer panel', async ({ page }) => {
     await page.addInitScript(() => {
-      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
     });
     await page.goto('/?mode=stage');
 
@@ -81,7 +81,7 @@ test.describe('Stage mode', () => {
       .poll(() => page.locator('#stage-envelopes .meter[data-state="active"]').count())
       .toBeGreaterThan(0);
     await expect(page.locator('#stage-envelopes .meter').first()).toContainText('ACTIVE');
-    await expect(page.locator('#stage-envelopes .meter').first()).toContainText('No routes');
+    await expect(page.locator('#stage-envelopes .meter').first()).toContainText('→ 7 slots');
     await page.locator('#stage-slots .stage-slot-cell').nth(16).click();
     await expect(page.locator('#stage-slot-focus')).toContainText('Slot 17');
   });

@@ -2574,9 +2574,51 @@ html[data-ui-mode='advanced'][data-dirty='true'] #page-shell {
   margin: 0;
 }
 
-#empty-start-simulator {
+.simulator-start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
   margin-top: 8px;
+}
+
+.simulator-start-actions button {
   min-width: 180px;
+}
+
+.simulator-start-hint {
+  max-width: 58ch;
+  margin: 0;
+}
+
+.simulator-fixture-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(45, 226, 230, 0.3);
+  border-radius: var(--radius-sm);
+  background: rgba(45, 226, 230, 0.07);
+}
+
+.simulator-fixture-card header {
+  display: grid;
+  gap: 3px;
+}
+
+.simulator-fixture-card .workspace-kicker,
+.simulator-fixture-card h3,
+.simulator-fixture-card .microcopy {
+  margin: 0;
+}
+
+.simulator-fixture-card h3 {
+  font-size: 0.9rem;
+}
+
+.simulator-fixture-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 html[data-connected='true'] .workspace-empty-state {

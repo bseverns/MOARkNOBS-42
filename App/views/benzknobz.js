@@ -111,6 +111,12 @@ const boot = () => {
   const applySaveProfileBtn = document.getElementById('apply-save-profile');
   const simulatorToggle = document.getElementById('simulator-toggle');
   const emptySimulatorBtn = document.getElementById('empty-start-simulator');
+  const emptyDemoRigBtn = document.getElementById('empty-load-demo-rig');
+  const simulatorFixtureCard = document.getElementById('simulator-fixture-card');
+  const simulatorFixtureTitle = document.getElementById('simulator-fixture-title');
+  const simulatorFixtureDetail = document.getElementById('simulator-fixture-detail');
+  const loadDemoRigBtn = document.getElementById('load-demo-rig');
+  const loadFirmwareDefaultsBtn = document.getElementById('load-firmware-defaults');
   const usbMidiToggleBtn = document.getElementById('usb-midi-toggle');
   const usbMidiTestBtn = document.getElementById('usb-midi-test');
   const usbMidiStatusEl = document.getElementById('usb-midi-status');
@@ -570,6 +576,12 @@ const boot = () => {
       applyBtn,
       simulatorToggle,
       emptySimulatorBtn,
+      emptyDemoRigBtn,
+      simulatorFixtureCard,
+      simulatorFixtureTitle,
+      simulatorFixtureDetail,
+      loadDemoRigBtn,
+      loadFirmwareDefaultsBtn,
       connectionPill,
       connectionBanner,
       transportLaneChip,
@@ -995,6 +1007,9 @@ const boot = () => {
     if (!applyAllowed) {
       setStatus('warn', 'Degraded device contract', `Apply is blocked: ${quality}.`);
     }
+  });
+  runtime.on('simulator-fixture', ({ fixture }) => {
+    transportToolbarController.onSimulatorFixture(fixture);
   });
   runtime.on('log', (line) => {
     sessionLogController.recordEvent('RUNTIME', 'Raw line', line, 'info');

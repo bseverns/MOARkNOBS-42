@@ -105,8 +105,11 @@ The runtime coalesces telemetry into approximately 50 ms paint frames. Scope tim
 firmware-source time or round-trip latency. EF and LFO traces, activity holds, and simulator traces are musical/operator
 visualization; latency-grade claims require the [bench latency method](../bench/latency/method.md).
 
-The simulator uses the same runtime API and deterministic synthetic telemetry. A fresh simulator begins with a neutral
-profile: no hidden LFO routes or route conflicts. Its selected-slot contribution frames and Mod Matrix consume the same
+The simulator uses the same runtime API and deterministic synthetic telemetry. **Start Simulator** opens the
+firmware-canonical reset fixture: Profile A, channel 1 / CC 0 pots, default EF payloads, disabled slots and ARG, and
+no LFO routes. **Load Demo Rig** is an explicit simulator-only fixture with illustrative mappings, EF/ARG examples,
+and active LFO routes. Session names the active fixture, and loading a fixture replaces the simulator's authoritative
+configuration rather than staging browser intent. Its selected-slot contribution frames and Mod Matrix consume the same
 active-profile LFO routing graph, including the firmware compatibility rule that a fixed slot lane shadows an older
 SlotValue route for the same slot/LFO pair. Contribution frames honor confirmed ARG sources/methods and each fixed LFO
 lane's enabled, amount, and combine settings so the causal signal strip can rehearse the device resolver accurately.

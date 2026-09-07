@@ -4,7 +4,8 @@ Use the browser configurator to connect directly over WebSerial, monitor the ins
 profiles. If you need OSC, host MIDI, or a browser without WebSerial, use the [Bridge](../bridge/README.md) path.
 
 The fastest hardware-free introduction is the [hosted configurator](https://bseverns.github.io/MN42/): select
-**Start simulator**, change a slot, review the draft, and apply it.
+**Start Simulator** for the firmware-default reset state, or **Load Demo Rig** for illustrative mappings and motion.
+The active simulator fixture is named in Session.
 
 ## Support boundary
 

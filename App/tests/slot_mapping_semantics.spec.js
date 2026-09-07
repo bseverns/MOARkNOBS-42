@@ -4,7 +4,7 @@ async function bootConfigureSimulator(page) {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'basic');
-    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   });
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: 'Connect' }).click();

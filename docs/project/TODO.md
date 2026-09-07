@@ -245,7 +245,7 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 ### Simulator truth
 
-- [ ] Split the two simulator purposes into explicit entry states.
+- [x] Split the two simulator purposes into explicit entry states.
   - **Start Simulator** boots a firmware-canonical reset: Profile A active, pot slots on channel 1 with CC 0,
     and the firmware-default EF payloads. It must contain no illustrative mappings, ARG examples, or LFO routes.
   - **Load Demo Rig** applies the deliberately illustrative mapping, EF/ARG, and LFO-route fixture used for

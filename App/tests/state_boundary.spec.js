@@ -5,7 +5,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
-    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   });
 
   await page.goto('/benzknobz.html');
