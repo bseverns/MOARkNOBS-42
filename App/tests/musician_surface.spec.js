@@ -102,6 +102,18 @@ test('signal evidence handles startup, stale snapshots, and ARG as one reactive 
     measured: true
   });
   expect(signal.source).toContain('EF 1 + EF 4 → EF shaping');
+  expect(
+    describeSlotSignal({
+      telemetry: {
+        ...telemetry,
+        slotContributions: [
+          { index: 0, baseline: 64, ef: 0, lfos: [12, 0], output: 76, activeMask: 2 }
+        ]
+      },
+      connected: true,
+      now: 10_200
+    })
+  ).toMatchObject({ reactive: null, lfos: [12, null], measured: true });
   expect(describeSlotSignal({ telemetry, connected: true, now: 15_000 })).toMatchObject({
     freshness: 'Stale telemetry',
     reactive: null,
@@ -129,6 +141,30 @@ test('signal evidence handles startup, stale snapshots, and ARG as one reactive 
     output: null,
     reactive: null
   });
+});
+
+test('selected-slot meters follow confirmed ARG and LFO enable state', async ({ page }) => {
+  const errors = await boot(page);
+  const reactiveMeter = page.locator('meter[aria-label^="Reactive · EF / ARG:"]');
+  const lfoOneMeter = page.locator('meter[aria-label^="LFO 1:"]');
+  const lfoTwoMeter = page.locator('meter[aria-label^="LFO 2:"]');
+
+  await expect(reactiveMeter).toBeVisible();
+  await expect(reactiveMeter).not.toHaveAttribute('aria-label', /Not reported/);
+  await expect(lfoOneMeter).toBeHidden();
+  await expect(lfoTwoMeter).toBeHidden();
+
+  await page.getByLabel('Use LFO 1', { exact: true }).check();
+  await page.locator('#apply').click();
+  await expect(page.locator('#status-label')).toHaveText('Synced');
+  await expect(lfoOneMeter).toBeVisible();
+  await expect(lfoTwoMeter).toBeHidden();
+
+  await page.getByLabel('Use LFO 1', { exact: true }).uncheck();
+  await page.locator('#apply').click();
+  await expect(page.locator('#status-label')).toHaveText('Synced');
+  await expect(lfoOneMeter).toBeHidden();
+  expect(errors).toEqual([]);
 });
 
 test('ARG and both motion lanes stage only the selected slot and keep place in Lab', async ({

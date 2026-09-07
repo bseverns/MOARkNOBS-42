@@ -127,6 +127,43 @@ export function simulateEfResponse(
   return Math.round(previousValue + (target - previousValue) * alpha);
 }
 
+export function simulateArgValue(a, b, method = 0) {
+  const left = Math.max(0, Math.min(127, Math.round(Number(a) || 0)));
+  const right = Math.max(0, Math.min(127, Math.round(Number(b) || 0)));
+  const operations = [
+    () => left + right,
+    () => left - right,
+    () => right - left,
+    () => Math.trunc((left - right) / 10),
+    () => Math.trunc(Math.sqrt(left * left + right * right)),
+    () => (right ? Math.trunc(left / Math.abs(right)) : 0),
+    () => (right ? Math.trunc((10 * left) / Math.abs(right)) : 0),
+    () => Math.trunc((left * right) / 127),
+    () => Math.trunc((left * 127) / (right + 1)),
+    () => Math.trunc((left + right) / 2),
+    () => Math.abs(left - right),
+    () => Math.max(left, right),
+    () => Math.min(left, right),
+    () => (left ^ right) & 0x7f
+  ];
+  const index = Math.max(0, Math.min(operations.length - 1, Math.round(Number(method) || 0)));
+  return Math.max(0, Math.min(127, operations[index]()));
+}
+
+function applySimulatedLfo(value, normalized, lane = {}) {
+  const mode = Math.max(0, Math.min(4, Math.round(Number(lane.mode) || 0)));
+  const amount = Math.max(-100, Math.min(100, Number(lane.amount) || 0)) / 100;
+  const signed = Math.max(-1, Math.min(1, normalized * 2 - 1));
+  const unipolar = Math.round(Math.max(0, Math.min(1, normalized)) * amount * 127);
+  const centeredAmount = signed * amount;
+  const centered = Math.round(centeredAmount * (centeredAmount < 0 ? 64 : 63));
+  if (mode === 1) return value - unipolar;
+  if (mode === 2) return 64 + centered;
+  if (mode === 3) return Math.round(value * (1 + signed * amount));
+  if (mode === 4) return value + centered;
+  return value + unipolar;
+}
+
 export function createSimulator(simDeps = {}) {
   const {
     createManifest,
@@ -413,8 +450,18 @@ export function createSimulator(simDeps = {}) {
       const efIndex = Number(slot.ef_index ?? slot.ef?.index);
       if (Number.isInteger(efIndex) && envelopeSignals[efIndex]) {
         const before = value;
+        const arg = slot.arg ?? {};
+        const sourceA = Math.max(0, Math.min(envelopeSignals.length - 1, Number(arg.sourceA) || 0));
+        const sourceB = Math.max(0, Math.min(envelopeSignals.length - 1, Number(arg.sourceB) || 0));
+        const reactiveInput = arg.enabled
+          ? simulateArgValue(
+              envelopeSignals[sourceA]?.sourceValue,
+              envelopeSignals[sourceB]?.sourceValue,
+              arg.method
+            )
+          : envelopeSignals[efIndex].sourceValue;
         const contribution = simulateEfResponse(
-          envelopeSignals[efIndex].sourceValue,
+          reactiveInput,
           slot.ef ?? {},
           simulatedSlotEfValues[slotIndex] ?? 0,
           index,
@@ -435,12 +482,14 @@ export function createSimulator(simDeps = {}) {
         }
       }
 
-      // The simulator's persisted rehearsal profile owns one LFO route to S7.
-      if (slotIndex === 6) {
+      const lanes = Array.isArray(slot.lfo) ? slot.lfo : [];
+      for (let lfoIndex = 0; lfoIndex < 2; lfoIndex += 1) {
+        const lane = lanes[lfoIndex];
+        if (!lane?.enabled) continue;
         const before = value;
-        value = Math.max(0, Math.min(127, Math.round(64 + (lfos[0] * 2 - 1) * 50)));
-        lfoDeltas[0] = value - before;
-        activeMask |= 0x02;
+        value = Math.max(0, Math.min(127, applySimulatedLfo(value, lfos[lfoIndex] ?? 0, lane)));
+        lfoDeltas[lfoIndex] = value - before;
+        activeMask |= 0x02 << lfoIndex;
       }
 
       slotOutputs[slotIndex] = value;

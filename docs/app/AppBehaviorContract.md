@@ -99,9 +99,11 @@ The runtime coalesces telemetry into approximately 50 ms paint frames. Scope tim
 firmware-source time or round-trip latency. EF and LFO traces, activity holds, and simulator traces are musical/operator
 visualization; latency-grade claims require the [bench latency method](../bench/latency/method.md).
 
-The simulator uses the same runtime API and deterministic synthetic telemetry. It is suitable for UI behavior,
-automation, screenshots, schema/migration rehearsal, and staged-transaction tests. It is not analog calibration,
-electrical, physical-control, transport-latency, or hardware-validation evidence.
+The simulator uses the same runtime API and deterministic synthetic telemetry. Its selected-slot contribution frames
+honor confirmed ARG sources/methods and each fixed LFO lane's enabled, amount, and combine settings so the causal signal
+strip can rehearse the device resolver accurately. It is suitable for UI behavior, automation, screenshots,
+schema/migration rehearsal, and staged-transaction tests. It is not analog calibration, electrical, physical-control,
+transport-latency, or hardware-validation evidence.
 
 ## Accessibility and input
 

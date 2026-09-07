@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+test('simulator ARG math follows the firmware method table', async ({ page }) => {
+  await page.goto('/runtime/simulator_transport.js');
+  const values = await page.evaluate(async () => {
+    const { simulateArgValue } = await import('/runtime/simulator_transport.js');
+    return [0, 7, 10, 11].map((method) => simulateArgValue(80, 32, method));
+  });
+  expect(values).toEqual([112, 20, 48, 80]);
+});
+
 test('simulator LFO telemetry helpers are deterministic and follow declared shapes', async ({ page }) => {
   await page.goto('/runtime/simulator_transport.js');
   const shapes = await page.evaluate(async () => {
@@ -100,8 +109,8 @@ test('simulator EF recipes produce distinct repeatable rehearsal telemetry', asy
       gate: await collect('ef-gate'),
       experimentalA: await collect('ef-experimental'),
       experimentalB: await collect('ef-experimental'),
-      slotThirteenNeutral: await collect('ef-neutral', 12),
-      slotThirteenGate: await collect('ef-gate', 12)
+      slotFifteenNeutral: await collect('ef-neutral', 14),
+      slotFifteenGate: await collect('ef-gate', 14)
     };
   });
 
@@ -113,8 +122,8 @@ test('simulator EF recipes produce distinct repeatable rehearsal telemetry', asy
   expect(result.gate.active).toEqual(result.neutral.active);
   expect(result.experimentalA.values).toEqual(result.experimentalB.values);
   expect(result.experimentalA.values).toEqual(result.neutral.values);
-  expect(result.slotThirteenNeutral.values).toEqual(result.slotThirteenGate.values);
-  expect(result.slotThirteenNeutral.outputs).not.toEqual(result.slotThirteenGate.outputs);
+  expect(result.slotFifteenNeutral.values).toEqual(result.slotFifteenGate.values);
+  expect(result.slotFifteenNeutral.outputs).not.toEqual(result.slotFifteenGate.outputs);
   expect(new Set([
     JSON.stringify(result.neutral.outputs),
     JSON.stringify(result.smooth.outputs),

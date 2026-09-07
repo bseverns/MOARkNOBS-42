@@ -36,6 +36,7 @@ export function describeSlotSignal({
     Number(entry.baseline) + Number(entry.ef) + Number(entry.lfos[0]) + Number(entry.lfos[1]) ===
       Number(entry.output);
   const measured = connected && age <= 3000 && evidenceAge <= 3000 && coherent;
+  const activeMask = measured ? Number(entry.activeMask) || 0 : 0;
   const efIndex = numberOrNull(slot.efIndex ?? slot.ef?.index);
   return {
     freshness,
@@ -43,8 +44,12 @@ export function describeSlotSignal({
     output: connected
       ? numberOrNull(measured ? entry.output : telemetry.slotOutputs?.[index])
       : null,
-    reactive: measured ? Number(entry.ef) : null,
-    lfos: measured ? entry.lfos.map(Number) : [null, null],
+    reactive: measured && (activeMask & 0x01) ? Number(entry.ef) : null,
+    lfos: measured
+      ? entry.lfos.map((value, lfoIndex) =>
+          activeMask & (0x02 << lfoIndex) ? Number(value) : null
+        )
+      : [null, null],
     source:
       efIndex === null || efIndex < 0
         ? 'No EF source assigned'
