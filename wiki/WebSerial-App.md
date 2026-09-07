@@ -43,8 +43,9 @@ runtime architecture below.
   activity, envelope levels, clock and connection state, and panic help. It
   deliberately has no staged editors or Apply controls.
 - **Configure**: the everyday mapping workspace for Basic editing.
-- **Lab**: the advanced workspace for EF/ARG/fixed-LFO, scope, diagnostics,
-  import/export, and other technical controls.
+- **Lab**: the advanced workspace. Its full-width Lab Bench separates
+  machine-wide **Instrument** controls, A–D **Profile** controls, live
+  **Observe** tools, and diagnostic **Evidence** from the selected-slot editor.
 - Profile load/save/reset flow
 - Staged diff visibility
 - MIDI monitor and optional clock output

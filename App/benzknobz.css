@@ -2621,23 +2621,105 @@ html[data-ui-mode='advanced'] #connect-card {
   grid-column: 3;
 }
 
-html[data-ui-mode='advanced'] #slot-detail-panel,
-html[data-ui-mode='advanced'] .debug-log-bridge {
-  grid-column: 1 / span 2;
-  width: 100%;
-  justify-self: stretch;
+#lab-bench {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid rgba(45, 226, 230, 0.2);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, rgba(45, 226, 230, 0.06), rgba(0, 0, 0, 0.2));
+  box-shadow: var(--shadow-soft);
 }
 
-html[data-ui-mode='advanced'] #slot-detail-panel {
-  max-width: none;
+.lab-bench-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-html[data-ui-mode='advanced'] .ef-modulation-cluster {
+.lab-bench-header h2 {
+  margin: 0;
+}
+
+.lab-bench-header .microcopy {
+  margin: 6px 0 0;
+}
+
+.lab-bench-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lab-bench-tabbar .utility-tab {
+  text-align: center;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.lab-bench-panel.utility-panel-active {
+  display: grid;
+  min-width: 0;
+}
+
+.lab-bench-panel--instrument {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.lab-bench-panel--instrument .ef-modulation-cluster,
+.lab-bench-panel--instrument #ef-assignment-card,
+.lab-bench-panel--instrument #led-settings {
+  grid-column: 1 / -1;
+}
+
+.lab-bench-panel--instrument .ef-modulation-cluster {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-html[data-ui-mode='advanced'] #ef-assignment-card {
+.lab-bench-panel--instrument #ef-assignment-card {
   grid-column: 1 / -1;
+}
+
+.lab-bench-panel--profile .profile-performance-workspace {
+  width: 100%;
+}
+
+.lab-bench-panel--observe {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.lab-bench-panel--observe #device-monitor-section,
+.lab-bench-panel--observe #midi-panel {
+  grid-column: 1 / -1;
+}
+
+.lab-bench-panel--observe .scope-panel,
+.lab-bench-panel--observe .mod-matrix-card {
+  min-width: 0;
+}
+
+.lab-bench-panel--evidence {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.lab-bench-panel--evidence #diff-panel,
+.lab-bench-panel--evidence .utility-empty,
+.lab-bench-panel--evidence .debug-log-bridge {
+  grid-column: 1 / -1;
+}
+
+.lab-bench-panel--evidence #slot-detail-panel {
+  grid-column: auto;
+  width: auto;
+  max-width: none;
+  justify-self: stretch;
 }
 
 html[data-ui-mode='advanced'] #slot-details,
@@ -4146,7 +4228,8 @@ footer {
 
   html[data-ui-mode='advanced'] #live-panel,
   html[data-ui-mode='advanced'] #editor-panel,
-  html[data-ui-mode='advanced'] #connect-card {
+  html[data-ui-mode='advanced'] #connect-card,
+  html[data-ui-mode='advanced'] #lab-bench {
     grid-column: 1;
   }
 
@@ -4188,6 +4271,21 @@ footer {
   .recovery-aux-grid,
   #slot-details,
   #device-monitor {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-bench-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .lab-bench-panel--instrument,
+  .lab-bench-panel--observe,
+  .lab-bench-panel--evidence {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-bench-panel--instrument .ef-modulation-cluster {
     grid-template-columns: 1fr;
   }
 

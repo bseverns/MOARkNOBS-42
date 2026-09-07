@@ -19,12 +19,14 @@ test('session log persists across reload and can be exported and cleared', async
     await window.__MN42_RUNTIME.disconnect();
   });
   await expect(page.locator('#connection-pill')).toContainText('Disconnected');
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
 
   const log = page.locator('#log');
   await expect(log).toContainText('CONNECTED');
   await expect(log).toContainText('DISCONNECTED');
 
   await page.reload();
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
   await expect(log).toContainText('CONNECTED');
   await expect(log).toContainText('DISCONNECTED');
 

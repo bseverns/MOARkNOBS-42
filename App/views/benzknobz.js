@@ -74,6 +74,75 @@ const boot = () => {
   const docRoot = document.documentElement;
   if (docRoot?.dataset?.mn42Booted === 'true') return;
   if (docRoot) docRoot.dataset.mn42Booted = 'true';
+
+  // Lab keeps the focused slot workspace above this point. The bench gives
+  // machine, profile, observation, and evidence work their own destinations
+  // without replacing the controllers that own these existing elements.
+  const main = document.querySelector('main');
+  const labBench = document.createElement('section');
+  labBench.id = 'lab-bench';
+  labBench.dataset.uiTier = 'advanced';
+  labBench.setAttribute('aria-labelledby', 'lab-bench-title');
+  labBench.innerHTML = `
+    <header class="lab-bench-header">
+      <div>
+        <p class="workspace-kicker">Lab Bench</p>
+        <h2 id="lab-bench-title">Choose a layer of the machine</h2>
+        <p class="microcopy">Instrument, profile, observation, and evidence each keep their own authority and purpose.</p>
+      </div>
+      <div class="lab-bench-tabbar" role="tablist" aria-label="Lab Bench workspaces">
+        <button type="button" class="utility-tab" data-utility-tab="instrument" aria-pressed="true">Instrument</button>
+        <button type="button" class="utility-tab" data-utility-tab="profile" aria-pressed="false">Profile</button>
+        <button type="button" class="utility-tab" data-utility-tab="observe" aria-pressed="false">Observe</button>
+        <button type="button" class="utility-tab" data-utility-tab="evidence" aria-pressed="false">Evidence</button>
+      </div>
+    </header>
+  `;
+  const benchPanel = (name, label) => {
+    const panel = document.createElement('section');
+    panel.className = `lab-bench-panel utility-panel lab-bench-panel--${name}`;
+    panel.dataset.utilityPanel = name;
+    panel.setAttribute('aria-label', label);
+    labBench.append(panel);
+    return panel;
+  };
+  const instrumentBench = benchPanel('instrument', 'Instrument controls');
+  const profileBench = benchPanel('profile', 'Profile controls');
+  const observeBench = benchPanel('observe', 'Observation tools');
+  const evidenceBench = benchPanel('evidence', 'Evidence and diagnostics');
+  const moveToBench = (selector, destination) => {
+    const element = document.querySelector(selector);
+    if (element) destination.append(element);
+  };
+  const consolePanel = document.querySelector('[data-utility-panel="console"]');
+  consolePanel?.classList.remove('utility-panel', 'utility-panel-active');
+  consolePanel?.removeAttribute('data-utility-panel');
+  document.querySelector('.utility-tabbar')?.remove();
+
+  moveToBench('.ef-modulation-cluster', instrumentBench);
+  const usbMidiCard = document.querySelector('#usb-midi-toggle')?.closest('.live-toggle-card');
+  if (usbMidiCard) instrumentBench.append(usbMidiCard);
+  moveToBench('#led-settings', instrumentBench);
+  const deviceClockCard = document.querySelector('#device-clock-source')?.closest('.live-toggle-card');
+  if (deviceClockCard) instrumentBench.append(deviceClockCard);
+
+  moveToBench('#profile-performance-workspace', profileBench);
+
+  moveToBench('#device-monitor-section', observeBench);
+  moveToBench('#scope-panel', observeBench);
+  moveToBench('#midi-panel', observeBench);
+  moveToBench('.mod-matrix-card', observeBench);
+
+  moveToBench('#diff-panel', evidenceBench);
+  moveToBench('#diff-empty', evidenceBench);
+  moveToBench('#slot-detail-panel', evidenceBench);
+  moveToBench('.debug-log-bridge', evidenceBench);
+
+  document.querySelector('[data-utility-panel="diff"]')?.remove();
+  document.querySelector('[data-utility-panel="midi"]')?.remove();
+  document.querySelector('[data-utility-panel="scope"]')?.remove();
+  main?.append(labBench);
+
   const statusEl = document.getElementById('status');
   const statusLabel = document.getElementById('status-label');
   const statusMessage = statusEl?.querySelector('.status-message');
@@ -622,7 +691,7 @@ const boot = () => {
       editorTabButtons,
       utilityTabButtons,
       utilityPanels,
-      efAssignmentCard
+      efAssignmentCard: null
     }
   });
 
@@ -888,6 +957,7 @@ const boot = () => {
     },
     openLfoGenerator: (laneIndex) => {
       uiModeController.setUIMode('advanced');
+      uiModeController.setUtilityTab('profile');
       setPerformanceTab('lfo');
       const lane = document.querySelector(`#lfo-editor .lfo-section:nth-child(${laneIndex + 1})`);
       lane?.scrollIntoView({ block: 'center' });
@@ -929,7 +999,7 @@ const boot = () => {
   });
   uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
   uiModeController.setEditorTab(uiModeController.getEditorTab());
-  uiModeController.setUtilityTab('console');
+  uiModeController.setUtilityTab('instrument');
   setPerformanceTab('arp');
 
   runtime.on('status', ({ level, message }) => {
@@ -1281,6 +1351,19 @@ const boot = () => {
       return;
     }
     uiModeController.setUIMode('advanced');
+    const benchForRoot = {
+      efSlots: 'instrument',
+      filter: 'instrument',
+      arg: 'instrument',
+      envelopeMode: 'instrument',
+      led: 'instrument',
+      lfos: 'profile',
+      midiInputBindings: 'profile'
+    };
+    const bench = benchForRoot[parts[0]];
+    if (bench) uiModeController.setUtilityTab(bench);
+    if (parts[0] === 'lfos') setPerformanceTab('lfo');
+    if (parts[0] === 'midiInputBindings') setPerformanceTab('incoming');
     const target = [...document.querySelectorAll('[data-device-config-path]')].find((node) => node.dataset.deviceConfigPath === parts.join('.')) ||
       [...document.querySelectorAll('[data-schema-section]')].find((node) => node.dataset.schemaSection === parts[0]);
     target?.scrollIntoView?.({ block: 'center' });

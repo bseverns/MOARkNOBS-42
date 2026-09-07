@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function openIncomingMidi(page) {
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
   const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
   await expect(inputSection).toBeVisible();

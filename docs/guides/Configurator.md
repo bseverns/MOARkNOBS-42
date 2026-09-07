@@ -72,6 +72,15 @@ Configure exposes:
 
 Lab keeps every underlying control. Enum choices lead with musical language while retaining the exact token, for example **Smooth · LOWPASS**, **Punchy · EXPONENTIAL**, **Average Together · AVG**, and **Strongest Wins · MAXX**.
 
+Lab has two deliberate tiers. Its upper row keeps **Live Slots**, **Selected Slot**, and a compact **Session** context together. The full-width **Lab Bench** then opens one ownership room at a time:
+
+- **Instrument** holds envelope assignments, filter/ARG compatibility controls, LED configuration, USB MIDI output, and Device Clock.
+- **Profile** holds Profile Arp, Profile LFO & Routes, and Incoming MIDI for the selected A–D profile.
+- **Observe** holds the Device Monitor, EF/LFO Scope, MIDI Monitor, and the read-only Modulation Matrix.
+- **Evidence** holds Staged Diff, the Diagnostic Slot Inspector, and the Debug Log.
+
+This does not reduce Lab coverage. It gives machine-wide settings, profile state, live observation, and diagnostic evidence separate destinations. Configure deep links open the matching room; **Edit generator in Lab** opens **Profile → Profile LFO & Routes** and focuses the chosen generator.
+
 ### State and exact Lab controls
 
 **State · Presets, profiles & backups** groups starting presets, profile switching/saving, and JSON backups. Presets and imports stage a draft; Apply sends it; profile save persists it. Existing dirty-draft and capability guards remain in force. Opening the drawer does not issue a write.

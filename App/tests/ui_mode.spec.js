@@ -40,12 +40,14 @@ test.describe('UI mode', () => {
     await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Console' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Instrument' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
+    await expect(page.locator('#device-monitor-section')).toBeHidden();
+    await page.getByRole('tab', { name: 'Instrument' }).press('End');
+    await expect(page.getByRole('tab', { name: 'Evidence' })).toBeFocused();
+    await page.getByRole('tab', { name: 'Observe' }).click();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
-    await page.getByRole('tab', { name: 'Console' }).press('End');
-    await expect(page.getByRole('tab', { name: 'Scope' })).toBeFocused();
     await expect(page.locator('#scope-panel')).toBeVisible();
 
     await page.reload();

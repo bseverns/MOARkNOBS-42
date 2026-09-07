@@ -5,7 +5,7 @@ async function bootWithSimulator(page) {
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
 }
 
-test('profile performance controls live in the center workspace, not the utility rail', async ({
+test('profile performance controls live in the Profile Lab Bench workspace', async ({
   page
 }) => {
   await page.addInitScript(() => {
@@ -17,15 +17,23 @@ test('profile performance controls live in the center workspace, not the utility
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
 
+  const bench = page.locator('#lab-bench');
+  await expect(bench).toBeVisible();
+  await expect(bench.getByRole('tab', { name: 'Instrument', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  );
+  await bench.getByRole('tab', { name: 'Profile', exact: true }).click();
   const workspace = page.locator('#profile-performance-workspace');
   await expect(workspace).toBeVisible();
   await expect(workspace.locator('[data-performance-panel="arp"]')).toBeVisible();
   await expect(page.locator('#connect-card [data-performance-panel]')).toHaveCount(0);
-  await expect(page.locator('#connect-card [data-utility-tab]')).toHaveText([
-    'Console',
-    'Diff',
-    'MIDI',
-    'Scope'
+  await expect(page.locator('#connect-card [data-utility-tab]')).toHaveCount(0);
+  await expect(bench.locator('[data-utility-tab]')).toHaveText([
+    'Instrument',
+    'Profile',
+    'Observe',
+    'Evidence'
   ]);
   await expect(page.locator('[data-editor-tab="lfo"]')).toHaveText('Slot LFO');
 });
@@ -42,6 +50,7 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#lfo-status')).toContainText('2 LFOs');
@@ -99,6 +108,7 @@ test('failed LFO profile save preserves unrelated staged configuration', async (
   });
   expect(stagedDiff.length).toBeGreaterThan(0);
 
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
   await firstDepth.fill('0.42');
@@ -130,6 +140,7 @@ test('inactive slot LFO save keeps the edited slot visible', async ({ page }) =>
     drawer.open = true;
   });
   await page.locator('[data-profile-slot="1"]').click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#profile-slot-status')).toContainText('Slot B');
@@ -184,6 +195,7 @@ test('active slot LFO save does not warn to switch to itself', async ({ page }) 
     };
   });
 
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
 

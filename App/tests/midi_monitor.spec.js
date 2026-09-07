@@ -46,8 +46,8 @@ test('midi monitor logs and clock without jitter', async ({ page }) => {
 
   await page.goto('/');
   await page.waitForFunction(() => document.documentElement?.dataset?.mn42Booted === 'true');
-  await page.locator('[data-utility-tab="midi"]').click();
-  await expect(page.locator('[data-utility-panel="midi"]')).toBeVisible();
+  await page.getByRole('tab', { name: 'Observe', exact: true }).click();
+  await expect(page.locator('[data-utility-panel="observe"]')).toBeVisible();
 
   const toggle = page.locator('#midi-panel-toggle');
   await expect(toggle).toBeVisible();

@@ -74,7 +74,12 @@ test('Lab exposes every device configuration root and the legacy mode stays sepa
 
   expect(actualRoots).toEqual(expectedRoots);
   for (const root of expectedRoots) {
+    if (root === 'lfos') {
+      await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+      await page.getByRole('tab', { name: 'Profile LFO & Routes', exact: true }).click();
+    }
     if (root === 'midiInputBindings') {
+      await page.getByRole('tab', { name: 'Profile', exact: true }).click();
       await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
     }
     await expect(page.locator(`[data-device-config-root="${root}"]`)).toBeVisible();
@@ -83,6 +88,7 @@ test('Lab exposes every device configuration root and the legacy mode stays sepa
   const slotModeBefore = await page.evaluate(
     () => window.__MN42_RUNTIME.getState().staged.slots[0].ef.mode
   );
+  await page.getByRole('tab', { name: 'Instrument', exact: true }).click();
   await page.locator('#envelope-mode-settings select').selectOption('LOG');
   await expect
     .poll(() => page.evaluate(() => window.__MN42_RUNTIME.getState().staged.envelopeMode))

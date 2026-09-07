@@ -283,7 +283,9 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
     await expect(page.locator('#led-settings')).toBeVisible();
+    await page.getByRole('tab', { name: 'Observe', exact: true }).click();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
+    await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
     await expect(page.locator('#slot-detail-panel')).toBeVisible();
     await expect(page.locator('#simulator-toggle')).toBeVisible();
 
@@ -306,6 +308,7 @@ test.describe('Stage mode', () => {
     await page.goto('/benzknobz.html');
     await page.locator('#simulator-toggle').click();
     await page.getByRole('button', { name: 'Connect' }).click();
+    await page.getByRole('tab', { name: 'Observe', exact: true }).click();
 
     await expect(page.locator('#device-monitor')).toContainText('OLED present');
     await expect(page.locator('#device-monitor')).toContainText('OLED ready');

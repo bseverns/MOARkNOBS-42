@@ -75,6 +75,7 @@ test('approved Stage hierarchy at 1440 × 1000', async ({ page }) => {
 
 test('approved open Incoming MIDI workspace at 1356 px', async ({ page }) => {
   await openMode(page, 'advanced', { width: 1356, height: 1700 }, { freeze: false });
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
   const workspace = page.locator('#profile-performance-workspace');
   await workspace.getByRole('button', { name: 'Add binding' }).click();

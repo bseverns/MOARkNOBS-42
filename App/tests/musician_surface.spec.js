@@ -58,6 +58,10 @@ test('causal signal links focus the matching reactive or motion controls', async
   await page.getByRole('button', { name: 'Focus LFO 2 controls' }).click();
   await expect(page.getByRole('checkbox', { name: 'Use LFO 2', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Edit generator in Lab →', exact: true }).first().click();
+  await expect(page.getByRole('tab', { name: 'Profile', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  );
   await expect(
     page.getByRole('tab', { name: 'Profile LFO & Routes', exact: true })
   ).toHaveAttribute('aria-selected', 'true');

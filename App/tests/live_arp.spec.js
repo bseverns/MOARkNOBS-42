@@ -175,6 +175,7 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('[data-performance-panel="arp"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Shared Arp Engine' })).toBeVisible();
@@ -231,6 +232,7 @@ test('profile arp round-trips generator settings and explicit assignments withou
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
   await expect(page.locator('[data-arp-engine-context-panel="profile"]')).toBeVisible();
@@ -269,6 +271,7 @@ test('live arp controls use native runtime commands without config boot', async 
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 

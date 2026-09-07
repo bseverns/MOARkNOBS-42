@@ -7,9 +7,7 @@ function normalizeEditorTab(tab) {
 }
 
 function normalizeUtilityTab(tab) {
-  return tab === 'diff' || tab === 'midi' || tab === 'scope' || tab === 'arp' || tab === 'lfo'
-    ? tab
-    : 'console';
+  return tab === 'profile' || tab === 'observe' || tab === 'evidence' ? tab : 'instrument';
 }
 
 function readAllowedModes(node) {
