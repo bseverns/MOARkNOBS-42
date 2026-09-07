@@ -7,7 +7,8 @@
 - `App/runtime.js` is the runtime composition root. It wires transport, contract, configuration-session, telemetry, and
   live-control services, but does not define their schema, transaction, or device-policy rules.
 - `App/views/benzknobz.js` is the view composition root. It assembles panels/controllers and binds operator controls to
-  the public runtime API; device truth and write policy must remain behind those dependencies.
+  the public runtime API; device truth and write policy must remain behind those dependencies. `App/views/panels/lab_bench.js`
+  owns the Bench's spatial composition and reparenting while preserving the DOM identities owned by its controllers.
 - `App/runtime/` owns manifest/schema negotiation, state normalization, validation, staged diffs, checksummed Apply,
   uncertainty/resynchronization, telemetry coalescing, and transport-specific behavior.
 - `App/config_schema.json` is the bundled schema 9 fallback. A compatible device-provided schema takes precedence.
@@ -62,6 +63,8 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   account for every slot-schema leaf. Its full-width Bench separates Instrument, Profile, Observe, and Evidence
   workspaces while keeping each room's major tools named in the Bench navigation. Scope, MIDI Monitor, Device Monitor,
   Modulation Matrix, Staged Diff, Slot Inspector, and Debug Log must remain discoverable even when their room is closed.
+  Instrument visually separates staged **Machine configuration** (Apply required) from immediate **Live device controls**
+  (writes now), without splitting either into a separate Lab room.
 
 Lab presents profile-owned incoming MIDI routes as the **Incoming MIDI** tab in **Profile Performance**, beside the
 profile arpeggiator and LFO/routes tabs. It must not place those routes inside **Selected Slot**: a route can target any

@@ -34,6 +34,19 @@ test('profile performance controls live in the Profile Lab Bench workspace', asy
   await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('EF/LFO Scope');
   await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('MIDI Monitor');
   await expect(bench.locator('[data-utility-tab="evidence"]')).toContainText('Debug Log');
+  await bench.getByRole('tab', { name: 'Instrument', exact: true }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  const configuration = bench.locator('[data-instrument-zone="configuration"]');
+  const liveControls = bench.locator('[data-instrument-zone="live"]');
+  await expect(configuration).toContainText('Machine configuration');
+  await expect(configuration).toContainText('Apply required');
+  await expect(configuration.locator('.ef-modulation-cluster')).toBeVisible();
+  await expect(configuration.locator('#led-settings')).toBeVisible();
+  await expect(liveControls).toContainText('Live device controls');
+  await expect(liveControls).toContainText('Writes now');
+  await expect(liveControls.locator('#usb-midi-toggle')).toBeVisible();
+  await expect(liveControls.locator('#device-clock-source')).toBeVisible();
   await expect(page.locator('[data-editor-tab="lfo"]')).toHaveText('Slot LFO');
 });
 

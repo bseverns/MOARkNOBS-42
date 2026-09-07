@@ -2695,18 +2695,66 @@ html[data-ui-mode='advanced'] #connect-card {
   align-items: start;
 }
 
-.lab-bench-panel--instrument .ef-modulation-cluster,
-.lab-bench-panel--instrument #ef-assignment-card,
-.lab-bench-panel--instrument #led-settings {
-  grid-column: 1 / -1;
+.instrument-authority-zone {
+  display: grid;
+  align-self: start;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  background: rgba(7, 15, 21, 0.5);
 }
 
-.lab-bench-panel--instrument .ef-modulation-cluster {
+.instrument-authority-zone--configuration {
+  border-color: rgba(45, 226, 230, 0.28);
+}
+
+.instrument-authority-zone--live {
+  border-color: rgba(255, 192, 80, 0.3);
+  background: rgba(38, 29, 11, 0.22);
+}
+
+.instrument-authority-header {
+  display: flex;
+  align-items: end;
+  min-height: 46px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.instrument-authority-header .workspace-kicker {
+  margin: 0 0 4px;
+}
+
+.instrument-authority-zone--configuration .workspace-kicker {
+  color: var(--color-accent);
+}
+
+.instrument-authority-zone--live .workspace-kicker {
+  color: #ffd36a;
+}
+
+.instrument-authority-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.instrument-authority-content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.instrument-authority-content .ef-modulation-cluster {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.lab-bench-panel--instrument #ef-assignment-card {
-  grid-column: 1 / -1;
+.instrument-authority-content .ef-modulation-cluster,
+.instrument-authority-content #ef-assignment-card,
+.instrument-authority-content #led-settings,
+.instrument-authority-content .live-toggle-card {
+  min-width: 0;
 }
 
 .lab-bench-panel--profile .profile-performance-workspace {

@@ -16,6 +16,7 @@ import { createDiffStatusController } from './controllers/diff_status_controller
 import { createSessionLogController } from './controllers/session_log_controller.js';
 import { createPanicHelpController } from './controllers/panic_help_controller.js';
 import { createSlotWorkspaceController } from './controllers/slot_workspace_controller.js';
+import { createLabBench } from './panels/lab_bench.js';
 import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
@@ -75,85 +76,7 @@ const boot = () => {
   if (docRoot?.dataset?.mn42Booted === 'true') return;
   if (docRoot) docRoot.dataset.mn42Booted = 'true';
 
-  // Lab keeps the focused slot workspace above this point. The bench gives
-  // machine, profile, observation, and evidence work their own destinations
-  // without replacing the controllers that own these existing elements.
-  const main = document.querySelector('main');
-  const labBench = document.createElement('section');
-  labBench.id = 'lab-bench';
-  labBench.dataset.uiTier = 'advanced';
-  labBench.setAttribute('aria-labelledby', 'lab-bench-title');
-  labBench.innerHTML = `
-    <header class="lab-bench-header">
-      <div>
-        <p class="workspace-kicker">Lab Bench</p>
-        <h2 id="lab-bench-title">Choose a layer of the machine</h2>
-        <p class="microcopy">Instrument, profile, observation, and evidence each keep their own authority and purpose.</p>
-      </div>
-      <div class="lab-bench-tabbar" role="tablist" aria-label="Lab Bench workspaces">
-        <button type="button" class="utility-tab" data-utility-tab="instrument" aria-label="Instrument" aria-pressed="true">
-          <strong>Instrument</strong>
-          <small>Assignments · Filter · ARG · LEDs · USB MIDI · Clock</small>
-        </button>
-        <button type="button" class="utility-tab" data-utility-tab="profile" aria-label="Profile" aria-pressed="false">
-          <strong>Profile</strong>
-          <small>Arp · LFO generators &amp; routes · Incoming MIDI</small>
-        </button>
-        <button type="button" class="utility-tab" data-utility-tab="observe" aria-label="Observe" aria-pressed="false">
-          <strong>Observe</strong>
-          <small>EF/LFO Scope · MIDI Monitor · Device Monitor · Modulation Matrix</small>
-        </button>
-        <button type="button" class="utility-tab" data-utility-tab="evidence" aria-label="Evidence" aria-pressed="false">
-          <strong>Evidence</strong>
-          <small>Staged Diff · Slot Inspector · Debug Log</small>
-        </button>
-      </div>
-    </header>
-  `;
-  const benchPanel = (name, label) => {
-    const panel = document.createElement('section');
-    panel.className = `lab-bench-panel utility-panel lab-bench-panel--${name}`;
-    panel.dataset.utilityPanel = name;
-    panel.setAttribute('aria-label', label);
-    labBench.append(panel);
-    return panel;
-  };
-  const instrumentBench = benchPanel('instrument', 'Instrument controls');
-  const profileBench = benchPanel('profile', 'Profile controls');
-  const observeBench = benchPanel('observe', 'Observation tools');
-  const evidenceBench = benchPanel('evidence', 'Evidence and diagnostics');
-  const moveToBench = (selector, destination) => {
-    const element = document.querySelector(selector);
-    if (element) destination.append(element);
-  };
-  const consolePanel = document.querySelector('[data-utility-panel="console"]');
-  consolePanel?.classList.remove('utility-panel', 'utility-panel-active');
-  consolePanel?.removeAttribute('data-utility-panel');
-  document.querySelector('.utility-tabbar')?.remove();
-
-  moveToBench('.ef-modulation-cluster', instrumentBench);
-  const usbMidiCard = document.querySelector('#usb-midi-toggle')?.closest('.live-toggle-card');
-  if (usbMidiCard) instrumentBench.append(usbMidiCard);
-  moveToBench('#led-settings', instrumentBench);
-  const deviceClockCard = document.querySelector('#device-clock-source')?.closest('.live-toggle-card');
-  if (deviceClockCard) instrumentBench.append(deviceClockCard);
-
-  moveToBench('#profile-performance-workspace', profileBench);
-
-  moveToBench('#device-monitor-section', observeBench);
-  moveToBench('#scope-panel', observeBench);
-  moveToBench('#midi-panel', observeBench);
-  moveToBench('.mod-matrix-card', observeBench);
-
-  moveToBench('#diff-panel', evidenceBench);
-  moveToBench('#diff-empty', evidenceBench);
-  moveToBench('#slot-detail-panel', evidenceBench);
-  moveToBench('.debug-log-bridge', evidenceBench);
-
-  document.querySelector('[data-utility-panel="diff"]')?.remove();
-  document.querySelector('[data-utility-panel="midi"]')?.remove();
-  document.querySelector('[data-utility-panel="scope"]')?.remove();
-  main?.append(labBench);
+  const labBench = createLabBench({ document });
 
   const statusEl = document.getElementById('status');
   const statusLabel = document.getElementById('status-label');
