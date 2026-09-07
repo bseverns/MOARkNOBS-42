@@ -34,6 +34,11 @@ test('profile performance controls live in the Profile Lab Bench workspace', asy
   await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('EF/LFO Scope');
   await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('MIDI Monitor');
   await expect(bench.locator('[data-utility-tab="evidence"]')).toContainText('Debug Log');
+  await expect(bench.locator('.lab-bench-tabbar .explainer-icon')).toHaveCount(4);
+  await expect(page.locator('.performance-tab .explainer-icon')).toHaveCount(3);
+  await expect(
+    page.locator('#profile-performance-workspace .profile-performance-header > div > .explainer-icon')
+  ).toHaveCount(1);
   await bench.getByRole('tab', { name: 'Instrument', exact: true }).click();
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
@@ -43,10 +48,24 @@ test('profile performance controls live in the Profile Lab Bench workspace', asy
   await expect(configuration).toContainText('Apply required');
   await expect(configuration.locator('.ef-modulation-cluster')).toBeVisible();
   await expect(configuration.locator('#led-settings')).toBeVisible();
+  await expect(configuration.locator('legend .explainer-icon')).toHaveCount(5);
   await expect(liveControls).toContainText('Live device controls');
   await expect(liveControls).toContainText('Writes now');
   await expect(liveControls.locator('#usb-midi-toggle')).toBeVisible();
   await expect(liveControls.locator('#device-clock-source')).toBeVisible();
+  await expect(liveControls.locator('#usb-midi-toggle-title .explainer-icon')).toHaveCount(1);
+  await expect(liveControls.locator('#device-clock-title .explainer-icon')).toHaveCount(1);
+
+  await bench.getByRole('tab', { name: 'Observe', exact: true }).click();
+  await expect(bench.locator('#device-monitor-section .explainer-icon')).toHaveCount(1);
+  await expect(bench.locator('#scope-panel .explainer-icon')).toHaveCount(1);
+  await expect(bench.locator('#midi-panel .explainer-icon')).toHaveCount(1);
+  await expect(bench.locator('.mod-matrix-card .explainer-icon')).toHaveCount(1);
+
+  await bench.getByRole('tab', { name: 'Evidence', exact: true }).click();
+  await expect(bench.locator('#diff-empty > .explainer-icon')).toHaveCount(1);
+  await expect(bench.locator('#slot-detail-panel .explainer-icon')).toHaveCount(1);
+  await expect(bench.locator('.debug-log-bridge > summary .explainer-icon')).toHaveCount(1);
   await expect(page.locator('[data-editor-tab="lfo"]')).toHaveText('Slot LFO');
 });
 

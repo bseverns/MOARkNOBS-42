@@ -2659,12 +2659,126 @@ html[data-ui-mode='advanced'] #connect-card {
 
 .lab-bench-tabbar .utility-tab {
   display: grid;
-  gap: 5px;
-  align-content: start;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
   min-height: 78px;
   padding: 11px 13px;
   text-align: left;
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+.lab-bench-tabbar .utility-tab > span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.explainer-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  padding: 7px;
+  overflow: visible;
+  color: var(--color-accent);
+  border: 1px solid rgba(45, 226, 230, 0.22);
+  border-radius: 10px;
+  background: rgba(45, 226, 230, 0.07);
+  box-sizing: border-box;
+}
+
+.explainer-icon--tab {
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.utility-tab:not([aria-pressed='true']) .explainer-icon {
+  color: var(--color-muted);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.explainer-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  text-align: left;
+}
+
+.explainer-heading > .explainer-icon {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+}
+
+.explainer-heading > :not(.explainer-icon) {
+  grid-column: 2;
+}
+
+.explainer-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.explainer-summary .explainer-icon {
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+}
+
+.performance-tab.explainer-tab {
+  display: inline-grid;
+  grid-template-columns: 24px auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.performance-tab.explainer-tab .explainer-icon {
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.explainer-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 4px;
+}
+
+.explainer-icon--legend {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 7px;
+}
+
+#diff-empty.explainer-heading,
+#diff-panel.explainer-heading {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+#diff-empty.explainer-heading .explainer-icon,
+#diff-panel.explainer-heading .explainer-icon {
+  align-self: start;
+}
+
+#diff-panel.explainer-heading pre {
+  grid-column: 1 / -1;
+}
+
+.live-toggle-card h3.explainer-heading {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+
+.live-toggle-card h3.explainer-heading .explainer-icon {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
 }
 
 .lab-bench-tabbar .utility-tab strong {
@@ -2733,6 +2847,12 @@ html[data-ui-mode='advanced'] #connect-card {
 
 .instrument-authority-zone--live .workspace-kicker {
   color: #ffd36a;
+}
+
+.instrument-authority-zone--live .explainer-icon {
+  color: #ffd36a;
+  border-color: rgba(255, 192, 80, 0.3);
+  background: rgba(255, 192, 80, 0.08);
 }
 
 .instrument-authority-header h3 {

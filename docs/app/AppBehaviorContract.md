@@ -64,7 +64,10 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   workspaces while keeping each room's major tools named in the Bench navigation. Scope, MIDI Monitor, Device Monitor,
   Modulation Matrix, Staged Diff, Slot Inspector, and Debug Log must remain discoverable even when their room is closed.
   Instrument visually separates staged **Machine configuration** (Apply required) from immediate **Live device controls**
-  (writes now), without splitting either into a separate Lab room.
+  (writes now), without splitting either into a separate Lab room. Lab uses a compact, consistent set of inline SVG
+  landmarks for rooms and major tools: faders for Instrument, a saved card for Profile, a scope for Observe, and a
+  document lens for Evidence. Major cards repeat their room's visual language or use a specific musical/control
+  metaphor. The SVGs remain decorative and text labels remain authoritative; dense telemetry cells stay icon-free.
 
 Lab presents profile-owned incoming MIDI routes as the **Incoming MIDI** tab in **Profile Performance**, beside the
 profile arpeggiator and LFO/routes tabs. It must not place those routes inside **Selected Slot**: a route can target any
