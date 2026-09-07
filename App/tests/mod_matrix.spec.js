@@ -29,8 +29,14 @@ test('matrix LFO rows select the matching route card', async ({ page }) => {
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await openMatrixPanel(page);
-  await expect(page.locator('#lfo-status')).toContainText('2 LFOs');
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
+  await page.locator('#lfo-route-add').click();
+  await page.locator('#lfo-save').click();
+  await expect(page.locator('#lfo-status')).toContainText('saved');
+  await page.getByRole('tab', { name: 'Observe', exact: true }).click();
+  await expect(page.locator('.mod-matrix-card')).toBeVisible();
 
   await page.locator('#mod-matrix-refresh').click();
 

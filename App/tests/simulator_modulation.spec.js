@@ -52,6 +52,63 @@ test('simulator LFO telemetry helpers are deterministic and follow declared shap
   expect(shapes.syncWhole).not.toEqual(shapes.syncFast);
 });
 
+test('simulator shares active-profile LFO routing between telemetry and the Mod Matrix', async ({
+  page
+}) => {
+  await page.goto('/runtime/simulator_transport.js');
+  const result = await page.evaluate(async () => {
+    const { createSimulator } = await import('/runtime/simulator_transport.js');
+    const simulator = createSimulator({
+      createManifest: () => ({ slot_count: 42, pot_count: 42, envelope_count: 6, lfo_count: 2 }),
+      argMethodNames: ['PLUS'],
+      efFilterNames: ['LINEAR'],
+      cloneValue: structuredClone,
+      setNested: () => {},
+      telemetryFrameMs: 0
+    });
+    const rpc = async (id, rpc, payload = {}) => {
+      await simulator.writeLine(JSON.stringify({ id, rpc, ...payload }));
+      return JSON.parse(await simulator.nextLine()).result;
+    };
+    await simulator.open();
+    const neutralProfile = await rpc(1, 'get_profile');
+    const neutralMatrix = await rpc(2, 'get_mod_matrix');
+    const route = { type: 4, lfo: 0, depth: 1, amount: 100, min: 20, max: 110, slot: 6 };
+    await rpc(3, 'set_profile', { slot: 1, profile: { routes: [route] } });
+    await rpc(4, 'load_profile', { slot: 1 });
+    const activeMatrix = await rpc(5, 'get_mod_matrix');
+    const frame = JSON.parse(await simulator.nextLine());
+    const activeRoute = activeMatrix.routes.find((entry) => entry.id === 'lfo0_route0');
+    const contribution = frame.slotContributions.find((entry) => entry.index === 6);
+    const configResponse = await rpc(6, 'get_config');
+    const config = configResponse.config;
+    config.slots[6].lfo = [
+      { enabled: true, mode: 4, amount: 25 },
+      { enabled: false, mode: 0, amount: 0 }
+    ];
+    await rpc(7, 'set_config', { config });
+    const shadowedMatrix = await rpc(8, 'get_mod_matrix');
+    await simulator.close();
+    return {
+      neutralRoutes: neutralProfile.routes,
+      neutralLfoRoutes: neutralMatrix.routes.filter((entry) => entry.source_type === 'lfo'),
+      neutralConflicts: neutralMatrix.conflicts,
+      activeRoute,
+      contribution,
+      shadowedRoute: shadowedMatrix.routes.find((entry) => entry.id === 'lfo0_route0'),
+      fixedRoute: shadowedMatrix.routes.find((entry) => entry.id === 'lfo0_slot6')
+    };
+  });
+
+  expect(result.neutralRoutes).toEqual([]);
+  expect(result.neutralLfoRoutes).toEqual([]);
+  expect(result.neutralConflicts).toEqual([]);
+  expect(result.activeRoute).toMatchObject({ mode: 'legacy_replace', active: true, slot: 6 });
+  expect(result.contribution?.activeMask & 0x02).toBeTruthy();
+  expect(result.shadowedRoute).toMatchObject({ mode: 'legacy_shadowed', active: false });
+  expect(result.fixedRoute).toMatchObject({ route_type: 'slot_lane', active: true });
+});
+
 test('simulator EF recipes produce distinct repeatable rehearsal telemetry', async ({ page }) => {
   await page.goto('/runtime/simulator_transport.js');
   const result = await page.evaluate(async () => {

@@ -332,33 +332,9 @@ export function createSimulator(simDeps = {}) {
         sync_ratio: 3
       }
     ],
-    routes: [
-      {
-        type: 4,
-        lfo: 0,
-        depth: 0.5,
-        amount: 100,
-        min: 20,
-        max: 110,
-        target: 6,
-        slot: 6,
-        channel: 1,
-        cc_msb: 74,
-        cc_lsb: 32
-      },
-      {
-        type: 2,
-        lfo: 1,
-        depth: 1,
-        amount: -75,
-        min: 0,
-        max: 127,
-        target: 0,
-        channel: 1,
-        cc_msb: 16,
-        cc_lsb: 48
-      }
-    ]
+    // A fresh simulator is a neutral instrument. Deliberately rich LFO
+    // routing belongs in an explicitly loaded profile, never its startup truth.
+    routes: []
   };
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
   const activeArpSlots = new Set();
@@ -397,6 +373,67 @@ export function createSimulator(simDeps = {}) {
       sync_ratio_name: lfoSyncRatioNames[entry.sync_ratio] ?? '-'
     }));
 
+  const currentLfoValues = () =>
+    profileSettingsSlots[activeProfile].lfos.map((lfo, lfoIndex) =>
+      Number(simulateLfoValue(lfo, index, {
+        frameMs: telemetryFrameMs * 4,
+        seed: lfoIndex + 101,
+        bpm: tappedBpm
+      }).toFixed(3))
+    );
+
+  const routeMidiValue = (route, normalized) => {
+    const amount = Math.max(-1, Math.min(1, Number(route.amount ?? 100) / 100));
+    let shaped = 0.5 + (Math.max(0, Math.min(1, normalized)) - 0.5) * Math.abs(amount);
+    if (amount < 0) shaped = 1 - shaped;
+    const min = Math.max(0, Math.min(127, Number(route.min ?? 0)));
+    const max = Math.max(0, Math.min(127, Number(route.max ?? 127)));
+    return Math.max(0, Math.min(127, Math.round(min + shaped * (max - min))));
+  };
+
+  // One effective graph feeds both selected-slot telemetry and the Mod Matrix.
+  // It mirrors firmware's compatibility rule: a fixed lane owns its source and
+  // shadows an older profile SlotValue route for that same slot/LFO pair.
+  const resolveSimulatorLfoGraph = (lfoValues = currentLfoValues()) => {
+    const profile = profileSettingsSlots[activeProfile] ?? defaultProfileSettings;
+    const fixedLanes = [];
+    const fixedKeys = new Set();
+    (config.slots ?? []).forEach((slot, slotIndex) => {
+      (Array.isArray(slot?.lfo) ? slot.lfo : []).slice(0, 2).forEach((lane, lfoIndex) => {
+        if (!lane?.enabled) return;
+        fixedKeys.add(`${slotIndex}:${lfoIndex}`);
+        fixedLanes.push({ slotIndex, lfoIndex, lane, active: Boolean(slot?.active) });
+      });
+    });
+    const legacyRoutes = (profile.routes ?? []).map((route, routeIndex) => {
+      const lfoIndex = Math.max(0, Math.min(1, Math.round(Number(route?.lfo) || 0)));
+      const slotIndex = Math.max(
+        0,
+        Math.min(manifest.slot_count - 1, Math.round(Number(route?.slot ?? route?.target) || 0))
+      );
+      const slot = config.slots?.[slotIndex];
+      const isSlotValue = Number(route?.type) === 4;
+      const shadowed = isSlotValue && fixedKeys.has(`${slotIndex}:${lfoIndex}`);
+      return {
+        route,
+        routeIndex,
+        lfoIndex,
+        slotIndex,
+        isSlotValue,
+        shadowed,
+        active: isSlotValue ? Boolean(slot?.active) && !shadowed : true,
+        value: routeMidiValue(route, lfoValues[lfoIndex] ?? 0)
+      };
+    });
+    const legacyBySlotLfo = new Map();
+    legacyRoutes.forEach((entry) => {
+      if (entry.isSlotValue && entry.active) {
+        legacyBySlotLfo.set(`${entry.slotIndex}:${entry.lfoIndex}`, entry);
+      }
+    });
+    return { fixedLanes, legacyRoutes, legacyBySlotLfo };
+  };
+
   const nextSlotValues = () => {
     const activeSlot = index % manifest.slot_count;
     slotValues[activeSlot] = (slotValues[activeSlot] + 1) % 128;
@@ -429,13 +466,8 @@ export function createSimulator(simDeps = {}) {
       return { sourceValue, value: sourceValue, active: sourceValue >= activityFloor };
     });
     const envelopes = envelopeSignals.map((signal) => signal.value);
-    const lfos = profileSettingsSlots[activeProfile].lfos.map((lfo, lfoIndex) =>
-      Number(simulateLfoValue(lfo, index, {
-        frameMs: telemetryFrameMs * 4,
-        seed: lfoIndex + 101,
-        bpm: tappedBpm
-      }).toFixed(3))
-    );
+    const lfos = currentLfoValues();
+    const lfoGraph = resolveSimulatorLfoGraph(lfos);
     const efStatus = envelopeSignals.map((signal) => (signal.active ? 1 : 0));
     const slotOutputs = [...slots];
     const slotContributions = [];
@@ -482,12 +514,22 @@ export function createSimulator(simDeps = {}) {
         }
       }
 
-      const lanes = Array.isArray(slot.lfo) ? slot.lfo : [];
       for (let lfoIndex = 0; lfoIndex < 2; lfoIndex += 1) {
-        const lane = lanes[lfoIndex];
-        if (!lane?.enabled) continue;
+        const fixedLane = lfoGraph.fixedLanes.find(
+          (entry) => entry.slotIndex === slotIndex && entry.lfoIndex === lfoIndex
+        );
+        const legacyRoute = lfoGraph.legacyBySlotLfo.get(`${slotIndex}:${lfoIndex}`);
+        if (!fixedLane && !legacyRoute) continue;
         const before = value;
-        value = Math.max(0, Math.min(127, applySimulatedLfo(value, lfos[lfoIndex] ?? 0, lane)));
+        value = Math.max(
+          0,
+          Math.min(
+            127,
+            fixedLane
+              ? applySimulatedLfo(value, lfos[lfoIndex] ?? 0, fixedLane.lane)
+              : applySimulatedLfo(value, legacyRoute.value / 127, { mode: 2, amount: 100 })
+          )
+        );
         lfoDeltas[lfoIndex] = value - before;
         activeMask |= 0x02 << lfoIndex;
       }
@@ -588,11 +630,17 @@ export function createSimulator(simDeps = {}) {
   function buildSimulatorModMatrix() {
     const routes = [];
     const ccWriters = new Map();
+    const slotWriters = new Map();
     const registerCc = (channel, cc, writer) => {
       const key = `${channel}:${cc}`;
       const list = ccWriters.get(key) ?? [];
       list.push(writer);
       ccWriters.set(key, list);
+    };
+    const registerSlot = (slot, writer) => {
+      const list = slotWriters.get(slot) ?? [];
+      list.push(writer);
+      slotWriters.set(slot, list);
     };
     const slotMidi = (slot = {}) => ({
       type: slot.type_name ?? slot.type ?? 'CC',
@@ -602,6 +650,8 @@ export function createSimulator(simDeps = {}) {
         ? { cc: slot.data1 ?? slot.cc ?? 0 }
         : {})
     });
+    const lfoValues = currentLfoValues();
+    const lfoGraph = resolveSimulatorLfoGraph(lfoValues);
 
     (config.slots ?? []).forEach((slot, index) => {
       if (!slot?.active) return;
@@ -660,10 +710,11 @@ export function createSimulator(simDeps = {}) {
       }
     });
 
-    (profileSettingsSlots[0].routes ?? []).forEach((route, index) => {
-      const source = `lfo${route.lfo ?? 0}`;
-      const id = `${source}_route${index}`;
-      const slot = config.slots?.[route.slot ?? route.target];
+    lfoGraph.legacyRoutes.forEach((entry) => {
+      const { route, routeIndex, lfoIndex, slotIndex, isSlotValue, shadowed, active, value } = entry;
+      const source = `lfo${lfoIndex}`;
+      const id = `${source}_route${routeIndex}`;
+      const slot = config.slots?.[slotIndex];
       const midi = slot ? slotMidi(slot) : null;
       const matrixRoute = {
         id,
@@ -672,28 +723,77 @@ export function createSimulator(simDeps = {}) {
         route_type:
           ['internal', 'midi_cc7', 'midi_cc14', 'osc', 'slot_value'][route.type] ?? 'unknown',
         transform: `sim depth ${route.depth ?? 1}`,
-        destination: route.type === 4 ? `slot${route.slot ?? route.target}.value` : 'midi.cc14',
-        mode: 'replace',
-        exit: route.type === 4 ? 'midi' : 'midi_cc14',
+        destination: isSlotValue ? `slot${slotIndex}.value` : 'midi.cc14',
+        mode: isSlotValue ? (shadowed ? 'legacy_shadowed' : 'legacy_replace') : 'replace',
+        exit: isSlotValue ? 'midi' : 'midi_cc14',
         depth: route.depth ?? 1,
         amount: route.amount ?? 100,
         rateLimitMs: 9,
-        active: true,
+        active,
         persisted: true,
-        last_value: 64,
+        last_value: value,
         range: { min: route.min ?? 0, max: route.max ?? 127 }
       };
       if (midi) matrixRoute.midi = midi;
-      if (route.type === 2) {
+      if (isSlotValue) {
+        matrixRoute.slot = slotIndex;
+        if (active) {
+          registerSlot(slotIndex, id);
+          if (midi?.type === 'CC' && Number.isFinite(Number(midi.cc))) {
+            registerCc(midi.channel, midi.cc, id);
+          }
+        }
+      } else if (route.type === 0) {
+        matrixRoute.destination = `internal.${route.target ?? 0}`;
+        matrixRoute.mode = 'add_bus';
+        matrixRoute.exit = 'internal';
+      } else if (route.type === 1) {
+        matrixRoute.destination = 'midi.cc';
+        matrixRoute.exit = 'midi_cc';
+        matrixRoute.channel = route.channel ?? 1;
+        matrixRoute.cc = route.cc_msb ?? 0;
+        registerCc(matrixRoute.channel, matrixRoute.cc, id);
+      } else if (route.type === 2) {
         matrixRoute.channel = route.channel ?? 1;
         matrixRoute.cc_msb = route.cc_msb ?? 0;
         matrixRoute.cc_lsb = route.cc_lsb ?? 32;
         registerCc(matrixRoute.channel, matrixRoute.cc_msb, id);
         registerCc(matrixRoute.channel, matrixRoute.cc_lsb, id);
-      } else if (midi?.type === 'CC' && Number.isFinite(Number(midi.cc))) {
-        registerCc(midi.channel, midi.cc, id);
+      } else if (route.type === 3) {
+        matrixRoute.destination = 'osc.lfo';
+        matrixRoute.mode = 'mirror';
+        matrixRoute.exit = 'osc';
       }
       routes.push(matrixRoute);
+    });
+
+    lfoGraph.fixedLanes.forEach(({ slotIndex, lfoIndex, lane, active }) => {
+      const slot = config.slots?.[slotIndex] ?? {};
+      const amount = Math.max(-100, Math.min(100, Number(lane.amount) || 0)) / 100;
+      const normalized = lfoValues[lfoIndex] ?? 0;
+      const signed = Math.max(-1, Math.min(1, normalized * 2 - 1));
+      const centeredAmount = signed * amount;
+      const centered = Math.round(centeredAmount * (centeredAmount < 0 ? 64 : 63));
+      const mode = Math.max(0, Math.min(4, Math.round(Number(lane.mode) || 0)));
+      const unipolar = Math.round(normalized * amount * 127);
+      const lastValue =
+        mode === 1 ? -unipolar : mode === 2 ? 64 + centered : mode === 3 ? Math.round(signed * amount * 100) : mode === 4 ? centered : unipolar;
+      routes.push({
+        id: `lfo${lfoIndex}_slot${slotIndex}`,
+        source: `lfo${lfoIndex}`,
+        source_type: 'lfo',
+        route_type: 'slot_lane',
+        destination: `slot${slotIndex}.value`,
+        slot: slotIndex,
+        mode: ['add_clamp', 'subtract', 'replace', 'scale', 'centered'][mode],
+        amount: lane.amount,
+        exit: 'slot_resolver',
+        persisted: true,
+        active,
+        last_value: lastValue,
+        range: { min: 0, max: 127 },
+        midi: slotMidi(slot)
+      });
     });
 
     const conflicts = Array.from(ccWriters.entries())
@@ -707,7 +807,17 @@ export function createSimulator(simDeps = {}) {
           writers: writers.join(', '),
           message: `${writers.length} live modulators write CC ${cc} on channel ${channel}`
         };
-      });
+      })
+      .concat(
+        Array.from(slotWriters.entries())
+          .filter(([, writers]) => writers.length > 1)
+          .map(([slot, writers]) => ({
+            target: 'slot.value',
+            slot,
+            writers: writers.join(', '),
+            message: `${writers.length} live modulators write slot ${slot} value`
+          }))
+      );
 
     return {
       command: 'GET_MOD_MATRIX',
