@@ -200,31 +200,31 @@ def main() -> None:
     if selected_docs:
         guard_commands.extend(
             [
-                ("markdown links", ["python3", "tools/check_markdown_links.py", "--root", "."]),
+                ("markdown links", [sys.executable, "tools/check_markdown_links.py", "--root", "."]),
                 (
                     "public UI vocabulary",
-                    ["python3", "tools/check_public_ui_vocabulary.py", "--root", "."],
+                    [sys.executable, "tools/check_public_ui_vocabulary.py", "--root", "."],
                 ),
-                ("wiki contract", ["python3", "tools/check_wiki_contract.py", "--root", "."]),
-                ("contract ledger", ["python3", "tools/check_contract_ledger.py", "--root", "."]),
+                ("wiki contract", [sys.executable, "tools/check_wiki_contract.py", "--root", "."]),
+                ("contract ledger", [sys.executable, "tools/check_contract_ledger.py", "--root", "."]),
                 (
                     "schema keyword coverage",
-                    ["python3", "tools/check_schema_keyword_coverage.py", "--root", "."],
+                    [sys.executable, "tools/check_schema_keyword_coverage.py", "--root", "."],
                 ),
-                ("comment style", ["python3", "tools/check_comment_style.py", "--root", "."]),
-                ("contract sync", ["python3", "tools/check_contract_sync.py", "--root", "."]),
+                ("comment style", [sys.executable, "tools/check_comment_style.py", "--root", "."]),
+                ("contract sync", [sys.executable, "tools/check_contract_sync.py", "--root", "."]),
                 (
                     "simulator protocol sync",
-                    ["python3", "tools/check_simulator_protocol_sync.py", "--root", "."],
+                    [sys.executable, "tools/check_simulator_protocol_sync.py", "--root", "."],
                 ),
-                ("control coverage", ["python3", "tools/check_control_coverage.py", "--root", "."]),
+                ("control coverage", [sys.executable, "tools/check_control_coverage.py", "--root", "."]),
             ]
         )
     if selected_release:
         guard_commands.append(
             (
                 "release readiness hardware-test",
-                ["python3", "tools/check_release_readiness.py", "--root", ".", "--stage", "hardware-test"],
+                [sys.executable, "tools/check_release_readiness.py", "--root", ".", "--stage", "hardware-test"],
             )
         )
     if selected_app:

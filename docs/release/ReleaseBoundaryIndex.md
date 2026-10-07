@@ -50,7 +50,7 @@ Treat these as current boundaries unless a dated release note says otherwise:
 
 ```bash
 python3 tools/check_release_readiness.py --root . --stage hardware-test --env teensy40_main
-python3 tools/doctor.py --release
+./tools/doctor --release
 ```
 
 Use `--stage beta` or `--stage public` only when you are deliberately testing those wider release claims.

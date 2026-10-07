@@ -22,7 +22,7 @@ Before opening a pull request:
 The one-command local readiness gate is:
 
 ```bash
-python3 tools/doctor.py --full
+./tools/doctor --full
 ```
 
 If it cannot run in your environment, report which scoped commands you ran and why the remainder was skipped.
@@ -66,11 +66,11 @@ npm --prefix bridge test
 Use the smallest grouped check that covers the change while developing:
 
 ```bash
-python3 tools/doctor.py --docs
-python3 tools/doctor.py --app
-python3 tools/doctor.py --bridge
-python3 tools/doctor.py --release
-python3 tools/doctor.py --firmware
+./tools/doctor --docs
+./tools/doctor --app
+./tools/doctor --bridge
+./tools/doctor --release
+./tools/doctor --firmware
 ```
 
 The release-facing contract checks include:

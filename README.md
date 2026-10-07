@@ -63,7 +63,7 @@ pio test -d firmware -e teensy40_unity -vvv
 Run the grouped repository checks before proposing a change:
 
 ```bash
-python3 tools/doctor.py --full
+./tools/doctor --full
 ```
 
 See [Contributing](CONTRIBUTING.md) for the scoped test matrix and the custom Unity transport rules.
