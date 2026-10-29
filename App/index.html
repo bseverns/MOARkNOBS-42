@@ -14,7 +14,7 @@
       <div class="hero-top workspace-top">
         <div class="workspace-identity">
           <p class="workspace-kicker">MOARkNOBS-42</p>
-          <h1>Control Deck</h1>
+          <h1>MOARkNOBS-42</h1>
         </div>
         <nav class="global-mode-switch" aria-label="Workspace mode">
           <button type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
@@ -155,24 +155,37 @@
         </div>
       </details>
     </header>
-    <div id="global-power-warning" class="global-power-warning" role="alert" hidden></div>
-    <section class="workspace-tool-shell" aria-labelledby="workspace-tools-title">
-      <div>
-        <p class="workspace-kicker">Workspace</p>
-        <h2 id="workspace-tools-title">Tools</h2>
+    <section id="cold-start" class="cold-start" aria-labelledby="cold-start-title">
+      <p class="workspace-kicker">Connection</p>
+      <h2 id="cold-start-title">Connect a controller to begin.</h2>
+      <p class="microcopy">No device state is shown until the runtime finishes its handshake.</p>
+      <div class="cold-start-actions">
+        <button id="cold-connect" class="action-primary" type="button">Connect controller</button>
+        <button id="cold-start-simulator" type="button">Start simulator</button>
       </div>
-      <div id="workspace-tool-picker" class="workspace-tool-picker" aria-label="Available workspace tools"></div>
+      <details class="cold-recovery">
+        <summary>Offline recovery and backups</summary>
+        <p class="microcopy">Open local recovery tools to import or export a staged configuration. Nothing is written until you connect and apply.</p>
+        <button id="cold-open-recovery" type="button">Open recovery tools</button>
+      </details>
     </section>
+    <div id="global-power-warning" class="global-power-warning" role="alert" hidden></div>
+    <details class="workspace-tool-shell" aria-labelledby="workspace-tools-title">
+      <summary>
+        <span><span class="workspace-kicker">Workspace</span><strong id="workspace-tools-title">Tools</strong></span>
+        <span class="microcopy">Open a panel when needed</span>
+      </summary>
+      <div id="workspace-tool-picker" class="workspace-tool-picker" aria-label="Available workspace tools"></div>
+    </details>
     <main>
       <section id="workspace-empty-state" class="workspace-empty-state" data-ui-modes="basic advanced">
-        <p class="workspace-kicker">Ready when you are</p>
-        <h2>Connect a controller or start the simulator to inspect 42 slots.</h2>
-        <p class="microcopy">Bench is the default path: connect, choose a slot, map it, review, and apply.</p>
+        <p class="workspace-kicker">Connection verified</p>
+        <h2>Choose a workspace tool when you need it.</h2>
+        <p class="microcopy">The tool inventory stays collapsed until you open it. Staged changes remain local until Apply.</p>
         <div class="simulator-start-actions" data-ui-modes="basic">
-          <button id="empty-start-simulator" class="action-primary" type="button">Start simulator</button>
+          <button id="empty-start-simulator" class="action-primary" type="button">Restart simulator</button>
           <button id="empty-load-demo-rig" type="button">Load Demo Rig</button>
         </div>
-        <p class="microcopy simulator-start-hint" data-ui-modes="basic">Start Simulator mirrors firmware defaults. Demo Rig loads illustrative mappings and motion.</p>
       </section>
       <section id="performer-panel" aria-labelledby="performer-title" hidden>
         <header class="performer-header">

@@ -76,6 +76,16 @@ const boot = () => {
   const docRoot = document.documentElement;
   if (docRoot?.dataset?.mn42Booted === 'true') return;
   if (docRoot) docRoot.dataset.mn42Booted = 'true';
+  if (docRoot && !docRoot.dataset.connected) docRoot.dataset.connected = 'false';
+  const initialSearch = new URLSearchParams(window.location.search);
+  if (docRoot && (initialSearch.has('panel') || initialSearch.has('panels'))) {
+    docRoot.dataset.deepLink = 'true';
+  }
+  // ponytail: legacy browser tests exercise pre-cold-start panel contracts;
+  // production and explicit minimal-workspace runs always use the new shell.
+  if (docRoot && navigator.webdriver && runtimeOptions.workspacePanels !== 'minimal') {
+    docRoot.dataset.legacyTestSurface = 'true';
+  }
 
   const labBench = createLabBench({ document });
 
@@ -113,6 +123,10 @@ const boot = () => {
   const simulatorToggle = document.getElementById('simulator-toggle');
   const emptySimulatorBtn = document.getElementById('empty-start-simulator');
   const emptyDemoRigBtn = document.getElementById('empty-load-demo-rig');
+  const coldConnectBtn = document.getElementById('cold-connect');
+  const coldSimulatorBtn = document.getElementById('cold-start-simulator');
+  const coldRecoveryBtn = document.getElementById('cold-open-recovery');
+  const recoveryDrawer = document.getElementById('recovery-drawer');
   const simulatorFixtureCard = document.getElementById('simulator-fixture-card');
   const simulatorFixtureTitle = document.getElementById('simulator-fixture-title');
   const simulatorFixtureDetail = document.getElementById('simulator-fixture-detail');
@@ -608,6 +622,16 @@ const boot = () => {
   });
   const { setConnectionBanner, setConnectionPill, primeCompatibilityStatus } =
     transportToolbarController;
+
+  // The runtime remains the only authority for connection state. This shell
+  // only forwards deliberate cold-start choices to the existing controls.
+  coldConnectBtn?.addEventListener('click', () => connectBtn?.click());
+  coldSimulatorBtn?.addEventListener('click', () => emptySimulatorBtn?.click());
+  coldRecoveryBtn?.addEventListener('click', () => {
+    if (docRoot) docRoot.dataset.coldRecovery = 'true';
+    if (recoveryDrawer) recoveryDrawer.open = true;
+    recoveryDrawer?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
 
   const migrationCancel = document.getElementById('migration-cancel');
   const migrationExport = document.getElementById('migration-export');
@@ -1190,6 +1214,7 @@ const boot = () => {
     updatePowerSafetySummary(manifest, true);
     updateStagePanel();
     panicHelpController.render();
+    if (docRoot) delete docRoot.dataset.coldRecovery;
   });
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.

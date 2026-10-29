@@ -11,8 +11,16 @@ async function bootSimulator(page, mode = 'basic') {
     };
   }, { mode });
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('button', { name: 'Connect controller' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await openWorkspaceTools(page);
+}
+
+async function openWorkspaceTools(page) {
+  const tools = page.locator('.workspace-tool-shell');
+  if (!(await tools.evaluate((element) => element.open))) {
+    await tools.locator('summary').click();
+  }
 }
 
 test.describe('progressive workspace panels', () => {
@@ -23,18 +31,20 @@ test.describe('progressive workspace panels', () => {
   });
 
   test('Bench and Lab start with clean optional workspaces', async ({ page }) => {
-    await page.goto('/benzknobz.html?mode=basic');
+    await bootSimulator(page, 'basic');
+    await page.locator('.workspace-tool-shell > summary').click();
 
     await expect(page.getByRole('button', { name: 'Bench', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
     await expect(page.getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
-    await expect(page.locator('#workspace-tool-picker')).toBeVisible();
+    await expect(page.locator('#workspace-tool-picker')).toBeHidden();
     await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
     await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(0);
+    await openWorkspaceTools(page);
     await expect(page.getByRole('group', { name: 'Lab Observe tools' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveAttribute(
       'aria-pressed',
@@ -58,7 +68,7 @@ test.describe('progressive workspace panels', () => {
   });
 
   test('mode changes retain open tools that remain eligible', async ({ page }) => {
-    await page.goto('/benzknobz.html?mode=basic');
+    await bootSimulator(page, 'basic');
     await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
@@ -70,13 +80,11 @@ test.describe('progressive workspace panels', () => {
     );
   });
 
-  test('an initial tool does not reopen after the operator closes it', async ({ page }) => {
-    await page.addInitScript(() => {
-      window.__MN42_RUNTIME_OPTIONS = {};
-    });
-    await page.goto('/benzknobz.html?mode=basic');
+  test('a tool does not reopen after the operator closes it', async ({ page }) => {
+    await bootSimulator(page, 'basic');
     const liveSlots = page.getByRole('button', { name: 'Live Slots', exact: true });
-    await expect(liveSlots).toHaveAttribute('aria-pressed', 'true');
+    await expect(liveSlots).toHaveAttribute('aria-pressed', 'false');
+    await liveSlots.click();
     await liveSlots.click();
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
@@ -87,7 +95,7 @@ test.describe('progressive workspace panels', () => {
   });
 
   test('the picker remains an interactive scroll target', async ({ page }) => {
-    await page.goto('/benzknobz.html?mode=advanced');
+    await bootSimulator(page, 'advanced');
     await expect(page.locator('#workspace-tool-picker')).toHaveCSS('pointer-events', 'auto');
   });
 
@@ -147,6 +155,7 @@ test.describe('progressive workspace panels', () => {
     await page.goto('/benzknobz.html?mode=basic');
     await page.getByRole('button', { name: 'Connect' }).click();
     await expect(page.locator('#connection-pill')).toContainText('Connected');
+    await openWorkspaceTools(page);
     await page.waitForTimeout(250);
     const before = await page.evaluate(() => window.__workspaceWrites.length);
 
@@ -160,7 +169,12 @@ test.describe('progressive workspace panels', () => {
   });
 
   test('deep links open only the requested allowed panel', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };
+    });
     await page.goto('/benzknobz.html?mode=advanced&panel=scope');
+    await page.getByRole('button', { name: 'Connect' }).click();
+    await openWorkspaceTools(page);
 
     await expect(page.locator('#scope-panel')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveAttribute(
