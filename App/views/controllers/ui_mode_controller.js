@@ -45,6 +45,7 @@ export function createUiModeController({
   getSlotCount = () => 0,
   renderSlotEditor = () => {},
   setPerformerVisible = () => {},
+  canChangeMode = () => true,
   onModeChanged = () => {}
 } = {}) {
   const {
@@ -151,8 +152,10 @@ export function createUiModeController({
     );
   }
 
-  function setUIMode(mode, { persist = true } = {}) {
-    activeUiMode = normalizeUIMode(mode);
+  function setUIMode(mode, { persist = true, preserveDraft = false } = {}) {
+    const nextMode = normalizeUIMode(mode);
+    if (nextMode !== activeUiMode && !preserveDraft && !canChangeMode(nextMode, activeUiMode)) return false;
+    activeUiMode = nextMode;
     if (docRoot) docRoot.dataset.uiMode = activeUiMode;
     refreshModeNodes();
 
@@ -173,6 +176,7 @@ export function createUiModeController({
     refreshUtilityTabs();
     if (getSlotCount() > 0) renderSlotEditor();
     onModeChanged(activeUiMode);
+    return true;
   }
 
   function refreshEditorTabs() {

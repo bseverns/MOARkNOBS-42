@@ -121,7 +121,7 @@ export class ScopePanel {
     });
     this.syncTimeWindowControls();
     this.handleRenderToggle = () => {
-      if (this.renderToggle && !this.renderToggle.open) {
+      if (this.container.hidden || (this.renderToggle && !this.renderToggle.open)) {
         this.stopRenderLoop();
         return;
       }
@@ -130,6 +130,7 @@ export class ScopePanel {
       this.startRenderLoop();
     };
     this.renderToggle?.addEventListener('toggle', this.handleRenderToggle);
+    this.container.addEventListener('workspace-panel-visibility', this.handleRenderToggle);
 
     this.telemetrySubscription = runtime?.on('telemetry', (frame) => this.handleTelemetry(frame));
     this.manifestSubscription = runtime?.on('manifest', (payload) => this.applyManifest(payload));
@@ -318,6 +319,7 @@ export class ScopePanel {
   // Kick off the scope repaint loop once the panel is live.
   startRenderLoop() {
     if (this.frameRequest !== null) return;
+    if (this.container.hidden) return;
     if (this.renderToggle && !this.renderToggle.open) return;
     this.container.dataset.scopeRendering = 'true';
     this.frameRequest = requestAnimationFrame((timestamp) => this.renderFrame(timestamp));
@@ -332,7 +334,7 @@ export class ScopePanel {
   // Frame limiter that keeps the scope readable without hogging the browser.
   renderFrame(timestamp) {
     this.frameRequest = null;
-    if (this.renderToggle && !this.renderToggle.open) {
+    if (this.container.hidden || (this.renderToggle && !this.renderToggle.open)) {
       this.stopRenderLoop();
       return;
     }
@@ -349,6 +351,7 @@ export class ScopePanel {
     this.manifestSubscription?.();
     this.resizeObserver?.disconnect?.();
     this.renderToggle?.removeEventListener('toggle', this.handleRenderToggle);
+    this.container?.removeEventListener('workspace-panel-visibility', this.handleRenderToggle);
   }
 
   // Draw the background grid, selected EF traces, LFO traces, and peak marker.

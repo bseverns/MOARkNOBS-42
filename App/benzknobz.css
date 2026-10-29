@@ -4779,3 +4779,36 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 .motion-composition summary { cursor: pointer; font-size: .78rem; color: var(--color-accent); }
 .motion-composition > * + * { margin-top: 10px; }
 .state-file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Progressive workspace: modes expose tools; operators choose what occupies the viewport. */
+.workspace-tool-shell {
+  position: sticky;
+  top: 0;
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px clamp(12px, 3vw, 36px);
+  border-block: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+  backdrop-filter: blur(12px);
+  overflow-x: clip;
+  pointer-events: none;
+}
+.workspace-tool-shell h2, .workspace-tool-shell p { margin: 0; }
+.workspace-tool-shell h2 { font-size: .9rem; }
+.workspace-kicker { color: var(--color-muted); font: .65rem var(--font-mono); text-transform: uppercase; letter-spacing: .1em; }
+.workspace-tool-picker { display: flex; flex-wrap: wrap; gap: 6px; pointer-events: auto; }
+.workspace-tool-group { display: flex; flex-wrap: wrap; gap: 5px; padding: 0; border: 0; }
+.workspace-tool-group[hidden] { display: none !important; }
+.workspace-tool-group legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.workspace-tool-picker button { min-height: 34px; padding: 5px 9px; font-size: .72rem; }
+.workspace-tool-picker button[aria-pressed='true'] { border-color: var(--color-accent); background: rgba(45,226,230,.12); }
+[data-workspace-panel][hidden], [data-workspace-group][hidden] { display: none !important; }
+.lab-bench-group-header { margin-bottom: 10px; }
+.lab-bench-group-header h2 { margin: 0; font-size: 1rem; }
+@media (max-width: 620px) {
+  .workspace-tool-shell { position: static; align-items: flex-start; flex-direction: column; }
+  .workspace-tool-picker { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .workspace-tool-group { flex: 0 0 auto; }
+}

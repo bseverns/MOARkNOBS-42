@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="refresh" content="0; url=./" />
+    <script>
+      if (location.search || location.hash) location.replace(`./${location.search}${location.hash}`);
+    </script>
     <title>MOARkNOBZ Control Deck</title>
     <link rel="canonical" href="./" />
     <link rel="stylesheet" href="benzknobz.css" />

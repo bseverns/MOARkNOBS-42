@@ -4,7 +4,9 @@ function makeBenchPanel(document, bench, name, label) {
   const panel = document.createElement('section');
   panel.className = `lab-bench-panel utility-panel lab-bench-panel--${name}`;
   panel.dataset.utilityPanel = name;
+  panel.dataset.workspaceGroup = `Lab ${name[0].toUpperCase()}${name.slice(1)}`;
   panel.setAttribute('aria-label', label);
+  panel.innerHTML = `<header class="lab-bench-group-header"><h2>${label}</h2></header>`;
   bench.append(panel);
   return panel;
 }
@@ -29,6 +31,13 @@ function makeInstrumentZone(document, name, title, authority) {
   zone.append(content);
   return { zone, content };
 }
+
+const GROUP_SUMMARY = {
+  instrument: 'USB MIDI',
+  profile: 'Incoming MIDI',
+  observe: 'EF/LFO Scope · MIDI Monitor',
+  evidence: 'Diagnostics · Debug Log · Session Log'
+};
 
 function decorateHeading(document, selector, icon) {
   const heading = document.querySelector(selector);
@@ -75,26 +84,15 @@ export function createLabBench({ document, main = document?.querySelector('main'
     <header class="lab-bench-header">
       <div>
         <p class="workspace-kicker">Lab Bench</p>
-        <h2 id="lab-bench-title">Choose a layer of the machine</h2>
-        <p class="microcopy">Instrument, profile, observation, and evidence each keep their own authority and purpose.</p>
+        <h2 id="lab-bench-title">Open only the tools you need</h2>
+        <p class="microcopy">Instrument, Profile, Observe, and Evidence remain separate authority groups.</p>
       </div>
       <div class="lab-bench-tabbar" role="tablist" aria-label="Lab Bench workspaces">
-        <button type="button" class="utility-tab" data-utility-tab="instrument" aria-label="Instrument" aria-pressed="true">
-          ${explainerIconMarkup('instrument', 'explainer-icon--tab')}
-          <span><strong>Instrument</strong><small>Assignments · Filter · ARG · LEDs · USB MIDI · Clock</small></span>
-        </button>
-        <button type="button" class="utility-tab" data-utility-tab="profile" aria-label="Profile" aria-pressed="false">
-          ${explainerIconMarkup('profile', 'explainer-icon--tab')}
-          <span><strong>Profile</strong><small>Arp · LFO generators &amp; routes · Incoming MIDI</small></span>
-        </button>
-        <button type="button" class="utility-tab" data-utility-tab="observe" aria-label="Observe" aria-pressed="false">
-          ${explainerIconMarkup('observe', 'explainer-icon--tab')}
-          <span><strong>Observe</strong><small>EF/LFO Scope · MIDI Monitor · Device Monitor · Modulation Matrix</small></span>
-        </button>
-        <button type="button" class="utility-tab" data-utility-tab="evidence" aria-label="Evidence" aria-pressed="false">
-          ${explainerIconMarkup('evidence', 'explainer-icon--tab')}
-          <span><strong>Evidence</strong><small>Staged Diff · Slot Inspector · Debug Log</small></span>
-        </button>
+        ${['instrument', 'profile', 'observe', 'evidence'].map((name, index) => `
+          <button type="button" class="utility-tab" data-utility-tab="${name}" aria-label="${name[0].toUpperCase()}${name.slice(1)}" aria-pressed="${index === 0}">
+            ${explainerIconMarkup(name, 'explainer-icon--tab')}
+            <span><strong>${name[0].toUpperCase()}${name.slice(1)}</strong> ${GROUP_SUMMARY[name]}</span>
+          </button>`).join('')}
       </div>
     </header>
   `;
