@@ -57,6 +57,40 @@ test.describe('progressive workspace panels', () => {
     await expect(page.locator('#device-monitor-section')).toBeVisible();
   });
 
+  test('mode changes retain open tools that remain eligible', async ({ page }) => {
+    await page.goto('/benzknobz.html?mode=basic');
+    await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
+
+    await page.getByRole('button', { name: 'Lab', exact: true }).click();
+
+    await expect(page.locator('#live-panel')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Live Slots', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  test('an initial tool does not reopen after the operator closes it', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = {};
+    });
+    await page.goto('/benzknobz.html?mode=basic');
+    const liveSlots = page.getByRole('button', { name: 'Live Slots', exact: true });
+    await expect(liveSlots).toHaveAttribute('aria-pressed', 'true');
+    await liveSlots.click();
+
+    await page.getByRole('button', { name: 'Lab', exact: true }).click();
+    await page.getByRole('button', { name: 'Bench', exact: true }).click();
+
+    await expect(page.locator('#live-panel')).toBeHidden();
+    await expect(liveSlots).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('the picker remains an interactive scroll target', async ({ page }) => {
+    await page.goto('/benzknobz.html?mode=advanced');
+    await expect(page.locator('#workspace-tool-picker')).toHaveCSS('pointer-events', 'auto');
+  });
+
   test('selecting a Bench slot opens and focuses its editor on demand', async ({ page }) => {
     await bootSimulator(page, 'basic');
 

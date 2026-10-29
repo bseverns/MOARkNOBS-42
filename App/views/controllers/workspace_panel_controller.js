@@ -15,6 +15,7 @@ export function createWorkspacePanelController({
     button: null
   }));
   let activeMode = initialMode;
+  const initializedOpen = new Set();
 
   function allowed(entry) {
     return entry.modes.includes(activeMode);
@@ -113,7 +114,13 @@ export function createWorkspacePanelController({
 
   function setMode(mode, { openDeepLink = false } = {}) {
     activeMode = String(mode);
-    closeAll({ updateUrl: false });
+    if (openDeepLink) {
+      closeAll({ updateUrl: false });
+    } else {
+      entries
+        .filter((entry) => entry.node && !entry.node.hidden && !allowed(entry))
+        .forEach((entry) => setOpen(entry, false, { updateUrl: false }));
+    }
     renderPicker();
     if (openDeepLink && typeof window !== 'undefined') {
       const requested = new URLSearchParams(window.location.search).get('panel') ?? '';
@@ -123,7 +130,12 @@ export function createWorkspacePanelController({
         .filter(Boolean)
         .forEach((id) => open(id, { updateUrl: false }));
     }
-    entries.filter((entry) => entry.initialOpen && allowed(entry)).forEach((entry) => open(entry.id, { updateUrl: false }));
+    entries
+      .filter((entry) => entry.initialOpen && allowed(entry) && !initializedOpen.has(entry.id))
+      .forEach((entry) => {
+        initializedOpen.add(entry.id);
+        open(entry.id, { updateUrl: false });
+      });
     refreshGroupVisibility();
     syncUrl();
   }
