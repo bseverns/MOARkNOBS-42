@@ -29,7 +29,8 @@ the runtime's label and recovery guidance.
 After `connected`, the runtime-provided connected state precedes a collapsed Workspace Tools disclosure. The existing
 workspace-panel controller remains the sole owner of workspace panel visibility; opening or closing the inventory does
 not open a panel, change mode, or write to the device. Explicit `panel`/`panels` deep links retain their requested-panel
-workflow. The before/after hierarchy and approved visual baselines are recorded in
+workflow. Hidden optional monitor panels retain the latest bounded runtime data but defer DOM rendering until opened. The
+before/after hierarchy and approved visual baselines are recorded in
 [Connection-First Visual Hierarchy](ColdStartVisualHierarchy.md).
 
 ## Transport modes
