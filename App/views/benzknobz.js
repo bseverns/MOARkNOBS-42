@@ -81,11 +81,7 @@ const boot = () => {
   if (docRoot && (initialSearch.has('panel') || initialSearch.has('panels'))) {
     docRoot.dataset.deepLink = 'true';
   }
-  // ponytail: legacy browser tests exercise pre-cold-start panel contracts;
-  // production and explicit minimal-workspace runs always use the new shell.
-  if (docRoot && navigator.webdriver && runtimeOptions.workspacePanels !== 'minimal') {
-    docRoot.dataset.legacyTestSurface = 'true';
-  }
+
 
   const labBench = createLabBench({ document });
 
@@ -659,10 +655,7 @@ const boot = () => {
     telemetry: null
   };
   const ledControlsController = createLedControlsController({ container: ledGrid, runtime });
-  // ponytail: keep legacy Playwright coverage useful while workspace-aware specs exercise the production default.
-  const openLegacyTestWorkspace =
-    navigator.webdriver && window.__MN42_RUNTIME_OPTIONS?.workspacePanels !== 'minimal';
-  const workspaceTool = (descriptor) => ({ ...descriptor, initialOpen: openLegacyTestWorkspace });
+  const workspaceTool = (descriptor) => descriptor;
   let latestTelemetry = null;
   let latestTelemetryHealth = null;
   const workspacePanelController = createWorkspacePanelController({
