@@ -228,9 +228,8 @@ inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
 } // namespace
 
 // Constructor
-ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
-                             PotentiometerManager *potentiometerManager)
-    : _scanner(config, controlPins), _potentiometerManager(potentiometerManager), activeMode(0),
+ButtonManager::ButtonManager(const HardwareConfig &config, PotentiometerManager *potentiometerManager)
+    : _scanner(config), _potentiometerManager(potentiometerManager), activeMode(0),
       _pendingEfSlot(-1), _efAssignDeadline(0) {}
 
 // Called during setup to configure the multiplexers and reset gesture state.
@@ -1269,6 +1268,10 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     dispatchGestureEvents(
         _gesture.updateControlMask(mask, now, !_onDeviceConfigModeActive && !_lfoTuningActive),
         context);
+
+    if (!_scanner.controlPotsAvailable()) {
+        return;
+    }
 
     for (uint8_t i = 0; i < 3; ++i) {
         _ctrlPotValues[i] =

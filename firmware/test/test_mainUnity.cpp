@@ -91,6 +91,7 @@ void test_set_provider_returns_previous();
 void test_digital_provider_overrides_matrix_reads();
 void test_button_scanner_debounces_one_matrix_row_per_pass();
 void test_button_scanner_reports_debounced_control_mask_and_raw_pots();
+void test_bench_pin_contract_has_no_i2c_or_vref_conflicts();
 void test_runtime_hardware_tuning_preserves_structural_config();
 void test_runtime_hardware_tuning_rejects_zero_intervals();
 void test_select_boot_slot_usbconfig();
@@ -260,6 +261,7 @@ void setup() {
     RUN_TEST(test_digital_provider_overrides_matrix_reads);
     RUN_TEST(test_button_scanner_debounces_one_matrix_row_per_pass);
     RUN_TEST(test_button_scanner_reports_debounced_control_mask_and_raw_pots);
+    RUN_TEST(test_bench_pin_contract_has_no_i2c_or_vref_conflicts);
     RUN_TEST(test_runtime_hardware_tuning_preserves_structural_config);
     RUN_TEST(test_runtime_hardware_tuning_rejects_zero_intervals);
     RUN_TEST(test_select_boot_slot_usbconfig);

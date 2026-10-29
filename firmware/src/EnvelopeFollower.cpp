@@ -400,13 +400,15 @@ int EnvelopeFollower::getEnvelopeA() const { return envelopeA; }
 int EnvelopeFollower::getEnvelopeB() const { return envelopeB; }
 
 void EnvelopeFollower::calibrate() {
-    const uint8_t samples = 8;
-    uint32_t refTotal = 0;
-    for (uint8_t i = 0; i < samples; ++i) {
-        refTotal += hardware::readAnalog(VREF_ADC_PIN);
-        delayMicroseconds(10);
+    if (VREF_ADC_PIN != kUnavailablePin) {
+        const uint8_t samples = 8;
+        uint32_t refTotal = 0;
+        for (uint8_t i = 0; i < samples; ++i) {
+            refTotal += hardware::readAnalog(VREF_ADC_PIN);
+            delayMicroseconds(10);
+        }
+        vref = (static_cast<float>(refTotal) / samples) * VadcScale;
     }
-    vref = (static_cast<float>(refTotal) / samples) * VadcScale;
     calibrateBaseline();
     configManager.saveEnvelopeBaseline(index, baseline);
 }

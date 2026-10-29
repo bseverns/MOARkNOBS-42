@@ -4,8 +4,7 @@
 #include "Hardware/IO.h"
 #include "Utility.h"
 
-ButtonScanner::ButtonScanner(const HardwareConfig &config, const uint8_t *controlPins)
-    : _config(config), _controlPins(controlPins) {
+ButtonScanner::ButtonScanner(const HardwareConfig &config) : _config(config) {
     resetState();
 }
 
@@ -27,7 +26,7 @@ void ButtonScanner::initHardware() {
         pinMode(_config.muxrPins[i], OUTPUT);
         pinMode(_config.muxcPins[i], OUTPUT);
     }
-    pinMode(_config.buttonMuxAnalogPin, INPUT);
+    pinMode(_config.matrixInputPin, INPUT);
     pinMode(_config.rowDriverPin, OUTPUT);
     digitalWrite(_config.rowDriverPin, LOW);
     resetState();
@@ -62,14 +61,14 @@ MatrixScanRange ButtonScanner::scanNextMatrixRow(unsigned long now) {
     const uint8_t begin = static_cast<uint8_t>(row * BUTTON_COLS);
     const uint8_t end = static_cast<uint8_t>(begin + BUTTON_COLS);
 
-    digitalWrite(_config.rowDriverPin, HIGH);
+    digitalWrite(_config.rowDriverPin, LOW);
     setMuxFast(_config.muxrPins, row);
     waitForMuxSettle();
     for (uint8_t col = 0; col < BUTTON_COLS; ++col) {
         setMuxFast(_config.muxcPins, col);
         waitForMuxSettle();
         const uint8_t index = static_cast<uint8_t>(begin + col);
-        const bool raw = hardware::readAnalog(_config.buttonMuxAnalogPin) < BUTTON_PRESS_THRESHOLD;
+        const bool raw = hardware::readDigital(_config.matrixInputPin) == LOW;
         _cachedRowValues[col] = raw ? HIGH : LOW;
         Utility::debounce(_stableStates[index], _lastRawStates[index], raw,
                           _lastDebounceTimes[index], now, DEBOUNCE_DELAY);
@@ -87,15 +86,17 @@ void ButtonScanner::scanControlBank(unsigned long now) {
         waitForMuxSettle();
         const uint8_t controlIndex = static_cast<uint8_t>(channel - 6);
         const uint8_t index = static_cast<uint8_t>(NUM_VIRTUAL_BUTTONS + controlIndex);
-        const bool raw = hardware::readAnalog(_config.buttonMuxAnalogPin) < BUTTON_PRESS_THRESHOLD;
+        const bool raw = hardware::readDigital(_config.matrixInputPin) == HIGH;
         Utility::debounce(_stableStates[index], _lastRawStates[index], raw,
                           _lastDebounceTimes[index], now, DEBOUNCE_DELAY);
     }
 
-    for (uint8_t index = 0; index < 3; ++index) {
-        selectMux(0, static_cast<uint8_t>(12 + index));
-        waitForMuxSettle();
-        _controlPotRaw[index] = hardware::readAnalog(_config.buttonMuxAnalogPin);
+    if (_config.controlPotsAvailable) {
+        for (uint8_t index = 0; index < 3; ++index) {
+            selectMux(0, static_cast<uint8_t>(12 + index));
+            waitForMuxSettle();
+            _controlPotRaw[index] = hardware::readAnalog(_config.matrixInputPin);
+        }
     }
 }
 
@@ -117,28 +118,24 @@ int ButtonScanner::controlPotRaw(uint8_t index) const {
     return index < 3 ? _controlPotRaw[index] : 0;
 }
 
+bool ButtonScanner::controlPotsAvailable() const { return _config.controlPotsAvailable; }
+
 uint8_t ButtonScanner::readMatrixButton(uint8_t index) const {
     if (index >= NUM_VIRTUAL_BUTTONS) return LOW;
     const uint8_t row = static_cast<uint8_t>(index / BUTTON_COLS);
     const uint8_t col = static_cast<uint8_t>(index % BUTTON_COLS);
     if (row != _cachedRow) {
-        digitalWrite(_config.rowDriverPin, HIGH);
+        digitalWrite(_config.rowDriverPin, LOW);
         setMuxFast(_config.muxrPins, row);
         waitForMuxSettle();
         for (uint8_t candidate = 0; candidate < BUTTON_COLS; ++candidate) {
             setMuxFast(_config.muxcPins, candidate);
             waitForMuxSettle();
             _cachedRowValues[candidate] =
-                hardware::readAnalog(_config.buttonMuxAnalogPin) < BUTTON_PRESS_THRESHOLD ? HIGH
-                                                                                          : LOW;
+                hardware::readDigital(_config.matrixInputPin) == LOW ? HIGH : LOW;
         }
         digitalWrite(_config.rowDriverPin, LOW);
         _cachedRow = row;
     }
     return _cachedRowValues[col];
-}
-
-bool ButtonScanner::readDirectControlButton(uint8_t index) const {
-    return index < NUM_CONTROL_BUTTONS && _controlPins != nullptr &&
-           hardware::readDigital(_controlPins[index]) == LOW;
 }

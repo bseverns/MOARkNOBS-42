@@ -40,7 +40,7 @@ void test_arg_sanitize_clamps_sources() {
 }
 
 void test_compute_slot_arg_level_blends_followers() {
-    PotentiometerManager pots(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pots(primaryMuxPins, secondaryMuxPins, A0);
     std::vector<EnvelopeFollower> followers;
     followers.reserve(NUM_ENVELOPES);
     for (uint8_t i = 0; i < NUM_ENVELOPES; ++i) {

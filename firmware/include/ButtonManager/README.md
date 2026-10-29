@@ -32,7 +32,7 @@ See the big picture in the [main firmware README](../../README.md).
 ```cpp
 #include "ButtonManager.h"
 
-ButtonManager buttons(hwConfig, CONTROL_PINS, &pots);
+ButtonManager buttons(hwConfig, &pots);
 
 void setup() {
   buttons.initButtons();

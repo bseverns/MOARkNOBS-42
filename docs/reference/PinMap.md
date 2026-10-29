@@ -1,36 +1,30 @@
-# Pin Map
+# Bench Pin Map — Rev A / `POWER_CHOKED_V1`
 
-Here's the lowdown on how the Teensy 4.0 talks to the outside world. For the full schematic chaos, peep the [board schematic](../sketch/MOAR_BOARD.png).
+This is the **assembled-board** contract reconciled against the 2026-08-13 schematics. It is intentionally narrower than the host configuration model: the 42 virtual slot mappings remain valid even where the physical board has no ADC path for a control.
 
-![Board Pin Trace](../sketch/TopLayer.png)
+| Teensy pin | Net / role | Firmware behavior |
+|---:|---|---|
+| 0 / 1 | MIDI RX / TX | DIN and TRS MIDI interface |
+| 2–5 | `MUXR1`–`MUXR4` | row-mux address outputs |
+| 6 | `LED` | WS2812 data |
+| 7 | `MRC_OLD` | disconnected after the analog-input bodge; pin 7 is not ADC-capable |
+| 8–11 | `MUXC1`–`MUXC4` | column/control-mux address outputs |
+| 14–17, 20–21 | `E1`–`E6` | envelope ADC inputs A0–A3, A6–A7 |
+| 18 / 19 | `SDA` / `SCL` | OLED I²C; never used as mux ADC inputs |
+| 22 / A8 | `MRR` | output driving the selected button-matrix row; never used as VREF ADC input |
+| 23 | status LED | indicator output |
+| 24 / A10 | `MRC` | bodge target; digital matrix/control reads plus ADC reads for MAIN/FP1/FP2 |
 
-Pins below are sorted by the Teensy's digital numbering. If you see "Analog read" in the notes, we're hitting that pin with `analogRead()` even though it's labeled by its digital ID.
+## Input topology
 
-| MCU Pin | Function            | Label            | Component                          | Notes                             |
-| ------- | ------------------- | ---------------- | ---------------------------------- | --------------------------------- |
-| 0       | MIDI in             | `MIDI_RX`        | DIN & TRS Type‑A jacks             | optocoupler assembly              |
-| 1       | MIDI out            | `MIDI_TX`        | DIN & TRS Type‑A jacks via AHCT245 | 220 Ω resistor on the line        |
-| 2       | MUX row select 1    | `MUXR1`          | CD74HC4067 row mux                 |                                   |
-| 3       | MUX row select 2    | `MUXR2`          | CD74HC4067 row mux                 |                                   |
-| 4       | MUX row select 3    | `MUXR3`          | CD74HC4067 row mux                 |                                   |
-| 5       | MUX row select 4    | `MUXR4`          | CD74HC4067 row mux                 |                                   |
-| 6       | WS2812 data         | `LED_PIN`        | LED strip                          | 330 Ω series resistor on the line |
-| 7       | Column MUX read     | `MUXC_IN`        | CD74HC4067 column mux              | Analog read                       |
-| 8       | MUX column select 1 | `MUXC1`          | CD74HC4067 column mux              |                                   |
-| 9       | MUX column select 2 | `MUXC2`          | CD74HC4067 column mux              |                                   |
-| 10      | MUX column select 3 | `MUXC3`          | CD74HC4067 column mux              |                                   |
-| 11      | MUX column select 4 | `MUXC4`          | CD74HC4067 column mux              |                                   |
-| 12      | Not connected       | —                | —                                  | leave it hanging                  |
-| 13      | Not connected       | —                | —                                  | leave it hanging                  |
-| 14      | Envelope input 1    | `EF1`            | Envelope follower                  | Analog read (A0)                  |
-| 15      | Envelope input 2    | `EF2`            | Envelope follower                  | Analog read (A1)                  |
-| 16      | Envelope input 3    | `EF3`            | Envelope follower                  | Analog read (A2)                  |
-| 17      | Envelope input 4    | `EF4`            | Envelope follower                  | Analog read (A3)                  |
-| 18      | I²C SDA             | `SDA`            | SSD1306 OLED                       |                                   |
-| 19      | I²C SCL             | `SCL`            | SSD1306 OLED                       |                                   |
-| 20      | Envelope input 5    | `EF5`            | Envelope follower                  | Analog read (A6)                  |
-| 21      | Envelope input 6    | `EF6`            | Envelope follower                  | Analog read (A7)                  |
-| 22      | Row MUX read        | `MUXR_IN`        | CD74HC4067 row mux                 | Analog read (A8)                  |
-| 23      | Power status LED    | `STATUS_LED_PIN` | On‑board indicator                 | Tied low until we scream          |
+- The 42-button panel is a 7×6 matrix. `MRR` selects/drives one row at a time; `MRC` reads a selected column. Matrix buttons are active-low, with column pull-ups shown on sheet 1.
+- `CTRL1`–`CTRL6` occupy column/control-mux channels 6–11 and are active-high, with 10 kΩ pulldowns shown on sheet 2.
+- `MAIN`, `FP1`, and `FP2` occupy channels 12–14 of that mux. The required hardware correction isolates `MRC` from pin 7 and jumps it to pin 24 / A10, allowing the same common to serve digital switch scans and ADC reads.
+- The 42 virtual slot controls and their saved MIDI mappings remain host/protocol concepts. The assembled Rev A board has no verified ADC-routed 42-slot-pot mux path.
+- `VREF` is used by the envelope circuits but has no verified dedicated ADC route to the Teensy. Firmware retains its calibrated/default reference rather than sampling A8/MRR as VREF.
 
-If a pin isn't listed here, it's either unused or riding shotgun for future hacks. All of the significant I/O pins (the ones on the sides) on the Teensy 4.0 are accounted for here.
+`MRC` includes R95 (220 Ω) in series and C77 (4.7 nF) to ground. Firmware allows 60 µs after every mux-address change before reading `MRC`; verify full-range, independent pot response on the assembled board.
+
+## Sources and limits
+
+Evidence: supplied schematic sheets `SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png` and `SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png`. Exact PCB connectivity remains subject to low-current bench confirmation. Do not change `POWER_CHOKED_V1` or increase LED limits based on this document.

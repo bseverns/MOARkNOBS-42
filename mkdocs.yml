@@ -151,6 +151,7 @@ nav:
       - Bringup: hardware-test/Bringup.md
       - Firmware Update: guides/FirmwareUpdate.md
       - Pin Map: reference/PinMap.md
+      - Bench Pin Reconciliation: hardware-test/BenchPinReconciliation.md
       - Current Hardware Build: reference/HardwareCurrentBuild.md
       - Hardware Test Matrix: hardware-test/TestMatrix.md
   - Prove:

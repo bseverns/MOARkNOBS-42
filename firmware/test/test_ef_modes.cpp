@@ -52,7 +52,7 @@ struct EfHarnessGuard {
 
 void test_peak_mode_rises_and_falls() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     ef.setModeSettings(baseSettings(EnvelopeFollower::EFMode::Peak));
@@ -83,7 +83,7 @@ void test_peak_mode_rises_and_falls() {
 
 void test_rms_mode_converges() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     ef.setModeSettings(baseSettings(EnvelopeFollower::EFMode::RMS));
@@ -100,7 +100,7 @@ void test_rms_mode_converges() {
 
 void test_gate_mode_hysteresis() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     EnvelopeFollower::EfModeSettings settings = baseSettings(EnvelopeFollower::EFMode::Gate);
@@ -131,7 +131,7 @@ void test_gate_mode_hysteresis() {
 
 void test_idle_floor_suppresses_disconnected_float() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     EnvelopeFollower::EfModeSettings settings = baseSettings(EnvelopeFollower::EFMode::Peak);
@@ -149,7 +149,7 @@ void test_idle_floor_suppresses_disconnected_float() {
 
 void test_auto_baseline_converges() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     EnvelopeFollower::EfModeSettings settings = baseSettings(EnvelopeFollower::EFMode::Peak);
@@ -170,7 +170,7 @@ void test_auto_baseline_converges() {
 
 void test_auto_gain_targets_level() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     EnvelopeFollower::EfModeSettings settings = baseSettings(EnvelopeFollower::EFMode::Peak);
@@ -193,7 +193,7 @@ void test_auto_gain_targets_level() {
 
 void test_stats_report_mode_and_value() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     ef.setModeSettings(baseSettings(EnvelopeFollower::EFMode::Follower));

@@ -25,7 +25,7 @@ inline constexpr bool kHasSD = false;
 HardwareConfig hwConfig = {
     .ledPin = 6,                // WS2812 data pin (docs/PinMap.md: LED_PIN)
     .statusLedPin = 23,         // status LED indicator (docs/PinMap.md: STATUS_LED_PIN)
-    .rowDriverPin = 7,          // button matrix row driver (docs/PinMap.md: PIN_ROW_DRV)
+    .rowDriverPin = 22,         // MRR: row-mux common drives the selected matrix row
     .slotLedCount = ManifestContract::kSlotCount, // total WS2812s in slot ring
     .efLedCount = ManifestContract::kEnvelopeCount, // envelope follower LEDs riding the strip
     .potLedCount = ManifestContract::kDefaultLedCount - ManifestContract::kSlotCount -
@@ -37,9 +37,10 @@ HardwareConfig hwConfig = {
     .envelopeTaskInterval = 5,  // ms cadence for envelope tracking
     .muxrPins = {2, 3, 4, 5},   // CD74HC4067 row select lines (docs/PinMap.md: MUXR0..3)
     .muxcPins = {8, 9, 10, 11}, // CD74HC4067 column select lines (docs/PinMap.md: MUXC0..3)
-    .buttonMuxAnalogPin = A4,   // button matrix analog read (docs/PinMap.md: BTN_MUX_OUT)
-    .potMuxAnalogPin = A5,      // pot matrix analog read (docs/PinMap.md: POT_MUX_OUT)
-    .vrefAdcPin = A8,           // VREF sense tap (docs/PinMap.md: VREF_ADC)
+    .matrixInputPin = 24,       // MRC bodge target: Teensy 4.0 pin 24 / A10
+    .slotPotMuxAnalogPin = kUnavailablePin, // no ADC-routed 42-slot pot mux on this PCB
+    .vrefAdcPin = kUnavailablePin, // no dedicated VREF ADC route on this PCB
+    .controlPotsAvailable = true, // MAIN/FP1/FP2 are MRC mux channels 12..14
 };
 
 // Global runtime variables

@@ -409,7 +409,13 @@ void checkDiagnosticsForAlerts() {
 void initializeRuntime(bool baselinesLoaded) {
     // Initialize runtime services now that the UI and EEPROM-backed state are ready.
     resetModulationTransport();
-    pinMode(VREF_ADC_PIN, INPUT);
+    if (VREF_ADC_PIN != kUnavailablePin) {
+        pinMode(VREF_ADC_PIN, INPUT);
+        g_vref = Utility::readVrefADC(VREF_ADC_PIN);
+    }
+    for (auto &ef : envelopeFollowers) {
+        ef.setVref(g_vref);
+    }
     for (int pin : ENVELOPE_ANALOG_PINS) {
 #if defined(INPUT_PULLDOWN)
         pinMode(pin, INPUT_PULLDOWN);
@@ -417,7 +423,6 @@ void initializeRuntime(bool baselinesLoaded) {
         pinMode(pin, INPUT);
 #endif
     }
-    g_vref = Utility::readVrefADC(VREF_ADC_PIN);
 
     midiHandler.begin();
     midiHandler.setDiagnostics(&g_systemDiagnostics);

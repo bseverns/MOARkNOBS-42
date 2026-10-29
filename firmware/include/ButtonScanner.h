@@ -17,7 +17,7 @@ struct MatrixScanRange {
 // does not interpret presses as gestures or mutate instrument configuration.
 class ButtonScanner {
   public:
-    ButtonScanner(const HardwareConfig &config, const uint8_t *controlPins);
+    explicit ButtonScanner(const HardwareConfig &config);
 
     void initHardware();
     MatrixScanRange scanNextMatrixRow(unsigned long now);
@@ -26,17 +26,16 @@ class ButtonScanner {
     bool isPressed(uint8_t index) const;
     uint8_t controlMask() const;
     int controlPotRaw(uint8_t index) const;
+    bool controlPotsAvailable() const;
 
     uint8_t readMatrixButton(uint8_t index) const;
-    bool readDirectControlButton(uint8_t index) const;
 
   private:
     static constexpr uint8_t kMuxSelectPins = 4;
-    static constexpr uint32_t kMuxSettleUs = 5;
+    static constexpr uint32_t kMuxSettleUs = 60;
     static constexpr uint8_t kTotalButtons = NUM_BUTTON_INPUTS;
 
     const HardwareConfig &_config;
-    const uint8_t *_controlPins;
     bool _stableStates[kTotalButtons] = {false};
     bool _lastRawStates[kTotalButtons] = {false};
     unsigned long _lastDebounceTimes[kTotalButtons] = {0};
