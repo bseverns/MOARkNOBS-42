@@ -17,6 +17,21 @@
 The view must not invent device truth. Identity, capabilities, configuration, persistence actions, and power-safety
 metadata remain manifest-, schema-, command-, or telemetry-backed.
 
+## Cold start and panel visibility
+
+A disconnected ordinary launch is connection-first: it presents only a controller connection action, an explicit
+simulator action, and an offline-recovery disclosure. It must not show device identity, firmware/schema, profile,
+power, telemetry, mode controls, or the workspace tool inventory until the runtime emits `connected`. The recovery
+disclosure may expose browser-local import/export staging, but must not imply a connection or enable a device write. It
+works even when Stage was the persisted mode. Compatibility and connection failures remain visible in that shell with
+the runtime's label and recovery guidance.
+
+After `connected`, the runtime-provided connected state precedes a collapsed Workspace Tools disclosure. The existing
+workspace-panel controller remains the sole owner of workspace panel visibility; opening or closing the inventory does
+not open a panel, change mode, or write to the device. Explicit `panel`/`panels` deep links retain their requested-panel
+workflow. The before/after hierarchy and approved visual baselines are recorded in
+[Connection-First Visual Hierarchy](ColdStartVisualHierarchy.md).
+
 ## Transport modes
 
 The App supports direct WebSerial, structured Bridge session, raw Bridge compatibility, and simulator transports. Their

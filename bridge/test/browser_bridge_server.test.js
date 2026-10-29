@@ -979,7 +979,7 @@ async function run() {
   const appHtml = appResponse.body.toString('utf8');
   assert.match(
     appHtml,
-    /MOARkNOBS-42 Browser Configurator[\s\S]*Control Deck/,
+    /MOARkNOBS-42 Browser Configurator[\s\S]*MOARkNOBS-42/,
     'server should expose the bundled configurator',
   );
 

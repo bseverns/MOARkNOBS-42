@@ -2621,9 +2621,6 @@ html[data-ui-mode='advanced'][data-dirty='true'] #page-shell {
   gap: 8px;
 }
 
-html[data-connected='true'] .workspace-empty-state {
-  display: none;
-}
 }
 
 html:not([data-connected='true']) #slot-detail-panel {
@@ -4782,7 +4779,7 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 
 /* Progressive workspace: modes expose tools; operators choose what occupies the viewport. */
 .workspace-tool-shell {
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 18;
   display: flex;
@@ -4795,6 +4792,21 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
   overflow-x: clip;
   pointer-events: none;
 }
+.workspace-tool-shell > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+  cursor: pointer;
+  list-style: none;
+  pointer-events: auto;
+}
+.workspace-tool-shell > summary::-webkit-details-marker { display: none; }
+.workspace-tool-shell > summary strong, .workspace-tool-shell > summary .workspace-kicker { display: block; }
+.workspace-tool-shell > summary strong { margin-top: 3px; font-size: 1.05rem; }
+.workspace-tool-shell[open] { display: grid; }
+.workspace-tool-shell[open] .workspace-tool-picker { width: 100%; }
 .workspace-tool-shell h2, .workspace-tool-shell p { margin: 0; }
 .workspace-tool-shell h2 { font-size: .9rem; }
 .workspace-kicker { color: var(--color-muted); font: .65rem var(--font-mono); text-transform: uppercase; letter-spacing: .1em; }
@@ -4807,6 +4819,40 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 [data-workspace-panel][hidden], [data-workspace-group][hidden] { display: none !important; }
 .lab-bench-group-header { margin-bottom: 10px; }
 .lab-bench-group-header h2 { margin: 0; font-size: 1rem; }
+
+.cold-start { display: none; }
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .cold-start {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  min-height: min(62vh, 620px);
+  padding: clamp(32px, 8vh, 96px) clamp(20px, 6vw, 72px);
+  border: 1px solid rgba(45, 226, 230, 0.24);
+  border-radius: var(--radius-lg);
+  background: rgba(13, 17, 25, 0.42);
+  text-align: center;
+}
+.cold-start h2, .cold-start .microcopy { max-width: 42ch; margin: 0; }
+.cold-connection-state { margin: 0; color: var(--color-muted); font: .74rem var(--font-mono); }
+.cold-status { display: grid; gap: 4px; max-width: 52ch; color: var(--color-text); }
+.cold-status strong { color: var(--color-warn); }
+.cold-status[data-state='err'] strong { color: var(--color-hot); }
+.cold-start-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.cold-start-actions button { min-width: 180px; }
+.cold-recovery { max-width: 48ch; margin-top: 12px; color: var(--color-muted); }
+.cold-recovery summary { cursor: pointer; }
+.cold-recovery button { margin-top: 10px; }
+/* A disconnected runtime has no trustworthy device identity, profile, or tools. */
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .global-mode-switch,
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-toolbar,
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .runtime-lane-strip,
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-tool-shell,
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) #global-power-warning,
+html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) main { display: none; }
+html[data-connected='false']:not([data-cold-recovery='true']):not([data-legacy-test-surface='true']) #recovery-drawer { display: none; }
+html[data-connected='false'][data-cold-recovery='true'] #recovery-drawer { display: block; }
+html[data-connected='false'][data-cold-recovery='true'] #recovery-drawer.ui-tier-hidden { display: block !important; }
+html[data-connected='false'][data-cold-recovery='true'][data-ui-mode='stage'] #recovery-drawer { display: block !important; }
 @media (max-width: 620px) {
   .workspace-tool-shell { position: static; align-items: flex-start; flex-direction: column; }
   .workspace-tool-picker { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }

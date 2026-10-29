@@ -106,6 +106,43 @@ test('connect ignores malformed remembered port filters so the picker can open',
   await expect(page.locator('#status-label')).toHaveText('No device selected');
 });
 
+test('cold start keeps connection failures visible', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.__MN42_RUNTIME_OPTIONS = { workspacePanels: 'minimal' };
+    Object.defineProperty(navigator, 'serial', {
+      configurable: true,
+      value: {
+        requestPort: async () => {
+          throw new DOMException('The chooser was dismissed.', 'NotFoundError');
+        }
+      }
+    });
+  });
+
+  await page.goto('/benzknobz.html');
+  await page.getByRole('button', { name: 'Connect controller' }).click();
+
+  await expect(page.locator('#cold-status')).toBeVisible();
+  await expect(page.locator('#cold-status-label')).toHaveText('No device selected');
+  await expect(page.locator('#cold-status-message')).toContainText('browser picker');
+});
+
+test('cold recovery works when Stage mode is persisted', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'stage');
+    window.__MN42_RUNTIME_OPTIONS = { workspacePanels: 'minimal' };
+  });
+
+  await page.goto('/benzknobz.html');
+  await page.locator('.cold-recovery > summary').click();
+  await page.getByRole('button', { name: 'Open recovery tools' }).click();
+
+  await expect(page.locator('#recovery-drawer')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Import config JSON' })).toBeVisible();
+});
+
 test('config JSON can be imported before connecting and exported afterward', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();

@@ -1,19 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('UI mode', () => {
-  test('basic mode hides advanced sections and mode persists', async ({ page }) => {
+  test('connected basic mode hides advanced sections and mode persists', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    });
     await page.goto('/benzknobz.html');
+    await page.getByRole('button', { name: 'Connect' }).click();
+    await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
     const basicButton = page.getByRole('button', { name: 'Bench', exact: true });
     const advancedButton = page.getByRole('button', { name: 'Lab', exact: true });
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#performer-panel')).toBeHidden();
-    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Direct USB');
+    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
     await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
     await expect
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
-      .toBe('direct-webserial');
+      .toBe('simulator');
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeHidden();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeHidden();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeHidden();
@@ -55,18 +60,28 @@ test.describe('UI mode', () => {
     await expect(page.locator('#filter-settings')).toBeVisible();
   });
 
-  test('Configure empty state starts and connects the simulator', async ({ page }) => {
+  test('cold start hides device inventory until an explicit simulator choice', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { workspacePanels: 'minimal' };
+    });
     await page.goto('/benzknobz.html');
 
-    await expect(page.locator('#workspace-empty-state')).toBeVisible();
-    await expect(page.locator('#empty-start-simulator')).toBeVisible();
+    await expect(page.locator('#cold-start')).toBeVisible();
+    await expect(page.locator('#workspace-empty-state')).toBeHidden();
+    await expect(page.locator('.workspace-tool-shell')).toBeHidden();
     await expect(page.locator('#simulator-toggle')).toBeHidden();
+    await page.locator('.cold-recovery > summary').click();
+    await page.getByRole('button', { name: 'Open recovery tools' }).click();
+    await expect(page.locator('#recovery-drawer')).toBeVisible();
+    await expect(page.locator('#import-preset')).toBeVisible();
 
-    await page.locator('#empty-start-simulator').click();
+    await page.getByRole('button', { name: 'Start simulator' }).click();
 
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
-    await expect(page.locator('#workspace-empty-state')).toBeHidden();
-    await expect(page.locator('.slot-editor')).toBeVisible();
+    await expect(page.locator('#cold-start')).toBeHidden();
+    await expect(page.locator('#workspace-empty-state')).toBeVisible();
+    await expect(page.locator('.workspace-tool-shell')).toBeVisible();
+    await expect(page.locator('.workspace-tool-shell')).not.toHaveAttribute('open', '');
     await expect
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
       .toBe('simulator');
