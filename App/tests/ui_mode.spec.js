@@ -4,7 +4,7 @@ test.describe('UI mode', () => {
   test('basic mode hides advanced sections and mode persists', async ({ page }) => {
     await page.goto('/benzknobz.html');
 
-    const basicButton = page.getByRole('button', { name: 'Configure', exact: true });
+    const basicButton = page.getByRole('button', { name: 'Bench', exact: true });
     const advancedButton = page.getByRole('button', { name: 'Lab', exact: true });
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
@@ -43,7 +43,7 @@ test.describe('UI mode', () => {
     await expect(page.getByRole('tab', { name: 'Instrument' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
-    await expect(page.locator('#device-monitor-section')).toBeHidden();
+    await expect(page.locator('#device-monitor-section')).toBeVisible();
     await page.getByRole('tab', { name: 'Instrument' }).press('End');
     await expect(page.getByRole('tab', { name: 'Evidence' })).toBeFocused();
     await page.getByRole('tab', { name: 'Observe' }).click();

@@ -10,7 +10,7 @@ test.describe('Stage mode', () => {
       'true'
     );
     await expect(page.locator('#performer-panel')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Configure', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bench', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Lab', exact: true })).toBeVisible();
     await expect(page.locator('#performer-panel')).toContainText(
       'Performance-safe status and recovery. No staged editors or Apply controls here.'
@@ -142,7 +142,7 @@ test.describe('Stage mode', () => {
 
     await drawer.locator(':scope > summary').click();
     await expect(panel).toHaveAttribute('data-scope-rendering', 'true');
-    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await page.getByRole('button', { name: 'Bench', exact: true }).click();
     await expect(drawer).not.toHaveAttribute('open', '');
     await expect(panel).toHaveAttribute('data-scope-rendering', 'false');
   });
@@ -322,7 +322,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#device-monitor')).toContainText('Primary');
   });
 
-  test('switching from Stage to Configure restores the calm editor surface', async ({ page }) => {
+  test('switching from Stage to Bench restores the calm editor surface', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
@@ -330,7 +330,7 @@ test.describe('Stage mode', () => {
     await page.locator('#stage-connect').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
-    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await page.getByRole('button', { name: 'Bench', exact: true }).click();
 
     await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('#stage-panel')).toBeVisible();
@@ -368,7 +368,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-scene-recall')).toBeDisabled();
     await expect(page.locator('#stage-draft-blocked')).toBeVisible();
     await expect(page.locator('#stage-draft-blocked')).toContainText(
-      'resolve it in Configure with Apply or Discard'
+      'resolve it in Bench with Apply or Discard'
     );
     await expect(page.locator('#dirty-badge')).toBeVisible();
     await expect(page.locator('#apply')).toBeHidden();

@@ -44,9 +44,9 @@ Bridge session for configuration while OSC and MIDI routing remain active.
 
 ## Everyday workflow
 
-- Use **Configure** to select a physical slot, map its output, build the **Reactive** path (source, ARG relationship, and EF character), then add **Motion**. With ARG off, Source drives the path; with ARG on, Reactive assignment keeps the path assigned while ARG supplies its combined value. Each Motion lane shows its shared generator’s current shape and rate, or labels an unsaved generator change as a local draft; editing remains in Lab. The selected-slot strip separates staged settings from measured device contributions and follows their causal order.
-- Use **Stage** for a compact performance dashboard and safe recall controls.
-- Use **Lab** for exact controls arranged by ownership. Its upper row keeps Live Slots, Selected Slot, and compact Session context together; the full-width **Lab Bench** opens one room at a time: **Instrument** for machine-wide shaping and live device controls, **Profile** for A–D arp/LFO/incoming-MIDI work, **Observe** for scope, monitor, MIDI trace, and modulation topology, and **Evidence** for staged diff and diagnostics. Continuous slot controls pair exact numbers with sliders; timing sliders use logarithmic travel. Reset to confirmed stages the last confirmed field value.
+- Use **Bench** to select a physical slot, then open the selected-slot editor on demand from the workspace tool picker. Map its output, build the **Reactive** path (source, ARG relationship, and EF character), then add **Motion**. With ARG off, Source drives the path; with ARG on, Reactive assignment keeps the path assigned while ARG supplies its combined value. Each Motion lane shows its shared generator’s current shape and rate, or labels an unsaved generator change as a local draft; editing remains in Lab. The selected-slot strip separates staged settings from measured device contributions and follows their causal order.
+- Use **Stage** for a compact performance dashboard and safe recall controls. Optional configuration and diagnostic panels remain closed.
+- Use **Lab** for exact controls arranged by ownership. Lab starts with no optional panels open; its tool picker exposes individual controls under **Instrument**, **Profile**, **Observe**, and **Evidence** without recreating their DOM or controller state. Closing visual tools suspends their drawing work while bounded telemetry continues. A `?mode=advanced&panel=scope` URL can open one allowed tool directly.
 - Importing JSON stages a draft; it does not write the device until Apply succeeds.
 - Export saves the current staged state, including unsent changes.
 - Profile, scene, macro, and transport actions that could replace a dirty draft are blocked until it is applied or discarded.
@@ -56,7 +56,7 @@ Bridge session for configuration while OSC and MIDI routing remain active.
 Opening the drawer writes nothing. Presets and imports stage changes; profile save persists configuration on the device.
 
 Changed controls carry **Staged** markers. The compact **Review / Discard / Apply** dock keeps the transaction available;
-Review can focus the exact changed slot field in its Lab Bench room. **Customize in Lab** and **Return to Configure** preserve the
+Review can focus the exact changed slot field in its Lab Bench room. **Customize in Lab** and **Return to Bench** preserve the
 selected slot and LFO lane; generator links open **Lab Bench → Profile → Profile LFO & Routes**. Recipe explanations remain visible on touch screens.
 
 The App explains how a slot’s value is shaped; the Bridge explains where that value goes. Neither surface infers

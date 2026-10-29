@@ -12,6 +12,7 @@ import { createPerformerPanelController } from './controllers/performer_panel_co
 import { createLedControlsController } from './controllers/led_controls_controller.js';
 import { createTransportToolbarController } from './controllers/transport_toolbar_controller.js';
 import { createUiModeController } from './controllers/ui_mode_controller.js';
+import { createWorkspacePanelController } from './controllers/workspace_panel_controller.js';
 import { createDiffStatusController } from './controllers/diff_status_controller.js';
 import { createSessionLogController } from './controllers/session_log_controller.js';
 import { createPanicHelpController } from './controllers/panic_help_controller.js';
@@ -317,7 +318,7 @@ const boot = () => {
     stage:
       'Stage mode keeps only stage-safe connect, profile, scene, power, slot, envelope, and panic controls.',
     basic:
-      'Configure keeps everyday slot mapping, profile, import/export, and Apply controls visible.',
+      'Bench keeps everyday slot mapping, profile, import/export, and Apply controls available.',
     advanced:
       'Lab opens diagnostics, live firmware lanes, modulation tools, and recovery extras.'
   };
@@ -619,17 +620,51 @@ const boot = () => {
     telemetry: null
   };
   const ledControlsController = createLedControlsController({ container: ledGrid, runtime });
+  // ponytail: keep legacy Playwright coverage useful while workspace-aware specs exercise the production default.
+  const openLegacyTestWorkspace =
+    navigator.webdriver && window.__MN42_RUNTIME_OPTIONS?.workspacePanels !== 'minimal';
+  const workspaceTool = (descriptor) => ({ ...descriptor, initialOpen: openLegacyTestWorkspace });
+  const workspacePanelController = createWorkspacePanelController({
+    document,
+    picker: document.getElementById('workspace-tool-picker'),
+    initialMode: initialUiMode,
+    registry: [
+      { id: 'live-slots', label: 'Live Slots', modes: ['basic', 'advanced'], group: 'Bench', selector: '#live-panel' },
+      { id: 'slot-editor', label: 'Selected Slot Editor', modes: ['basic', 'advanced'], group: 'Bench', selector: '#editor-panel' },
+      { id: 'ef-controls', label: 'EF Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '.ef-modulation-cluster' },
+      { id: 'led-controls', label: 'LED Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '#led-settings' },
+      { id: 'device-link', label: 'Device Link Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '[data-instrument-zone="live"]' },
+      { id: 'arp-profile', label: 'Arpeggiator Profile', modes: ['advanced'], group: 'Lab Profile', selector: '[data-performance-panel="arp"]' },
+      { id: 'lfo-profile', label: 'LFO Profile', modes: ['advanced'], group: 'Lab Profile', selector: '[data-performance-panel="lfo"]' },
+      { id: 'incoming-midi', label: 'Incoming MIDI', modes: ['advanced'], group: 'Lab Profile', selector: '[data-performance-panel="incoming"]' },
+      { id: 'device-monitor', label: 'Device Monitor', modes: ['advanced'], group: 'Lab Observe', selector: '#device-monitor-section' },
+      { id: 'scope', label: 'Scope', modes: ['advanced'], group: 'Lab Observe', selector: '#scope-panel' },
+      { id: 'midi-monitor', label: 'MIDI Monitor', modes: ['advanced'], group: 'Lab Observe', selector: '#midi-panel' },
+      { id: 'mod-matrix', label: 'Modulation Matrix', modes: ['advanced'], group: 'Lab Observe', selector: '.mod-matrix-card' },
+      { id: 'evidence-diff', label: 'Evidence Diff', modes: ['advanced'], group: 'Lab Evidence', selector: '#diff-panel' },
+      { id: 'slot-inspector', label: 'Slot Inspector', modes: ['advanced'], group: 'Lab Evidence', selector: '#slot-detail-panel' },
+      { id: 'session-log', label: 'Session Log', modes: ['advanced'], group: 'Lab Evidence', selector: '.debug-log-bridge' }
+    ].map(workspaceTool)
+  });
+  let hydrateWorkspaceDeepLink = true;
   const uiModeController = createUiModeController({
     docRoot,
     initialMode: initialUiMode,
     hints: UI_MODE_HINTS,
     getSlotCount: () => slotState.slots.length,
     renderSlotEditor,
+    canChangeMode: () =>
+      !runtime.getState().dirty ||
+      window.confirm('You have staged changes. Change workspace mode? Your staged changes remain until Apply or Revert.'),
     setPerformerVisible: (visible) => {
       performerPanelController.setVisible(visible);
       if (!visible && stageMotion?.open) stageMotion.open = false;
     },
-    onModeChanged: updateStagePanel,
+    onModeChanged: (mode) => {
+      workspacePanelController.setMode(mode, { openDeepLink: hydrateWorkspaceDeepLink });
+      hydrateWorkspaceDeepLink = false;
+      updateStagePanel();
+    },
     elements: {
       uiModeButtons,
       uiModeHint,
@@ -898,12 +933,14 @@ const boot = () => {
     openLabTab: (tab, laneIndex = null) => {
       docRoot.dataset.configureReturnTab = tab;
       docRoot.dataset.configureReturnLane = laneIndex === null ? '' : String(laneIndex);
-      uiModeController.setUIMode('advanced');
+      uiModeController.setUIMode('advanced', { preserveDraft: true });
+      workspacePanelController.open('slot-editor');
       uiModeController.setEditorTab(tab);
       slotEditorPanel.focusControl('', laneIndex);
     },
     openLfoGenerator: (laneIndex) => {
-      uiModeController.setUIMode('advanced');
+      uiModeController.setUIMode('advanced', { preserveDraft: true });
+      workspacePanelController.open('lfo-profile');
       uiModeController.setUtilityTab('profile');
       setPerformanceTab('lfo');
       const lane = document.querySelector(`#lfo-editor .lfo-section:nth-child(${laneIndex + 1})`);
@@ -919,7 +956,12 @@ const boot = () => {
     envelopeContainer: envContainer,
     slotTypeAbbreviations: SLOT_TYPE_ABBREVIATIONS,
     performerPanel: performerPanelController,
-    onSelectSlot: () => populateDetail(),
+    onSelectSlot: () => {
+      populateDetail();
+      if (uiModeController.getUiMode() === 'basic') {
+        workspacePanelController.open('slot-editor', { focus: true });
+      }
+    },
     onTelemetryPainted: () => populateDetail({ renderEditor: false }),
     onSlotsChanged: () => performerPanelController.renderSlots(slotState.slots)
   });
@@ -932,7 +974,7 @@ const boot = () => {
   transportToolbarController.bind();
   performerPanelController.bind();
   document.getElementById('return-configure')?.addEventListener('click', () => {
-    uiModeController.setUIMode('basic');
+    uiModeController.setUIMode('basic', { preserveDraft: true });
     const zone = docRoot.dataset.configureReturnTab || 'envelope';
     const lane = docRoot.dataset.configureReturnLane;
     const target = document.querySelector(`[data-configure-zone="${zone}"]${lane ? ` [data-lfo-lane="${lane}"]` : ''}`);
@@ -944,10 +986,10 @@ const boot = () => {
   performanceTabButtons.forEach((button) => {
     button.addEventListener('click', () => setPerformanceTab(button.dataset.performanceTab));
   });
-  uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
-  uiModeController.setEditorTab(uiModeController.getEditorTab());
   uiModeController.setUtilityTab('instrument');
   setPerformanceTab('arp');
+  uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
+  uiModeController.setEditorTab(uiModeController.getEditorTab());
 
   runtime.on('status', ({ level, message }) => {
     // Normalize transport/runtime status levels onto the small UI state palette.

@@ -18,7 +18,7 @@
         </div>
         <nav class="global-mode-switch" aria-label="Workspace mode">
           <button type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
-          <button type="button" data-ui-mode-btn="basic" aria-pressed="false">Configure</button>
+          <button type="button" data-ui-mode-btn="basic" aria-pressed="false">Bench</button>
           <button type="button" data-ui-mode-btn="advanced" aria-pressed="false">Lab</button>
         </nav>
         <div class="workspace-toolbar">
@@ -156,11 +156,18 @@
       </details>
     </header>
     <div id="global-power-warning" class="global-power-warning" role="alert" hidden></div>
+    <section class="workspace-tool-shell" aria-labelledby="workspace-tools-title">
+      <div>
+        <p class="workspace-kicker">Workspace</p>
+        <h2 id="workspace-tools-title">Tools</h2>
+      </div>
+      <div id="workspace-tool-picker" class="workspace-tool-picker" aria-label="Available workspace tools"></div>
+    </section>
     <main>
       <section id="workspace-empty-state" class="workspace-empty-state" data-ui-modes="basic advanced">
         <p class="workspace-kicker">Ready when you are</p>
         <h2>Connect a controller or start the simulator to inspect 42 slots.</h2>
-        <p class="microcopy">Configure is the default path: connect, choose a slot, map it, review, and apply.</p>
+        <p class="microcopy">Bench is the default path: connect, choose a slot, map it, review, and apply.</p>
         <div class="simulator-start-actions" data-ui-modes="basic">
           <button id="empty-start-simulator" class="action-primary" type="button">Start simulator</button>
           <button id="empty-load-demo-rig" type="button">Load Demo Rig</button>
@@ -242,7 +249,7 @@
           <button id="stage-panic-help" class="action-warning" type="button" data-ui-modes="stage advanced">Panic Help</button>
         </div>
         <p id="stage-draft-blocked" class="stage-draft-blocked" role="status" aria-live="polite" hidden>
-          Draft staged — resolve it in Configure with Apply or Discard before recalling a profile or scene.
+          Draft staged — resolve it in Bench with Apply or Discard before recalling a profile or scene.
         </p>
 
         <div class="performer-grid">
@@ -351,7 +358,7 @@
               <span class="lane-tag" data-runtime-lane="staged">Staged config</span>
               <span class="lane-tag" data-runtime-lane="browser">Labels stay local</span>
             </div>
-            <button id="return-configure" type="button" data-ui-tier="advanced">Return to Configure</button>
+            <button id="return-configure" type="button" data-ui-tier="advanced">Return to Bench</button>
             <div class="editor-tabbar" role="tablist" aria-label="Selected slot editor sections">
               <button type="button" class="editor-tab" data-editor-tab="mapping" aria-pressed="true">Mapping</button>
               <button type="button" class="editor-tab" data-editor-tab="envelope" aria-pressed="false"
@@ -435,7 +442,7 @@
         <header class="session-rail-header">
           <p class="workspace-kicker">Session</p>
           <h2>Session</h2>
-          <p class="microcopy" id="ui-mode-hint">Configure keeps everyday mapping and profile work close at hand.</p>
+          <p class="microcopy" id="ui-mode-hint">Bench keeps everyday mapping and profile work available on demand.</p>
         </header>
         <div class="utility-tabbar" role="tablist" aria-label="Utility panels" data-ui-modes="advanced">
           <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true" data-ui-modes="advanced">Console</button>
