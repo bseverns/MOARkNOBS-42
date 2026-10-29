@@ -37,10 +37,10 @@ HardwareConfig hwConfig = {
     .envelopeTaskInterval = 5,  // ms cadence for envelope tracking
     .muxrPins = {2, 3, 4, 5},   // CD74HC4067 row select lines (docs/PinMap.md: MUXR0..3)
     .muxcPins = {8, 9, 10, 11}, // CD74HC4067 column select lines (docs/PinMap.md: MUXC0..3)
-    .matrixInputPin = 7,        // MRC: column/control mux common, digital input only
+    .matrixInputPin = 24,       // MRC bodge target: Teensy 4.0 pin 24 / A10
     .slotPotMuxAnalogPin = kUnavailablePin, // no ADC-routed 42-slot pot mux on this PCB
     .vrefAdcPin = kUnavailablePin, // no dedicated VREF ADC route on this PCB
-    .controlPotsAvailable = false, // MAIN/FP1/FP2 share MRC, which is digital-only
+    .controlPotsAvailable = true, // MAIN/FP1/FP2 are MRC mux channels 12..14
 };
 
 // Global runtime variables

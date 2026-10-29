@@ -123,23 +123,27 @@ void test_button_scanner_debounces_one_matrix_row_per_pass() {
 void test_button_scanner_reports_debounced_control_mask_and_raw_pots() {
     ButtonScanner scanner(hwConfig);
     hardware::ScopedDigitalReadProvider pressed(stubDigitalHigh);
+    ScopedSequence pots{101, 502, 903};
 
     scanner.scanControlBank(0);
     TEST_ASSERT_EQUAL_HEX8(0, scanner.controlMask());
     scanner.scanControlBank(DEBOUNCE_DELAY + 1);
 
     TEST_ASSERT_EQUAL_HEX8(0x3F, scanner.controlMask());
-    TEST_ASSERT_FALSE(scanner.controlPotsAvailable());
+    TEST_ASSERT_TRUE(scanner.controlPotsAvailable());
+    TEST_ASSERT_EQUAL(101, scanner.controlPotRaw(0));
+    TEST_ASSERT_EQUAL(502, scanner.controlPotRaw(1));
+    TEST_ASSERT_EQUAL(903, scanner.controlPotRaw(2));
 }
 
 // Boot-time tuning must not rewrite topology already captured by global
 // managers. Keep this contract explicit as new hardware fields are added.
 void test_bench_pin_contract_has_no_i2c_or_vref_conflicts() {
     TEST_ASSERT_EQUAL_UINT8(22, hwConfig.rowDriverPin);
-    TEST_ASSERT_EQUAL_UINT8(7, hwConfig.matrixInputPin);
+    TEST_ASSERT_EQUAL_UINT8(24, hwConfig.matrixInputPin);
     TEST_ASSERT_EQUAL_UINT8(kUnavailablePin, hwConfig.slotPotMuxAnalogPin);
     TEST_ASSERT_EQUAL_UINT8(kUnavailablePin, hwConfig.vrefAdcPin);
-    TEST_ASSERT_FALSE(hwConfig.controlPotsAvailable);
+    TEST_ASSERT_TRUE(hwConfig.controlPotsAvailable);
 }
 
 void test_runtime_hardware_tuning_preserves_structural_config() {

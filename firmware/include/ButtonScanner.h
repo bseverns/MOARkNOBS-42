@@ -33,6 +33,7 @@ class ButtonScanner {
   private:
     static constexpr uint8_t kMuxSelectPins = 4;
     static constexpr uint32_t kMuxSettleUs = 5;
+    static constexpr uint32_t kAnalogMuxSettleUs = 60;
     static constexpr uint8_t kTotalButtons = NUM_BUTTON_INPUTS;
 
     const HardwareConfig &_config;
@@ -48,6 +49,7 @@ class ButtonScanner {
     void selectMux(uint8_t row, uint8_t col) const;
     static void setMuxFast(const uint8_t selectPins[4], uint8_t index);
     static void waitForMuxSettle();
+    static void waitForAnalogMuxSettle();
 };
 
 #endif // BUTTON_SCANNER_H
