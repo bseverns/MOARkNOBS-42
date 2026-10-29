@@ -11,14 +11,15 @@ test('session log persists across reload and can be exported and cleared', async
   });
 
   await page.goto('/benzknobz.html');
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.evaluate(async () => {
     await window.__MN42_RUNTIME.disconnect();
   });
   await expect(page.locator('#connection-pill')).toContainText('Disconnected');
+  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('#cold-start')).toBeHidden();
   await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
 
   const log = page.locator('#log');
@@ -26,10 +27,14 @@ test('session log persists across reload and can be exported and cleared', async
   await expect(log).toContainText('DISCONNECTED');
 
   await page.reload();
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
   await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
   await expect(log).toContainText('CONNECTED');
   await expect(log).toContainText('DISCONNECTED');
 
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Session Log', exact: true }).click();
   await page.locator('.debug-log-bridge').evaluate((element) => {
     element.open = true;
   });
