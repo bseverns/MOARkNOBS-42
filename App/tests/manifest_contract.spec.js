@@ -68,7 +68,7 @@ test('simulator manifest advertises the firmware lanes it emulates', async ({ pa
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   const manifest = await page.evaluate(() => window.__MN42_RUNTIME.getState().manifest);
