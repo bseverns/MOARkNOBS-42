@@ -663,6 +663,8 @@ const boot = () => {
   const openLegacyTestWorkspace =
     navigator.webdriver && window.__MN42_RUNTIME_OPTIONS?.workspacePanels !== 'minimal';
   const workspaceTool = (descriptor) => ({ ...descriptor, initialOpen: openLegacyTestWorkspace });
+  let latestTelemetry = null;
+  let latestTelemetryHealth = null;
   const workspacePanelController = createWorkspacePanelController({
     document,
     picker: document.getElementById('workspace-tool-picker'),
@@ -683,7 +685,12 @@ const boot = () => {
       { id: 'evidence-diff', label: 'Evidence Diff', modes: ['advanced'], group: 'Lab Evidence', selector: '#diff-panel' },
       { id: 'slot-inspector', label: 'Slot Inspector', modes: ['advanced'], group: 'Lab Evidence', selector: '#slot-detail-panel' },
       { id: 'session-log', label: 'Session Log', modes: ['advanced'], group: 'Lab Evidence', selector: '.debug-log-bridge' }
-    ].map(workspaceTool)
+    ].map(workspaceTool),
+    onVisibilityChanged: (entry, open) => {
+      if (entry.id !== 'device-monitor' || !open) return;
+      if (latestTelemetry) deviceMonitorController.renderTelemetry(latestTelemetry);
+      if (latestTelemetryHealth) deviceMonitorController.renderTelemetryHealth(latestTelemetryHealth);
+    }
   });
   let hydrateWorkspaceDeepLink = true;
   const uiModeController = createUiModeController({
@@ -1040,6 +1047,7 @@ const boot = () => {
     formRenderer.updateSchema(schema);
   });
   runtime.on('telemetry', (frame) => {
+    latestTelemetry = frame;
     slotWorkspaceController.paintTelemetry(frame);
     transportToolbarController.onTelemetry(frame);
     if (workspacePanelController.getOpenPanelIds().includes('device-monitor')) {
@@ -1048,6 +1056,7 @@ const boot = () => {
     profileMacroScenePanel.onTelemetry(frame);
   });
   runtime.on('telemetry-health', (health) => {
+    latestTelemetryHealth = health;
     slotEditorPanel.updateSignalPath();
     if (workspacePanelController.getOpenPanelIds().includes('device-monitor')) {
       deviceMonitorController.renderTelemetryHealth(health);
