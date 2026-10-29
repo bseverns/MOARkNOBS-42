@@ -63,6 +63,8 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   account for every slot-schema leaf. Its full-width Bench separates Instrument, Profile, Observe, and Evidence
   workspaces while keeping each room's major tools named in the Bench navigation. Scope, MIDI Monitor, Device Monitor,
   Modulation Matrix, Staged Diff, Slot Inspector, and Debug Log must remain discoverable even when their room is closed.
+  A mode change preserves open panels that are eligible in the destination mode and closes only ineligible panels;
+  initial panels open once per page load, while a deep link intentionally resets the panel set to its requested panels.
   Instrument visually separates staged **Machine configuration** (Apply required) from immediate **Live device controls**
   (writes now), without splitting either into a separate Lab room. Lab uses a compact, consistent set of inline SVG
   landmarks for rooms and major tools: faders for Instrument, a saved card for Profile, a scope for Observe, and a
