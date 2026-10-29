@@ -13,8 +13,10 @@ test('a real staged firmware config edit enables Apply and clears only after ACK
 
   await page.goto('/benzknobz.html');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'EF Controls', exact: true }).click();
 
   const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();
   await expect(freqInput).toHaveCount(1);
