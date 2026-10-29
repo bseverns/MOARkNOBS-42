@@ -51,10 +51,10 @@ test('compatibility check reports when Web Serial is unavailable', async ({ page
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Check compatibility' }).click();
+  await page.locator('#cold-connect').click();
 
-  await expect(page.locator('#status-label')).toHaveText('Web Serial unavailable');
-  await expect(page.locator('.status-message')).toContainText('cannot access the Web Serial API');
+  await expect(page.locator('#cold-status-label')).toHaveText('Web Serial unavailable');
+  await expect(page.locator('#cold-status-message')).toContainText('cannot access the Web Serial API');
 });
 
 test('connect distinguishes a cancelled device picker from other errors', async ({ page }) => {
@@ -155,9 +155,10 @@ test('config JSON can be imported before connecting and exported afterward', asy
   await page.goto('/benzknobz.html');
   await waitForBoot(page);
 
-  await page.locator('#recovery-drawer > summary').click();
-  const importButton = page.getByRole('button', { name: 'Import config JSON' });
-  const exportButton = page.getByRole('button', { name: 'Export config JSON' });
+  await page.locator('.cold-recovery > summary').click();
+  await page.locator('#cold-open-recovery').click();
+  const importButton = page.locator('#import-preset');
+  const exportButton = page.locator('#export-preset');
   await expect(importButton).toBeEnabled();
   await expect(exportButton).toBeDisabled();
 
