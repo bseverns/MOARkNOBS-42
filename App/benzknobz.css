@@ -4845,7 +4845,7 @@ html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-
 html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-tool-shell,
 html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) #global-power-warning,
 html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) main { display: none; }
-html[data-connected='false']:not([data-cold-recovery='true']) #recovery-drawer { display: none; }
+html[data-connected='false']:not([data-cold-recovery='true']):not([data-legacy-test-surface='true']) #recovery-drawer { display: none; }
 html[data-connected='false'][data-cold-recovery='true'] #recovery-drawer { display: block; }
 @media (max-width: 620px) {
   .workspace-tool-shell { position: static; align-items: flex-start; flex-direction: column; }
