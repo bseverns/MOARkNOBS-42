@@ -77,6 +77,7 @@ export function createWorkspacePanelController({
     groups.forEach((groupName) => {
       const groupEntries = entries.filter((entry) => entry.group === groupName);
       const fieldset = document.createElement('fieldset');
+      fieldset.className = 'workspace-tool-group';
       fieldset.dataset.workspaceToolGroup = groupName;
       fieldset.setAttribute('role', 'group');
       fieldset.setAttribute('aria-label', `${groupName} tools`);

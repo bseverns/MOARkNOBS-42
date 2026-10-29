@@ -4792,6 +4792,7 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
   border-block: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg) 94%, transparent);
   backdrop-filter: blur(12px);
+  overflow-x: clip;
   pointer-events: none;
 }
 .workspace-tool-shell h2, .workspace-tool-shell p { margin: 0; }
