@@ -25,8 +25,21 @@ async function bootLabSimulator(page) {
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   });
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  for (const name of [
+    'Live Slots',
+    'Selected Slot Editor',
+    'EF Controls',
+    'LED Controls',
+    'Device Link Controls',
+    'Arpeggiator Profile',
+    'LFO Profile',
+    'Incoming MIDI'
+  ]) {
+    await page.getByRole('button', { name, exact: true }).click();
+  }
   await expect(page.locator('.slot-editor')).toBeVisible();
 }
 
@@ -74,13 +87,11 @@ test('Lab exposes every device configuration root and the legacy mode stays sepa
 
   expect(actualRoots).toEqual(expectedRoots);
   for (const root of expectedRoots) {
-    if (root === 'lfos') {
+    if (root === 'lfos' || root === 'midiInputBindings') {
       await page.getByRole('tab', { name: 'Profile', exact: true }).click();
-      await page.getByRole('tab', { name: 'Profile LFO & Routes', exact: true }).click();
-    }
-    if (root === 'midiInputBindings') {
-      await page.getByRole('tab', { name: 'Profile', exact: true }).click();
-      await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
+      await page
+        .getByRole('tab', { name: root === 'lfos' ? 'Profile LFO & Routes' : 'Incoming MIDI', exact: true })
+        .click();
     }
     await expect(page.locator(`[data-device-config-root="${root}"]`)).toBeVisible();
   }
@@ -102,8 +113,14 @@ test('Lab selected-slot editor covers every slot schema leaf', async ({ page }) 
   await bootLabSimulator(page);
   const covered = new Set();
 
-  // The default CC mapping exposes data1. SysEx intentionally replaces that
-  // field with its template, so collect both meaningful mapping states.
+  await page.evaluate(() => {
+    window.__MN42_RUNTIME.stage((draft) => {
+      draft.slots[0] = { ...draft.slots[0], type: 'CC' };
+      return draft;
+    });
+  });
+  await page.getByRole('tab', { name: 'Envelope', exact: true }).click();
+  await page.getByRole('tab', { name: 'Mapping', exact: true }).click();
   await collectSlotPaths(page, covered);
 
   await page.evaluate(() => {
