@@ -124,7 +124,8 @@ export function createWorkspacePanelController({
     }
     renderPicker();
     if (openDeepLink && typeof window !== 'undefined') {
-      const requested = new URLSearchParams(window.location.search).get('panel') ?? '';
+      const params = new URLSearchParams(window.location.search);
+      const requested = params.get('panel') ?? params.get('panels') ?? '';
       requested
         .split(',')
         .map((id) => id.trim())

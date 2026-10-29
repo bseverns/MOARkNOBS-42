@@ -1042,12 +1042,16 @@ const boot = () => {
   runtime.on('telemetry', (frame) => {
     slotWorkspaceController.paintTelemetry(frame);
     transportToolbarController.onTelemetry(frame);
-    deviceMonitorController.renderTelemetry(frame);
+    if (workspacePanelController.getOpenPanelIds().includes('device-monitor')) {
+      deviceMonitorController.renderTelemetry(frame);
+    }
     profileMacroScenePanel.onTelemetry(frame);
   });
   runtime.on('telemetry-health', (health) => {
     slotEditorPanel.updateSignalPath();
-    deviceMonitorController.renderTelemetryHealth(health);
+    if (workspacePanelController.getOpenPanelIds().includes('device-monitor')) {
+      deviceMonitorController.renderTelemetryHealth(health);
+    }
     updateStagePanel();
   });
   runtime.on('config', ({ staged, config, dirty }) => {
@@ -1377,12 +1381,13 @@ const boot = () => {
     document.activeElement?.blur?.();
     if (parts[0] === 'slots' && /^\d+$/.test(parts[1] || '')) {
       selectSlot(Number(parts[1]));
-      uiModeController.setUIMode('advanced');
+      if (!uiModeController.setUIMode('advanced')) return;
+      workspacePanelController.open('slot-editor');
       uiModeController.setEditorTab(parts[2] === 'ef' || parts[2] === 'efIndex' ? 'envelope' : parts[2] === 'arg' ? 'arg' : parts[2] === 'lfo' ? 'lfo' : 'mapping');
       slotEditorPanel.focusControl(path, parts[2] === 'lfo' ? Number(parts[3]) : null);
       return;
     }
-    uiModeController.setUIMode('advanced');
+    if (!uiModeController.setUIMode('advanced')) return;
     const benchForRoot = {
       efSlots: 'instrument',
       filter: 'instrument',
@@ -1393,6 +1398,8 @@ const boot = () => {
       midiInputBindings: 'profile'
     };
     const bench = benchForRoot[parts[0]];
+    const toolForRoot = { efSlots: 'ef-controls', filter: 'ef-controls', arg: 'ef-controls', envelopeMode: 'ef-controls', led: 'led-controls', lfos: 'lfo-profile', midiInputBindings: 'incoming-midi' };
+    if (toolForRoot[parts[0]]) workspacePanelController.open(toolForRoot[parts[0]]);
     if (bench) uiModeController.setUtilityTab(bench);
     if (parts[0] === 'lfos') setPerformanceTab('lfo');
     if (parts[0] === 'midiInputBindings') setPerformanceTab('incoming');

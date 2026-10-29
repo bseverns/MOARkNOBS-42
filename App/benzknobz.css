@@ -4821,7 +4821,7 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 .lab-bench-group-header h2 { margin: 0; font-size: 1rem; }
 
 .cold-start { display: none; }
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .cold-start {
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) .cold-start {
   display: grid;
   place-items: center;
   gap: 12px;
@@ -4843,12 +4843,12 @@ html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-
 .cold-recovery summary { cursor: pointer; }
 .cold-recovery button { margin-top: 10px; }
 /* A disconnected runtime has no trustworthy device identity, profile, or tools. */
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .global-mode-switch,
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-toolbar,
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .runtime-lane-strip,
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-tool-shell,
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) #global-power-warning,
-html[data-connected='false']:not([data-deep-link='true']):not([data-legacy-test-surface='true']) main { display: none; }
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) .global-mode-switch,
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-toolbar,
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) .runtime-lane-strip,
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) .workspace-tool-shell,
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) #global-power-warning,
+html[data-connected='false']:not([data-had-connection='true']):not([data-deep-link='true']):not([data-legacy-test-surface='true']) main { display: none; }
 html[data-connected='false']:not([data-cold-recovery='true']):not([data-legacy-test-surface='true']) #recovery-drawer { display: none; }
 html[data-connected='false'][data-cold-recovery='true'] #recovery-drawer { display: block; }
 html[data-connected='false'][data-cold-recovery='true'] #recovery-drawer.ui-tier-hidden { display: block !important; }
