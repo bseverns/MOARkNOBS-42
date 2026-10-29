@@ -94,21 +94,17 @@ void test_set_provider_returns_previous() {
     hardware::setAnalogReadProvider(baseline);
 }
 
-// Digital reads also funnel through the provider API.  Force HIGH/LOW values
-// and make sure ButtonManager reports the expected active-low truth table.
 void test_digital_provider_overrides_matrix_reads() {
-    const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
-    ButtonManager manager(hwConfig, controlPins, nullptr);
-    hardware::ScopedDigitalReadProvider hi(stubDigitalLow);
-    TEST_ASSERT_TRUE(manager.readControlButtonForTest(0));
-    hardware::ScopedDigitalReadProvider lo(stubDigitalHigh);
-    TEST_ASSERT_FALSE(manager.readControlButtonForTest(1));
+    ButtonScanner scanner(hwConfig);
+    hardware::ScopedDigitalReadProvider pressed(stubDigitalHigh);
+    scanner.scanControlBank(0);
+    scanner.scanControlBank(DEBOUNCE_DELAY + 1);
+    TEST_ASSERT_EQUAL_HEX8(0x3F, scanner.controlMask());
 }
 
 void test_button_scanner_debounces_one_matrix_row_per_pass() {
-    const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
-    ButtonScanner scanner(hwConfig, controlPins);
-    ScopedSequence pressed{0};
+    ButtonScanner scanner(hwConfig);
+    hardware::ScopedDigitalReadProvider pressed(stubDigitalLow);
 
     for (uint8_t row = 0; row < BUTTON_ROWS; ++row) {
         const MatrixScanRange range = scanner.scanNextMatrixRow(0);
@@ -125,22 +121,27 @@ void test_button_scanner_debounces_one_matrix_row_per_pass() {
 }
 
 void test_button_scanner_reports_debounced_control_mask_and_raw_pots() {
-    const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
-    ButtonScanner scanner(hwConfig, controlPins);
-    ScopedSequence values{0, 0, 0, 0, 0, 0, 101, 202, 303};
+    ButtonScanner scanner(hwConfig);
+    hardware::ScopedDigitalReadProvider pressed(stubDigitalHigh);
 
     scanner.scanControlBank(0);
     TEST_ASSERT_EQUAL_HEX8(0, scanner.controlMask());
     scanner.scanControlBank(DEBOUNCE_DELAY + 1);
 
     TEST_ASSERT_EQUAL_HEX8(0x3F, scanner.controlMask());
-    TEST_ASSERT_EQUAL_INT(101, scanner.controlPotRaw(0));
-    TEST_ASSERT_EQUAL_INT(202, scanner.controlPotRaw(1));
-    TEST_ASSERT_EQUAL_INT(303, scanner.controlPotRaw(2));
+    TEST_ASSERT_FALSE(scanner.controlPotsAvailable());
 }
 
 // Boot-time tuning must not rewrite topology already captured by global
 // managers. Keep this contract explicit as new hardware fields are added.
+void test_bench_pin_contract_has_no_i2c_or_vref_conflicts() {
+    TEST_ASSERT_EQUAL_UINT8(22, hwConfig.rowDriverPin);
+    TEST_ASSERT_EQUAL_UINT8(7, hwConfig.matrixInputPin);
+    TEST_ASSERT_EQUAL_UINT8(kUnavailablePin, hwConfig.slotPotMuxAnalogPin);
+    TEST_ASSERT_EQUAL_UINT8(kUnavailablePin, hwConfig.vrefAdcPin);
+    TEST_ASSERT_FALSE(hwConfig.controlPotsAvailable);
+}
+
 void test_runtime_hardware_tuning_preserves_structural_config() {
     HardwareConfig config = hwConfig;
     const HardwareConfig original = config;
@@ -157,9 +158,10 @@ void test_runtime_hardware_tuning_preserves_structural_config() {
     TEST_ASSERT_EQUAL_UINT8(original.numButtons, config.numButtons);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(original.muxrPins, config.muxrPins, 4);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(original.muxcPins, config.muxcPins, 4);
-    TEST_ASSERT_EQUAL_UINT8(original.buttonMuxAnalogPin, config.buttonMuxAnalogPin);
-    TEST_ASSERT_EQUAL_UINT8(original.potMuxAnalogPin, config.potMuxAnalogPin);
+    TEST_ASSERT_EQUAL_UINT8(original.matrixInputPin, config.matrixInputPin);
+    TEST_ASSERT_EQUAL_UINT8(original.slotPotMuxAnalogPin, config.slotPotMuxAnalogPin);
     TEST_ASSERT_EQUAL_UINT8(original.vrefAdcPin, config.vrefAdcPin);
+    TEST_ASSERT_EQUAL(original.controlPotsAvailable, config.controlPotsAvailable);
     TEST_ASSERT_EQUAL_UINT8(7, config.midiTaskInterval);
     TEST_ASSERT_EQUAL_UINT8(11, config.serialTaskInterval);
     TEST_ASSERT_EQUAL_UINT8(13, config.ledTaskInterval);
@@ -178,9 +180,8 @@ void test_runtime_hardware_tuning_rejects_zero_intervals() {
 
 #if defined(UNIT_TEST) && !defined(UNIT_TEST_PROTOCOL_IMPL)
 
-ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
-                             PotentiometerManager *potentiometerManager)
-    : _scanner(config, controlPins), _potentiometerManager(potentiometerManager), activeMode(0),
+ButtonManager::ButtonManager(const HardwareConfig &config, PotentiometerManager *potentiometerManager)
+    : _scanner(config), _potentiometerManager(potentiometerManager), activeMode(0),
       _pendingEfSlot(-1), _efAssignDeadline(0) {}
 
 #endif // defined(UNIT_TEST)

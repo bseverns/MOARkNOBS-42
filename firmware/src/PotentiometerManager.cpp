@@ -160,6 +160,9 @@ void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue,
 // Scan the full mux tree, update smoothing state, and emit callbacks for meaningful pot moves.
 void PotentiometerManager::processPots(LedAnimator &ledAnimator,
                                        std::vector<EnvelopeFollower> &envelopes) {
+    if (analogPin == kUnavailablePin) {
+        return;
+    }
     (void)envelopes; // explicitly marked unused
 
     static uint8_t currentPotIndex = 0;
@@ -316,6 +319,9 @@ void PotentiometerManager::getArgEnvelopePair(int &a, int &b) const {
 
 // Force a direct immediate read of one pot without touching the wider scan loop.
 int PotentiometerManager::readRawPot(uint8_t potIndex) {
+    if (analogPin == kUnavailablePin) {
+        return -1;
+    }
     // decode into bank and pot bits
     uint8_t bank = potIndex >> SECONDARY_MUX_PINS;
     uint8_t pot = potIndex & ((1 << SECONDARY_MUX_PINS) - 1);

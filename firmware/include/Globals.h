@@ -97,6 +97,8 @@ Bundle the fixed board topology and the scheduler cadence used by the runtime.
 The topology is established before setup() by the long-lived hardware managers;
 only the task intervals may be tuned during boot.
 */
+inline constexpr uint8_t kUnavailablePin = 0xFF;
+
 struct HardwareConfig {
     const uint8_t ledPin;
     const uint8_t statusLedPin;
@@ -111,9 +113,10 @@ struct HardwareConfig {
     uint8_t envelopeTaskInterval;
     const uint8_t muxrPins[4];
     const uint8_t muxcPins[4];
-    const uint8_t buttonMuxAnalogPin;
-    const uint8_t potMuxAnalogPin;
+    const uint8_t matrixInputPin;
+    const uint8_t slotPotMuxAnalogPin;
     const uint8_t vrefAdcPin;
+    const bool controlPotsAvailable;
 };
 
 struct HardwareRuntimeTuning {
@@ -172,8 +175,8 @@ extern EnvelopeConfig envelopeConfig;
 // Legacy aliases for modules awaiting full refactors
 inline const uint8_t (&primaryMuxPins)[4] = hwConfig.muxrPins;
 inline const uint8_t (&secondaryMuxPins)[4] = hwConfig.muxcPins;
-inline const uint8_t &buttonMuxAnalogPin = hwConfig.buttonMuxAnalogPin;
-inline const uint8_t &potMuxAnalogPin = hwConfig.potMuxAnalogPin;
+inline const uint8_t &matrixInputPin = hwConfig.matrixInputPin;
+inline const uint8_t &slotPotMuxAnalogPin = hwConfig.slotPotMuxAnalogPin;
 inline const uint8_t &VREF_ADC_PIN = hwConfig.vrefAdcPin;
 inline const uint16_t &SLOT_LED_COUNT = hwConfig.slotLedCount;
 inline const uint8_t &EF_LED_COUNT = hwConfig.efLedCount;

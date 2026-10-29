@@ -50,7 +50,7 @@ struct EfHarnessGuard {
 
 void test_envelope_stats_sine_trace() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     ef.setModeSettings(baseSettings(EnvelopeFollower::EFMode::Peak));
@@ -73,7 +73,7 @@ void test_envelope_stats_sine_trace() {
 
 void test_envelope_stats_step_trace() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     ef.setModeSettings(baseSettings(EnvelopeFollower::EFMode::Peak));
@@ -98,7 +98,7 @@ void test_envelope_stats_step_trace() {
 
 void test_envelope_stats_idle_noise() {
     EfHarnessGuard guard;
-    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, A0);
     EnvelopeFollower ef(A0, &pm, 0);
     ef.setVref(1.65f);
     EnvelopeFollower::EfModeSettings settings = baseSettings(EnvelopeFollower::EFMode::Peak);

@@ -48,9 +48,8 @@ MidiInputRouter midiInputRouter;
 std::array<EfVoice, NUM_SLOTS> efVoices;
 
 // 3. Front-panel input wiring and the managers that read it.
-const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25};
-PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
-ButtonManager buttonManager(hwConfig, controlPins, &potentiometerManager);
+PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, slotPotMuxAnalogPin);
+ButtonManager buttonManager(hwConfig, &potentiometerManager);
 
 // 4. Signal-processing runtime state: follower instances plus cached telemetry.
 std::vector<EnvelopeFollower> envelopeFollowers = {

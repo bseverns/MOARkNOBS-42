@@ -20,11 +20,11 @@ inline DisplayManager createDisplayManager() {
 }
 
 inline PotentiometerManager createPotentiometerManager() {
-    return PotentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    return PotentiometerManager(primaryMuxPins, secondaryMuxPins, A0);
 }
 
 inline ButtonManager createButtonManager(PotentiometerManager *pm) {
-    return ButtonManager(hwConfig, TEST_CONTROL_PINS, pm);
+    return ButtonManager(hwConfig, pm);
 }
 
 inline std::vector<EnvelopeFollower> createEnvelopeFollowers(PotentiometerManager *pm) {

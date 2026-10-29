@@ -32,7 +32,7 @@ struct MidiUsbGuard {
 };
 
 PotentiometerManager makePots() {
-    PotentiometerManager pots(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    PotentiometerManager pots(primaryMuxPins, secondaryMuxPins, A0);
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         pots.potLastValues[i] = 0;
     }
