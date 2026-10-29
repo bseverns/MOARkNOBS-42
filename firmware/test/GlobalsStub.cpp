@@ -18,7 +18,7 @@
 // Hardware snapshot so the tests can lean on mux pin definitions without
 // hauling in the full Globals.cpp (and its SD/Serial baggage).
 HardwareConfig hwConfig = {0,  0,  22, 16, 6, 8, NUM_BUTTONS, 1, 1, 1, 1, {2, 3, 4, 5}, {8, 9, 10, 11},
-                           7, kUnavailablePin, kUnavailablePin, false};
+                           24, kUnavailablePin, kUnavailablePin, true};
 
 void loadHardwareRuntimeTuning() {}
 

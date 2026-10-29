@@ -39,13 +39,6 @@ void ButtonScanner::waitForMuxSettle() {
     }
 }
 
-void ButtonScanner::waitForAnalogMuxSettle() {
-    const uint32_t start = micros();
-    while (micros() - start < kAnalogMuxSettleUs) {
-        yield();
-    }
-}
-
 void ButtonScanner::setMuxFast(const uint8_t selectPins[4], uint8_t index) {
     static const uint8_t lut[16][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0},
                                        {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0},
@@ -101,7 +94,7 @@ void ButtonScanner::scanControlBank(unsigned long now) {
     if (_config.controlPotsAvailable) {
         for (uint8_t index = 0; index < 3; ++index) {
             selectMux(0, static_cast<uint8_t>(12 + index));
-            waitForAnalogMuxSettle();
+            waitForMuxSettle();
             _controlPotRaw[index] = hardware::readAnalog(_config.matrixInputPin);
         }
     }

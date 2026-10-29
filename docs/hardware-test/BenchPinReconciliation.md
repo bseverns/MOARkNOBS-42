@@ -5,7 +5,7 @@
 | Function | Board evidence | Firmware contract |
 |---|---|---|
 | matrix row common | `MRR` → Teensy 22/A8 | output, held low while the addressed row is scanned |
-| matrix/control common | original board route: `MRC` → Teensy 7 | rework target: Teensy 24/A10; 5 µs digital settle and 60 µs analog settle |
+| matrix/control common | original board route: `MRC` → Teensy 7 | rework target: Teensy 24/A10; 60 µs settle after every mux-address change |
 | matrix | seven `ROW` nets × six `COL` nets | active-low button inputs |
 | direct controls | `CTRL1`–`CTRL6`, mux channels 6–11 | active-high inputs |
 | OLED | Teensy 18/19 `SDA`/`SCL` | I²C only |
@@ -17,7 +17,7 @@
 - Firmware no longer samples A8/MRR as VREF.
 - Before rework, matrix scanning drives pin 22 and reads pin 7 digitally; direct controls use the same pin-7 mux input with their actual active-high polarity.
 - The 42 virtual slot values remain protocol/configuration state, but their unverified physical ADC scan is disabled.
-- The pin-24/A10 firmware enables `MAIN`, `FP1`, and `FP2` after a 60 µs analog settling interval. Their MRC route includes R95 (220 Ω) and C77 (4.7 nF); pin 7 cannot provide their analogue readings.
+- The pin-24/A10 firmware waits 60 µs after every mux-address change and enables `MAIN`, `FP1`, and `FP2`. Their MRC route includes R95 (220 Ω) and C77 (4.7 nF); pin 7 cannot provide their analogue readings.
 
 ## MRC analog-input correction
 

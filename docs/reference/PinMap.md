@@ -23,7 +23,7 @@ This is the **assembled-board** contract reconciled against the 2026-08-13 schem
 - The 42 virtual slot controls and their saved MIDI mappings remain host/protocol concepts. The assembled Rev A board has no verified ADC-routed 42-slot-pot mux path.
 - `VREF` is used by the envelope circuits but has no verified dedicated ADC route to the Teensy. Firmware retains its calibrated/default reference rather than sampling A8/MRR as VREF.
 
-`MRC` includes R95 (220 Ω) in series and C77 (4.7 nF) to ground. Firmware allows 5 µs before digital reads and 60 µs before analog reads; verify full-range, independent pot response on the assembled board.
+`MRC` includes R95 (220 Ω) in series and C77 (4.7 nF) to ground. Firmware allows 60 µs after every mux-address change before reading `MRC`; verify full-range, independent pot response on the assembled board.
 
 ## Sources and limits
 
