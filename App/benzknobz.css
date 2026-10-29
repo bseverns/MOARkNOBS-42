@@ -4779,7 +4779,7 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 
 /* Progressive workspace: modes expose tools; operators choose what occupies the viewport. */
 .workspace-tool-shell {
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 18;
   display: flex;
