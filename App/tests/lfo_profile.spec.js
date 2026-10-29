@@ -109,6 +109,28 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   expect(profile.lfos[0].depth).toBe(0.42);
 });
 
+test('disconnect preserves an unsaved profile LFO draft without claiming it was saved', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+  await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  const depth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
+  await depth.fill('0.42');
+  await depth.dispatchEvent('change');
+
+  await page.evaluate(() => window.__MN42_RUNTIME.disconnect());
+
+  await expect(depth).toHaveValue('0.42');
+  await expect(page.locator('#lfo-save')).toBeDisabled();
+  await expect(page.locator('#lfo-status')).toContainText('Connect to inspect');
+});
+
 test('failed LFO profile save preserves unrelated staged configuration', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
