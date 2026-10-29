@@ -159,6 +159,11 @@
       <p class="workspace-kicker">Connection</p>
       <h2 id="cold-start-title">Connect a controller to begin.</h2>
       <p class="microcopy">No device state is shown until the runtime finishes its handshake.</p>
+      <p id="cold-connection-state" class="cold-connection-state" role="status">Ready to connect</p>
+      <div id="cold-status" class="cold-status" role="status" hidden>
+        <strong id="cold-status-label"></strong>
+        <span id="cold-status-message"></span>
+      </div>
       <div class="cold-start-actions">
         <button id="cold-connect" class="action-primary" type="button">Connect controller</button>
         <button id="cold-start-simulator" type="button">Start simulator</button>

@@ -41,8 +41,9 @@ export function createTransportToolbarController({
     simulatorFixtureDetail = null,
     loadDemoRigBtn = null,
     loadFirmwareDefaultsBtn = null,
-    connectionPill = null,
-    connectionBanner = null,
+    connectionPill,
+    connectionBanner,
+    coldConnectionState,
     transportLaneChip = null,
     contractQualityChip = null,
     connectFailHelp = null,
@@ -200,6 +201,7 @@ export function createTransportToolbarController({
     if (!connectionPill) return;
     connectionPill.dataset.stage = stage;
     connectionPill.textContent = text;
+    if (coldConnectionState) coldConnectionState.textContent = text;
     if (connectBtn) {
       connectBtn.textContent = stage === 'live' ? 'Reconnect' : 'Connect';
     }

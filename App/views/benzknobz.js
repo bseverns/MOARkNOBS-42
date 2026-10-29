@@ -112,6 +112,10 @@ const boot = () => {
   const changeReviewOutput = document.getElementById('change-review-output');
   const connectionPill = document.getElementById('connection-pill');
   const connectionBanner = document.getElementById('connection-banner');
+  const coldConnectionState = document.getElementById('cold-connection-state');
+  const coldStatus = document.getElementById('cold-status');
+  const coldStatusLabel = document.getElementById('cold-status-label');
+  const coldStatusMessage = document.getElementById('cold-status-message');
   const transportLaneChip = document.getElementById('transport-lane-chip');
   const contractQualityChip = document.getElementById('contract-quality-chip');
   const connectFailHelp = document.getElementById('connect-fail-help');
@@ -467,6 +471,12 @@ const boot = () => {
   function setStatus(state, label, message) {
     sessionLogController.recordStatus(state, label, message);
     baseSetStatus(state, label, message);
+    if (connectionPill?.dataset.stage !== 'live' && coldStatus && coldStatusLabel && coldStatusMessage) {
+      coldStatus.hidden = false;
+      coldStatus.dataset.state = state;
+      coldStatusLabel.textContent = label;
+      coldStatusMessage.textContent = message;
+    }
     panicHelpController.render();
   }
 
@@ -599,6 +609,7 @@ const boot = () => {
       loadFirmwareDefaultsBtn,
       connectionPill,
       connectionBanner,
+      coldConnectionState,
       transportLaneChip,
       contractQualityChip,
       connectFailHelp,
@@ -629,7 +640,11 @@ const boot = () => {
   coldSimulatorBtn?.addEventListener('click', () => emptySimulatorBtn?.click());
   coldRecoveryBtn?.addEventListener('click', () => {
     if (docRoot) docRoot.dataset.coldRecovery = 'true';
-    if (recoveryDrawer) recoveryDrawer.open = true;
+    if (recoveryDrawer) {
+      recoveryDrawer.classList.remove('ui-tier-hidden');
+      recoveryDrawer.removeAttribute('aria-hidden');
+      recoveryDrawer.open = true;
+    }
     recoveryDrawer?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
