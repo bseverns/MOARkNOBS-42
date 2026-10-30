@@ -12,13 +12,15 @@ function useSimulator(page) {
 async function bootWithSimulator(page) {
   await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'LFO Profile', exact: true }).click();
+  await page.locator('[data-performance-tab="lfo"]').click();
 }
 
 async function openMatrixPanel(page) {
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
-  await page.locator('[data-performance-tab="lfo"]').click();
-  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
-  await page.getByRole('tab', { name: 'Observe', exact: true }).click();
+  await page.getByRole('button', { name: 'Modulation Matrix', exact: true }).click();
   await expect(page.locator('.mod-matrix-card')).toBeVisible();
 }
 
@@ -26,17 +28,12 @@ test('matrix LFO rows select the matching route card', async ({ page }) => {
   await useSimulator(page);
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
-  await page.locator('[data-performance-tab="lfo"]').click();
-  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await page.locator('#lfo-route-add').click();
   await page.locator('#lfo-save').click();
   await expect(page.locator('#lfo-status')).toContainText('saved');
-  await page.getByRole('tab', { name: 'Observe', exact: true }).click();
-  await expect(page.locator('.mod-matrix-card')).toBeVisible();
+  await openMatrixPanel(page);
 
   await page.locator('#mod-matrix-refresh').click();
 
@@ -59,7 +56,6 @@ test('matrix discloses when the route preview is capped', async ({ page }) => {
   await useSimulator(page);
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await openMatrixPanel(page);
@@ -112,7 +108,6 @@ test('matrix filters, export, and copy conflicts reflect the visible route set',
   await useSimulator(page);
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await openMatrixPanel(page);
 
