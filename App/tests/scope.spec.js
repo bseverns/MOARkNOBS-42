@@ -15,10 +15,9 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   });
 
   await page.goto('/benzknobz.html');
-  const simulatorToggle = page.locator('#simulator-toggle');
-  await simulatorToggle.click();
-  await page.getByRole('button', { name: 'Connect' }).click();
-  await page.getByRole('tab', { name: 'Observe', exact: true }).click();
+  await page.locator('#cold-start-simulator').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Scope', exact: true }).click();
 
   await page.waitForFunction(() => {
     const label = document.getElementById('scope-status');
