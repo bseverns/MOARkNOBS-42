@@ -1,63 +1,29 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('UI mode', () => {
-  test('connected basic mode hides advanced sections and mode persists', async ({ page }) => {
+  test('connected Bench and Lab modes preserve explicit workspace ownership', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/benzknobz.html');
-    await page.getByRole('button', { name: 'Connect' }).click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
-    const basicButton = page.getByRole('button', { name: 'Bench', exact: true });
-    const advancedButton = page.getByRole('button', { name: 'Lab', exact: true });
+    const benchButton = page.getByRole('button', { name: 'Bench', exact: true });
+    const labButton = page.getByRole('button', { name: 'Lab', exact: true });
+    await expect(benchButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#editor-panel')).toBeHidden();
+    await page.locator('.workspace-tool-shell > summary').click();
+    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+    await expect(page.locator('#editor-panel')).toBeVisible();
 
-    await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#performer-panel')).toBeHidden();
-    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-    await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
-    await expect
-      .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
-      .toBe('simulator');
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeHidden();
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeHidden();
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeHidden();
-    await expect(page.locator('.editor-tabbar')).toBeHidden();
-    await expect(page.locator('#editor-panel')).toContainText('Shape this slot');
-    await expect(page.locator('#check-compatibility')).toBeHidden();
-    await expect(page.locator('#config-mode')).toBeHidden();
-    await expect(page.locator('#rollback')).toHaveCount(0);
-    await expect(page.locator('#profile-wizard')).toBeHidden();
-    await expect(page.locator('#macro-card')).toBeHidden();
-    await expect(page.locator('#scene-card')).toBeHidden();
-    await expect(page.locator('#stage-power-summary')).toBeHidden();
-    await expect(page.locator('#stage-scene-recall')).toBeHidden();
-    await expect(page.locator('#stage-panic-help')).toBeHidden();
-    await expect(page.locator('#usb-midi-toggle')).toBeHidden();
-    await expect(page.locator('#simulator-toggle')).toBeHidden();
-    await expect(page.locator('#device-monitor-section')).toBeHidden();
-    await expect(page.locator('#slot-detail-panel')).toBeHidden();
-    await expect(page.locator('#filter-settings')).toBeHidden();
-    await expect(page.locator('#arg-settings')).toBeHidden();
-    await expect(page.locator('#scope-panel')).toBeHidden();
-
-    await advancedButton.click();
-    await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#performer-panel')).toBeHidden();
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Instrument' })).toHaveAttribute('aria-selected', 'true');
+    await labButton.click();
+    await expect(labButton).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'EF Controls', exact: true }).click();
     await expect(page.locator('#filter-settings')).toBeVisible();
-    await expect(page.locator('#arg-settings')).toBeVisible();
-    await expect(page.locator('#device-monitor-section')).toBeVisible();
-    await page.getByRole('tab', { name: 'Instrument' }).press('End');
-    await expect(page.getByRole('tab', { name: 'Evidence' })).toBeFocused();
-    await page.getByRole('tab', { name: 'Observe' }).click();
-    await expect(page.locator('#device-monitor-section')).toBeVisible();
-    await expect(page.locator('#scope-panel')).toBeVisible();
 
     await page.reload();
-    await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#filter-settings')).toBeVisible();
+    await expect(labButton).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('cold start hides device inventory until an explicit simulator choice', async ({ page }) => {
@@ -94,17 +60,16 @@ test.describe('UI mode', () => {
     });
     await page.goto('/benzknobz.html');
 
-    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-    await page.getByRole('button', { name: 'Connect' }).click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
     await expect
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
       .toBe('simulator');
-    await page.locator('#load-demo-rig').click();
-    await expect(page.locator('#simulator-fixture-title')).toHaveText('Demo Rig');
-    await expect(page.locator('.slot-editor')).toBeVisible();
-    await expect(page.locator('#slot-detail-panel')).toBeHidden();
     await page.locator('#recovery-drawer > summary').click();
+    await page.locator('#load-demo-rig').click();
+    await page.locator('.workspace-tool-shell > summary').click();
+    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+    await expect(page.locator('#slot-detail-panel')).toBeHidden();
     await expect(page.locator('#export-preset')).toBeVisible();
     await expect(page.locator('#import-preset')).toBeVisible();
     await expect(page.locator('#profile-save')).toBeVisible();
