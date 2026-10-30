@@ -46,7 +46,9 @@ export function createSlotWorkspaceController({
   onSelectSlot = () => {},
   onTelemetryPainted = () => {},
   onSlotsChanged = () => {},
-  performerPanel = null
+  performerPanel = null,
+  isLivePanelOpen = () => true,
+  isSlotEditorOpen = () => true
 } = {}) {
   let envMeters = [];
 
@@ -126,16 +128,22 @@ export function createSlotWorkspaceController({
       efStatus: Array.isArray(frame.efStatus) ? frame.efStatus : slotState.telemetry?.efStatus,
       lfos: Array.isArray(frame.lfos) ? frame.lfos : slotState.telemetry?.lfos
     };
-    const outputValues = Array.isArray(frame.slotOutputs) ? frame.slotOutputs : frame.slots;
+    renderTelemetry();
+    performerPanel?.paintTelemetry?.(frame);
+    if (isSlotEditorOpen()) onTelemetryPainted(frame);
+  }
+
+  function renderTelemetry() {
+    if (!isLivePanelOpen()) return;
+    const telemetry = slotState.telemetry ?? {};
+    const outputValues = Array.isArray(telemetry.slotOutputs) ? telemetry.slotOutputs : telemetry.slots;
     if (Array.isArray(outputValues)) slotVirtualizer.updateTelemetry(outputValues);
-    frame.envelopes?.forEach((value, idx) => {
+    telemetry.envelopes?.forEach((value, idx) => {
       const entry = envMeters[idx];
       if (!entry) return;
       entry.progress.value = value;
       entry.value.textContent = String(value);
     });
-    performerPanel?.paintTelemetry?.(frame);
-    onTelemetryPainted(frame);
   }
 
   function renderSlotButton(el, index, slot) {
@@ -242,6 +250,7 @@ export function createSlotWorkspaceController({
     rebuildMeters,
     syncConfig,
     selectSlot,
-    paintTelemetry
+    paintTelemetry,
+    renderTelemetry
   };
 }

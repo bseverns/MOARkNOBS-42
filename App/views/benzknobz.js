@@ -679,9 +679,14 @@ const boot = () => {
       { id: 'session-log', label: 'Session Log', modes: ['advanced'], group: 'Lab Evidence', selector: '.debug-log-bridge' }
     ].map(workspaceTool),
     onVisibilityChanged: (entry, open) => {
-      if (entry.id !== 'device-monitor' || !open) return;
-      if (latestTelemetry) deviceMonitorController.renderTelemetry(latestTelemetry);
-      if (latestTelemetryHealth) deviceMonitorController.renderTelemetryHealth(latestTelemetryHealth);
+      if (!open) return;
+      if (entry.id === 'device-monitor') {
+        deviceMonitorController.render();
+        if (latestTelemetry) deviceMonitorController.renderTelemetry(latestTelemetry);
+        if (latestTelemetryHealth) deviceMonitorController.renderTelemetryHealth(latestTelemetryHealth);
+      }
+      if (entry.id === 'live-slots') slotWorkspaceController.renderTelemetry();
+      if (entry.id === 'slot-editor') populateDetail({ renderEditor: false });
     }
   });
   let hydrateWorkspaceDeepLink = true;
@@ -991,6 +996,8 @@ const boot = () => {
     envelopeContainer: envContainer,
     slotTypeAbbreviations: SLOT_TYPE_ABBREVIATIONS,
     performerPanel: performerPanelController,
+    isLivePanelOpen: () => workspacePanelController.getOpenPanelIds().includes('live-slots'),
+    isSlotEditorOpen: () => workspacePanelController.getOpenPanelIds().includes('slot-editor'),
     onSelectSlot: () => {
       populateDetail();
       if (uiModeController.getUiMode() === 'basic') {
@@ -1038,17 +1045,13 @@ const boot = () => {
     latestTelemetry = frame;
     slotWorkspaceController.paintTelemetry(frame);
     transportToolbarController.onTelemetry(frame);
-    if (workspacePanelController.getOpenPanelIds().includes('device-monitor')) {
-      deviceMonitorController.renderTelemetry(frame);
-    }
+    deviceMonitorController.renderTelemetry(frame);
     profileMacroScenePanel.onTelemetry(frame);
   });
   runtime.on('telemetry-health', (health) => {
     latestTelemetryHealth = health;
-    slotEditorPanel.updateSignalPath();
-    if (workspacePanelController.getOpenPanelIds().includes('device-monitor')) {
-      deviceMonitorController.renderTelemetryHealth(health);
-    }
+    if (workspacePanelController.getOpenPanelIds().includes('slot-editor')) slotEditorPanel.updateSignalPath();
+    deviceMonitorController.renderTelemetryHealth(health);
     updateStagePanel();
   });
   runtime.on('config', ({ staged, config, dirty }) => {

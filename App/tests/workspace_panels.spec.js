@@ -68,6 +68,29 @@ test.describe('progressive workspace panels', () => {
     await expect(page.locator('#device-monitor-section')).toBeVisible();
   });
 
+  test('hidden Device Monitor retains data without rebuilding its DOM', async ({ page }) => {
+    await bootSimulator(page, 'advanced');
+    const monitor = page.locator('#device-monitor-section');
+    await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
+    await expect(monitor.locator('.monitor-row')).not.toHaveCount(0);
+    await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
+
+    await page.evaluate(() => {
+      window.__deviceMonitorMutations = 0;
+      const monitor = document.querySelector('#device-monitor');
+      window.__deviceMonitorObserver = new MutationObserver((records) => {
+        window.__deviceMonitorMutations += records.length;
+      });
+      window.__deviceMonitorObserver.observe(monitor, { childList: true, subtree: true, characterData: true });
+    });
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.__deviceMonitorMutations)).toBe(0);
+
+    await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
+    await expect(monitor.locator('.monitor-row')).not.toHaveCount(0);
+    await page.evaluate(() => window.__deviceMonitorObserver.disconnect());
+  });
+
   test('mode changes retain open tools that remain eligible', async ({ page }) => {
     await bootSimulator(page, 'basic');
     await page.getByRole('button', { name: 'Live Slots', exact: true }).click();

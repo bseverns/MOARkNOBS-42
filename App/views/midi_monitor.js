@@ -59,6 +59,11 @@ export class MidiMonitor {
     this.clockBpm = clampBpm(this.bpmInput?.value ?? 120);
     this.visibleCount = LOG_VISIBLE_COUNT;
 
+    this.handleWorkspaceVisibility = (event) => {
+      if (event.detail?.open) this.renderLog();
+    };
+    this.container.addEventListener('workspace-panel-visibility', this.handleWorkspaceVisibility);
+
     this.toggleButton?.addEventListener('click', () => this.togglePanel());
     this.enableButton?.addEventListener('click', () => this.initMidiAccess());
     this.clockToggle?.addEventListener('click', () => this.toggleClock());
@@ -176,11 +181,12 @@ export class MidiMonitor {
 
   // Batch DOM updates onto rAF so dense MIDI traffic does not thrash layout.
   scheduleRender() {
+    if (this.container?.hidden) return;
     if (this.pendingRender) return;
     this.pendingRender = true;
     requestAnimationFrame(() => {
       this.pendingRender = false;
-      this.renderLog();
+      if (!this.container?.hidden) this.renderLog();
     });
   }
 

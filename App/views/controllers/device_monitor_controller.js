@@ -38,8 +38,12 @@ export function createDeviceMonitorController({ container, resolveDeviceName } =
   let lastTelemetry = {};
   let telemetryHealth = { freshness: 'stale', receivedAt: null, ageMs: null };
 
+  function isOpen() {
+    return !container?.closest('[data-workspace-panel]')?.hidden;
+  }
+
   function render() {
-    if (!container) return;
+    if (!container || !isOpen()) return;
     container.innerHTML = '';
 
     const diagnostics =
@@ -117,5 +121,5 @@ export function createDeviceMonitorController({ container, resolveDeviceName } =
     render();
   }
 
-  return { renderManifest, renderTelemetry, renderTelemetryHealth };
+  return { render, renderManifest, renderTelemetry, renderTelemetryHealth };
 }

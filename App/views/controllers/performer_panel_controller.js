@@ -287,6 +287,7 @@ export function createPerformerPanelController({
 
   function setVisible(visible) {
     panel?.toggleAttribute('hidden', !visible);
+    if (visible && latestTelemetry) paintTelemetry(latestTelemetry);
   }
 
   function rebuildMeters(count) {
@@ -451,6 +452,7 @@ export function createPerformerPanelController({
           ? { ...(latestTelemetry?.clock ?? {}), ...frame.clock }
           : latestTelemetry?.clock
     };
+    if (panel?.hidden) return;
 
     latestTelemetry.envelopes?.forEach((value, idx) => {
       const entry = envMeters[idx];

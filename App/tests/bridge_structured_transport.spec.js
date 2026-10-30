@@ -380,6 +380,9 @@ test('bridge-served app prefers the structured bridge session and promotes stage
   await expect(page.locator('#connection-banner')).toContainText('via Bridge session');
   await expect(page.locator('#connection-banner')).not.toContainText('via Bridge raw transport');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Bridge session');
+  await page.getByRole('button', { name: 'Lab', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
   await expect(page.locator('#device-monitor')).toContainText('OLED status');
   await expect(page.locator('#device-monitor')).toContainText('driver_begin_failed');
   await expect(page.locator('#device-monitor')).toContainText('Brownouts');
