@@ -2838,7 +2838,7 @@ html[data-ui-mode='advanced'] #connect-card {
   color: rgba(232, 255, 255, 0.78);
 }
 
-.lab-bench-panel.utility-panel-active {
+.lab-bench-panel:not([hidden]) {
   display: grid;
   min-width: 0;
 }

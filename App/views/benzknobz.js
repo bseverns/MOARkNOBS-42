@@ -149,8 +149,7 @@ const boot = () => {
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
   const editorTabButtons = Array.from(document.querySelectorAll('[data-editor-tab]'));
-  const utilityTabButtons = Array.from(document.querySelectorAll('[data-utility-tab]'));
-  const utilityPanels = Array.from(document.querySelectorAll('[data-utility-panel]'));
+
   const performanceTabButtons = Array.from(document.querySelectorAll('[data-performance-tab]'));
   const performancePanels = Array.from(document.querySelectorAll('[data-performance-panel]'));
   const performancePanelHost = document.getElementById('profile-performance-panels');
@@ -710,8 +709,6 @@ const boot = () => {
       uiModeNodes,
       advancedTierNodes,
       editorTabButtons,
-      utilityTabButtons,
-      utilityPanels,
       efAssignmentCard: null
     }
   });
@@ -980,7 +977,6 @@ const boot = () => {
     openLfoGenerator: (laneIndex) => {
       uiModeController.setUIMode('advanced', { preserveDraft: true });
       workspacePanelController.open('lfo-profile');
-      uiModeController.setUtilityTab('profile');
       setPerformanceTab('lfo');
       const lane = document.querySelector(`#lfo-editor .lfo-section:nth-child(${laneIndex + 1})`);
       lane?.scrollIntoView({ block: 'center' });
@@ -1025,7 +1021,6 @@ const boot = () => {
   performanceTabButtons.forEach((button) => {
     button.addEventListener('click', () => setPerformanceTab(button.dataset.performanceTab));
   });
-  uiModeController.setUtilityTab('instrument');
   setPerformanceTab('arp');
   uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
   uiModeController.setEditorTab(uiModeController.getEditorTab());
@@ -1390,19 +1385,8 @@ const boot = () => {
       return;
     }
     if (!uiModeController.setUIMode('advanced')) return;
-    const benchForRoot = {
-      efSlots: 'instrument',
-      filter: 'instrument',
-      arg: 'instrument',
-      envelopeMode: 'instrument',
-      led: 'instrument',
-      lfos: 'profile',
-      midiInputBindings: 'profile'
-    };
-    const bench = benchForRoot[parts[0]];
     const toolForRoot = { efSlots: 'ef-controls', filter: 'ef-controls', arg: 'ef-controls', envelopeMode: 'ef-controls', led: 'led-controls', lfos: 'lfo-profile', midiInputBindings: 'incoming-midi' };
     if (toolForRoot[parts[0]]) workspacePanelController.open(toolForRoot[parts[0]]);
-    if (bench) uiModeController.setUtilityTab(bench);
     if (parts[0] === 'lfos') setPerformanceTab('lfo');
     if (parts[0] === 'midiInputBindings') setPerformanceTab('incoming');
     const target = [...document.querySelectorAll('[data-device-config-path]')].find((node) => node.dataset.deviceConfigPath === parts.join('.')) ||

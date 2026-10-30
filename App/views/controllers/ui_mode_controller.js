@@ -6,9 +6,6 @@ function normalizeEditorTab(tab) {
   return tab === 'envelope' || tab === 'arg' || tab === 'lfo' ? tab : 'mapping';
 }
 
-function normalizeUtilityTab(tab) {
-  return tab === 'profile' || tab === 'observe' || tab === 'evidence' ? tab : 'instrument';
-}
 
 function readAllowedModes(node) {
   const raw = node?.dataset?.uiModes;
@@ -54,14 +51,11 @@ export function createUiModeController({
     uiModeNodes = [],
     advancedTierNodes = [],
     editorTabButtons = [],
-    utilityTabButtons = [],
-    utilityPanels = [],
     efAssignmentCard = null
   } = elements;
 
   let activeUiMode = normalizeUIMode(initialMode);
   let activeEditorTab = 'mapping';
-  let activeUtilityTab = 'console';
   const managedNodes = Array.from(new Set([...uiModeNodes, ...advancedTierNodes]));
 
   function initializeTabGroup(buttons, prefix, controlsForButton) {
@@ -92,17 +86,7 @@ export function createUiModeController({
 
   function bind() {
     initializeTabGroup(editorTabButtons, 'editor', () => 'form');
-    initializeTabGroup(utilityTabButtons, 'utility', (button) => {
-      const tab = normalizeUtilityTab(button.dataset.utilityTab);
-      const panel = utilityPanels.find(
-        (candidate) => normalizeUtilityTab(candidate.dataset.utilityPanel) === tab
-      );
-      if (!panel) return '';
-      panel.id ||= `utility-panel-${tab}`;
-      panel.setAttribute('role', 'tabpanel');
-      panel.setAttribute('aria-labelledby', button.id);
-      return panel.id;
-    });
+
     uiModeButtons.forEach((button) => {
       button.addEventListener('click', () => {
         setUIMode(button.dataset.uiModeBtn);
@@ -113,11 +97,7 @@ export function createUiModeController({
         setEditorTab(button.dataset.editorTab);
       });
     });
-    utilityTabButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        setUtilityTab(button.dataset.utilityTab);
-      });
-    });
+
   }
 
   function refreshModeNodes() {
@@ -139,18 +119,6 @@ export function createUiModeController({
     );
   }
 
-  function firstAvailableUtilityTab() {
-    const firstVisible = utilityTabButtons.find((button) => isModeAllowed(button, activeUiMode));
-    return normalizeUtilityTab(firstVisible?.dataset?.utilityTab);
-  }
-
-  function isUtilityTabAllowed(tab) {
-    return utilityTabButtons.some(
-      (button) =>
-        isModeAllowed(button, activeUiMode) &&
-        normalizeUtilityTab(button.dataset.utilityTab) === normalizeUtilityTab(tab)
-    );
-  }
 
   function setUIMode(mode, { persist = true, preserveDraft = false } = {}) {
     const nextMode = normalizeUIMode(mode);
@@ -169,11 +137,9 @@ export function createUiModeController({
     if (persist) persistUIMode(activeUiMode);
 
     if (!isEditorTabAllowed(activeEditorTab)) activeEditorTab = firstAvailableEditorTab();
-    if (!isUtilityTabAllowed(activeUtilityTab)) activeUtilityTab = firstAvailableUtilityTab();
 
     setPerformerVisible(activeUiMode === 'stage');
     refreshEditorTabs();
-    refreshUtilityTabs();
     if (getSlotCount() > 0) renderSlotEditor();
     onModeChanged(activeUiMode);
     return true;
@@ -199,25 +165,6 @@ export function createUiModeController({
     }
   }
 
-  function refreshUtilityTabs() {
-    const effectiveTab = isUtilityTabAllowed(activeUtilityTab)
-      ? normalizeUtilityTab(activeUtilityTab)
-      : firstAvailableUtilityTab();
-    activeUtilityTab = effectiveTab;
-    utilityTabButtons.forEach((button) => {
-      const buttonTab = normalizeUtilityTab(button.dataset.utilityTab);
-      const allowed = isModeAllowed(button, activeUiMode);
-      button.setAttribute('aria-pressed', allowed && buttonTab === effectiveTab ? 'true' : 'false');
-      button.setAttribute('aria-selected', allowed && buttonTab === effectiveTab ? 'true' : 'false');
-      button.tabIndex = allowed && buttonTab === effectiveTab ? 0 : -1;
-    });
-    utilityPanels.forEach((panel) => {
-      const panelTab = normalizeUtilityTab(panel.dataset.utilityPanel);
-      const visible = isModeAllowed(panel, activeUiMode) && panelTab === effectiveTab;
-      panel.classList.toggle('utility-panel-active', visible);
-      panel.toggleAttribute('hidden', !visible);
-    });
-  }
 
   function setEditorTab(tab) {
     activeEditorTab = normalizeEditorTab(tab);
@@ -225,16 +172,11 @@ export function createUiModeController({
     if (getSlotCount() > 0) renderSlotEditor();
   }
 
-  function setUtilityTab(tab) {
-    activeUtilityTab = normalizeUtilityTab(tab);
-    refreshUtilityTabs();
-  }
 
   return {
     bind,
     setUIMode,
     setEditorTab,
-    setUtilityTab,
     getUiMode: () => activeUiMode,
     getEditorTab: () => activeEditorTab
   };

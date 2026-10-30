@@ -53,7 +53,6 @@ export function createWorkspacePanelController({
         (entry) => entry.group === group.dataset.workspaceGroup && entry.node && !entry.node.hidden
       );
       group.hidden = !hasOpenPanel;
-      group.classList.toggle('utility-panel-active', hasOpenPanel);
     });
   }
 

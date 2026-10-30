@@ -11,7 +11,7 @@ async function bootSimulator(page, mode = 'basic') {
     };
   }, { mode });
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect controller' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await openWorkspaceTools(page);
 }
@@ -45,6 +45,7 @@ test.describe('progressive workspace panels', () => {
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
     await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(0);
     await openWorkspaceTools(page);
+    await expect(page.getByRole('tablist', { name: 'Lab Bench workspaces' })).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Lab Observe tools' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveAttribute(
       'aria-pressed',
@@ -113,6 +114,10 @@ test.describe('progressive workspace panels', () => {
 
   test('dirty drafts survive an explicitly confirmed mode transition', async ({ page }) => {
     await bootSimulator(page, 'basic');
+    await page.getByRole('button', { name: 'Lab', exact: true }).click();
+    await page.locator('#recovery-drawer > summary').click();
+    await page.locator('#load-demo-rig').click();
+    await page.getByRole('button', { name: 'Bench', exact: true }).click();
     await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
     const ccInput = page.locator('.slot-editor label:has-text("CC number") input').first();
     await ccInput.fill('45');
