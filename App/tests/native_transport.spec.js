@@ -207,8 +207,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
   }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-connect').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   const manifest = await page.evaluate(() => window.__MN42_RUNTIME.getState().manifest);
