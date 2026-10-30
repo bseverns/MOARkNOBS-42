@@ -103,6 +103,7 @@ export function createSlotEditorPanel({
   ];
   const lfoModeValues = lfoModeOptions.map((option) => option.value);
   let slotEditorRenderPending = false;
+  let lastSignalPathKey = '';
   let slotEditorFocusGuardBound = false;
   let lastRecipeResult = '';
   const recipeSelections = new Map();
@@ -982,15 +983,20 @@ export function createSlotEditorPanel({
     const slot = slotState.slots[index];
     const container = document.getElementById('selected-slot-signal');
     if (!container || !slot) return;
+    const liveSlot = runtime.getState().live?.slots?.[index];
+    const dirty = runtime
+      .diff()
+      .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`));
+    const key = JSON.stringify([index, slot, liveSlot, slotState.telemetry, dirty]);
+    if (key === lastSignalPathKey || container.matches(':hover, :focus-within')) return;
+    lastSignalPathKey = key;
     renderSlotSignal(container, {
       slot,
-      liveSlot: runtime.getState().live?.slots?.[index],
+      liveSlot,
       telemetry: slotState.telemetry,
       index,
       connected: document.documentElement.dataset.connected === 'true',
-      dirty: runtime
-        .diff()
-        .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`)),
+      dirty,
       onNavigate: (destination) => {
         const paths = {
           reactive: `slots.${index}.ef.index`,
