@@ -35,7 +35,7 @@ test.describe('UI mode', () => {
     await expect(page.locator('#cold-start')).toBeVisible();
     await expect(page.locator('#workspace-empty-state')).toBeHidden();
     await expect(page.locator('.workspace-tool-shell')).toBeHidden();
-    await expect(page.locator('#simulator-toggle')).toBeHidden();
+    await expect(page.locator('#cold-start-simulator')).toBeVisible();
     await page.locator('.cold-recovery > summary').click();
     await page.getByRole('button', { name: 'Open recovery tools' }).click();
     await expect(page.locator('#recovery-drawer')).toBeVisible();
