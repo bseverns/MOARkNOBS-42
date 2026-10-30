@@ -105,7 +105,7 @@ change the authority or write semantics of the underlying state.
 The State drawer groups presets, profile persistence, and file backups without merging their authority. Selected-slot
 markers reflect exact staged diffs. Review focuses the matching Lab field; Customize/Return preserve slot and lane.
 Continuous Lab slot controls support sliders and reset-to-confirmed staging, with logarithmic millisecond travel.
-Signal contribution graphics require a coherent, recent measured snapshot; missing components remain unreported.
+Signal contribution graphics require a coherent, recent measured snapshot; missing components remain unreported. Their render cache must also invalidate on connection and freshness transitions, so a retained telemetry frame never continues to present itself as live after delay, disconnect, or connection error.
 
 ## Device-backed and browser-local state
 
