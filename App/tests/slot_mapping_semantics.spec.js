@@ -7,7 +7,11 @@ async function bootConfigureSimulator(page) {
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   });
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
+  await page.locator('#recovery-drawer > summary').click();
+  await page.locator('#load-demo-rig').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
   await expect(page.locator('.slot-editor')).toBeVisible();
 }
 
