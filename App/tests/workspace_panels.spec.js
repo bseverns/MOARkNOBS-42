@@ -153,7 +153,7 @@ test.describe('progressive workspace panels', () => {
       };
     });
     await page.goto('/benzknobz.html?mode=basic');
-    await page.getByRole('button', { name: 'Connect' }).click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toContainText('Connected');
     await openWorkspaceTools(page);
     await page.waitForTimeout(250);
@@ -173,7 +173,7 @@ test.describe('progressive workspace panels', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };
     });
     await page.goto('/benzknobz.html?mode=advanced&panel=scope');
-    await page.getByRole('button', { name: 'Connect' }).click();
+    await page.locator('#connect').click();
     await openWorkspaceTools(page);
 
     await expect(page.locator('#scope-panel')).toBeVisible();
