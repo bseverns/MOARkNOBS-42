@@ -126,9 +126,10 @@ test('push note dynamics sends only the live native note dynamics command', asyn
   await page.addInitScript(installNativeHarness, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-connect').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
 
   await expect(page.locator('#note-dynamics-apply')).toBeEnabled();
   await page.locator('#note-dynamics-velocity').fill('-12');
