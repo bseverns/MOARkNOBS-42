@@ -72,7 +72,7 @@ test('connect distinguishes a cancelled device picker from other errors', async 
 
   await page.goto('/benzknobz.html');
   await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-connect').click();
 
   await expect(page.locator('#status-label')).toHaveText('No device selected');
   await expect(page.locator('.status-message')).toContainText('browser picker');
@@ -98,7 +98,7 @@ test('connect ignores malformed remembered port filters so the picker can open',
 
   await page.goto('/benzknobz.html');
   await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-connect').click();
 
   await page.waitForFunction(() => window.__requestPortOptions !== null);
   const options = await page.evaluate(() => window.__requestPortOptions);
