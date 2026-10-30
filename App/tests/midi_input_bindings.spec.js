@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 async function openIncomingMidi(page) {
+  await page.getByRole('button', { name: 'Lab', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Incoming MIDI', exact: true }).click();
   await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
   const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
@@ -18,7 +21,7 @@ test('MIDI input bindings can be added, edited, and removed as staged profile co
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
 
   const inputSection = await openIncomingMidi(page);
   await inputSection.locator('.schema-array-add').click();
@@ -60,7 +63,7 @@ test('removing a MIDI input binding cancels its pending field edit', async ({ pa
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
 
   const inputSection = await openIncomingMidi(page);
   await inputSection.locator('.schema-array-add').click();
@@ -90,7 +93,7 @@ test('rerendering an array preserves a synchronously staged select edit', async 
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
 
   const inputSection = await openIncomingMidi(page);
   await inputSection.locator('.schema-array-add').click();
@@ -118,7 +121,7 @@ test('MIDI input binding editor presents grouped targets and keeps output range 
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
 
   const inputSection = await openIncomingMidi(page);
   await expect(inputSection.locator('.midi-binding-count')).toHaveText('0 of 16 bindings');
@@ -179,7 +182,7 @@ test('MIDI input binding groups contain their controls at the desktop review wid
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   const inputSection = await openIncomingMidi(page);
   await inputSection.getByRole('button', { name: 'Add binding' }).click();
 
@@ -222,7 +225,7 @@ test('MIDI input binding editor collapses to one usable column on a phone', asyn
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   const inputSection = await openIncomingMidi(page);
   await inputSection.getByRole('button', { name: 'Add binding' }).click();
 
@@ -248,7 +251,7 @@ test('Incoming MIDI is profile-owned and not part of the selected-slot workspace
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
 
   const incomingPanel = page.locator('[data-performance-panel="incoming"]');
   await expect(incomingPanel).toBeHidden();

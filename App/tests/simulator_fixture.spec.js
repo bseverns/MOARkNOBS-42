@@ -17,8 +17,11 @@ test('Start Simulator opens firmware defaults and Load Demo Rig names its illust
   await page.goto('/benzknobz.html');
   await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
 
-  await page.locator('#empty-start-simulator').click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
+  await page.getByRole('button', { name: 'Lab', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
   await expect(page.locator('#simulator-fixture-card')).toBeVisible();
   await expect(page.locator('#simulator-fixture-title')).toHaveText('Firmware defaults');
 
@@ -67,7 +70,10 @@ test('Load Demo Rig can be chosen as the first hardware-free session', async ({ 
   await page.goto('/benzknobz.html');
   await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
 
-  await page.locator('#empty-load-demo-rig').click();
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toHaveText('Connected');
+  await page.locator('#recovery-drawer > summary').click();
+  await page.locator('#load-demo-rig').click();
   await expect
     .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().simulatorFixture))
     .toBe('demo');

@@ -11,11 +11,10 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
 
   await page.goto('/benzknobz.html');
   await page.waitForFunction(() => Boolean(window.__MN42_RUNTIME));
-  await page.evaluate(() => {
-    window.__MN42_RUNTIME?.useSimulator?.(true);
-  });
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'EF Controls', exact: true }).click();
   await page.evaluate(() => {
     const runtime = window.__MN42_RUNTIME;
     runtime?.stage?.((draft) => {
@@ -46,8 +45,6 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
     const efSlots = runtime?.getState?.().staged?.efSlots;
     return Array.isArray(efSlots) && efSlots.length > 0 && Array.isArray(efSlots[0]?.slots);
   });
-  await page.getByRole('tab', { name: 'Envelope' }).click();
-
   const efRow = page.locator('#ef-assignment-card .ef-row').first();
   await expect(efRow).toBeVisible();
   await expect(efRow.locator('.ef-row-summary')).toHaveText('Unassigned');

@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+async function bootSlotEditor(page) {
+  await page.goto('/benzknobz.html');
+  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+  await expect(page.locator('.slot-editor')).toBeVisible();
+}
+
 test('slot editor preserves focused number input during live telemetry refresh', async ({
   page
 }) => {
@@ -9,10 +19,7 @@ test('slot editor preserves focused number input during live telemetry refresh',
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
   });
 
-  await page.goto('/benzknobz.html');
-  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.locator('#connect').click();
-  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await bootSlotEditor(page);
   await page.getByRole('tab', { name: 'Envelope' }).click();
 
   const frequencyInput = page
@@ -41,10 +48,8 @@ test('schema controls preserve focused numeric draft during config refresh', asy
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
   });
 
-  await page.goto('/benzknobz.html');
-  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.locator('#connect').click();
-  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await bootSlotEditor(page);
+  await page.getByRole('button', { name: 'EF Controls', exact: true }).click();
 
   const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();
   await expect(freqInput).toBeVisible();

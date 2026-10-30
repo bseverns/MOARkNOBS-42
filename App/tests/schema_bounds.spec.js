@@ -10,8 +10,9 @@ test('schema bounds clamp numeric inputs', async ({ page }) => {
   });
 
   await page.goto('/benzknobz.html');
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'EF Controls', exact: true }).click();
 
   const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();
   await expect(freqInput).toBeVisible();

@@ -11,8 +11,7 @@ test('connection banner shows device identity and firmware version', async ({ pa
     'What to do if connect fails'
   );
 
-  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
 
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
   await expect
@@ -30,6 +29,8 @@ test('connection banner shows device identity and firmware version', async ({ pa
   );
 
   await page.getByRole('button', { name: 'Lab', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
   await expect(page.locator('#power-safety-pill')).toBeHidden();
   await expect(page.locator('#global-power-warning')).toBeVisible();
   await expect(page.locator('#device-monitor')).toContainText('Power profile');

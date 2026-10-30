@@ -6,12 +6,16 @@ async function bootConfigureSimulator(page) {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'basic');
-    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
+  await page.locator('#recovery-drawer > summary').click();
+  await page.locator('#load-demo-rig').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
 }
 
 test('selected-slot tuning screenshot states', async ({ page }) => {

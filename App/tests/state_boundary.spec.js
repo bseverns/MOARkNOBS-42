@@ -5,13 +5,18 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
-    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
   });
 
   await page.goto('/benzknobz.html');
-  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.getByRole('button', { name: 'Lab', exact: true }).click();
+  await page.locator('#recovery-drawer > summary').click();
+  await page.locator('#load-demo-rig').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+  await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
   await page.locator('#slots [data-index="1"]').click();
 
   await expect(page.locator('#note-dynamics-apply')).toBeEnabled();
@@ -157,8 +162,7 @@ test('readback divergence preserves staged and live truth and updates status UI'
   }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-connect').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.evaluate(() => {

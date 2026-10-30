@@ -1,4 +1,4 @@
-import { renderSlotSignal } from '../slot_signal_path.js';
+import { describeSlotSignal, renderSlotSignal } from '../slot_signal_path.js';
 import { updateStagedControlMarkers, normalizeConfigPath } from '../staged_control_markers.js';
 import {
   EF_DESTINATION_PRESENTATION,
@@ -103,6 +103,7 @@ export function createSlotEditorPanel({
   ];
   const lfoModeValues = lfoModeOptions.map((option) => option.value);
   let slotEditorRenderPending = false;
+  let lastSignalPathKey = '';
   let slotEditorFocusGuardBound = false;
   let lastRecipeResult = '';
   const recipeSelections = new Map();
@@ -982,15 +983,22 @@ export function createSlotEditorPanel({
     const slot = slotState.slots[index];
     const container = document.getElementById('selected-slot-signal');
     if (!container || !slot) return;
+    const liveSlot = runtime.getState().live?.slots?.[index];
+    const dirty = runtime
+      .diff()
+      .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`));
+    const connected = document.documentElement.dataset.connected === 'true';
+    const freshness = describeSlotSignal({ telemetry: slotState.telemetry, connected }).freshness;
+    const key = JSON.stringify([index, slot, liveSlot, slotState.telemetry, dirty, connected, freshness]);
+    if (key === lastSignalPathKey || container.matches(':hover, :focus-within')) return;
+    lastSignalPathKey = key;
     renderSlotSignal(container, {
       slot,
-      liveSlot: runtime.getState().live?.slots?.[index],
+      liveSlot,
       telemetry: slotState.telemetry,
       index,
-      connected: document.documentElement.dataset.connected === 'true',
-      dirty: runtime
-        .diff()
-        .some((change) => normalizeConfigPath(change.path).startsWith(`slots.${index}.`)),
+      connected,
+      dirty,
       onNavigate: (destination) => {
         const paths = {
           reactive: `slots.${index}.ef.index`,

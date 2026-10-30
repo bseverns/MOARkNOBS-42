@@ -46,8 +46,10 @@ test('midi monitor logs and clock without jitter', async ({ page }) => {
 
   await page.goto('/');
   await page.waitForFunction(() => document.documentElement?.dataset?.mn42Booted === 'true');
-  await page.getByRole('tab', { name: 'Observe', exact: true }).click();
-  await expect(page.locator('[data-utility-panel="observe"]')).toBeVisible();
+  await page.locator('#cold-start-simulator').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'MIDI Monitor', exact: true }).click();
+  await expect(page.locator('#midi-panel')).toBeVisible();
 
   const toggle = page.locator('#midi-panel-toggle');
   await expect(toggle).toBeVisible();

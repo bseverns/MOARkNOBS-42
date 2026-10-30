@@ -3,6 +3,12 @@ import { test, expect } from '@playwright/test';
 async function bootWithSimulator(page) {
   await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'LFO Profile', exact: true }).click();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
 }
 
 test('profile performance controls live in the Profile Lab Bench workspace', async ({
@@ -17,55 +23,11 @@ test('profile performance controls live in the Profile Lab Bench workspace', asy
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
 
-  const bench = page.locator('#lab-bench');
-  await expect(bench).toBeVisible();
-  await expect(bench.getByRole('tab', { name: 'Instrument', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true'
-  );
-  await bench.getByRole('tab', { name: 'Profile', exact: true }).click();
   const workspace = page.locator('#profile-performance-workspace');
   await expect(workspace).toBeVisible();
-  await expect(workspace.locator('[data-performance-panel="arp"]')).toBeVisible();
+  await expect(workspace.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#connect-card [data-performance-panel]')).toHaveCount(0);
   await expect(page.locator('#connect-card [data-utility-tab]')).toHaveCount(0);
-  await expect(bench.locator('[data-utility-tab="instrument"]')).toContainText('USB MIDI');
-  await expect(bench.locator('[data-utility-tab="profile"]')).toContainText('Incoming MIDI');
-  await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('EF/LFO Scope');
-  await expect(bench.locator('[data-utility-tab="observe"]')).toContainText('MIDI Monitor');
-  await expect(bench.locator('[data-utility-tab="evidence"]')).toContainText('Debug Log');
-  await expect(bench.locator('.lab-bench-tabbar .explainer-icon')).toHaveCount(4);
-  await expect(page.locator('.performance-tab .explainer-icon')).toHaveCount(3);
-  await expect(
-    page.locator('#profile-performance-workspace .profile-performance-header > div > .explainer-icon')
-  ).toHaveCount(1);
-  await bench.getByRole('tab', { name: 'Instrument', exact: true }).click();
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
-  await expect(page.locator('#connection-pill')).toContainText('Connected');
-  const configuration = bench.locator('[data-instrument-zone="configuration"]');
-  const liveControls = bench.locator('[data-instrument-zone="live"]');
-  await expect(configuration).toContainText('Machine configuration');
-  await expect(configuration).toContainText('Apply required');
-  await expect(configuration.locator('.ef-modulation-cluster')).toBeVisible();
-  await expect(configuration.locator('#led-settings')).toBeVisible();
-  await expect(configuration.locator('legend .explainer-icon')).toHaveCount(5);
-  await expect(liveControls).toContainText('Live device controls');
-  await expect(liveControls).toContainText('Writes now');
-  await expect(liveControls.locator('#usb-midi-toggle')).toBeVisible();
-  await expect(liveControls.locator('#device-clock-source')).toBeVisible();
-  await expect(liveControls.locator('#usb-midi-toggle-title .explainer-icon')).toHaveCount(1);
-  await expect(liveControls.locator('#device-clock-title .explainer-icon')).toHaveCount(1);
-
-  await bench.getByRole('tab', { name: 'Observe', exact: true }).click();
-  await expect(bench.locator('#device-monitor-section .explainer-icon')).toHaveCount(1);
-  await expect(bench.locator('#scope-panel .explainer-icon')).toHaveCount(1);
-  await expect(bench.locator('#midi-panel .explainer-icon')).toHaveCount(1);
-  await expect(bench.locator('.mod-matrix-card .explainer-icon')).toHaveCount(1);
-
-  await bench.getByRole('tab', { name: 'Evidence', exact: true }).click();
-  await expect(bench.locator('#diff-empty > .explainer-icon')).toHaveCount(1);
-  await expect(bench.locator('#slot-detail-panel .explainer-icon')).toHaveCount(1);
-  await expect(bench.locator('.debug-log-bridge > summary .explainer-icon')).toHaveCount(1);
   await expect(page.locator('[data-editor-tab="lfo"]')).toHaveText('Slot LFO');
 });
 
@@ -78,10 +40,8 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
 
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#lfo-status')).toContainText('2 LFOs');
@@ -117,8 +77,6 @@ test('disconnect preserves an unsaved profile LFO draft without claiming it was 
   });
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   const depth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
   await depth.fill('0.42');
@@ -140,7 +98,6 @@ test('failed LFO profile save preserves unrelated staged configuration', async (
 
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   const stagedDiff = await page.evaluate(() => {
@@ -161,7 +118,6 @@ test('failed LFO profile save preserves unrelated staged configuration', async (
   });
   expect(stagedDiff.length).toBeGreaterThan(0);
 
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
   await firstDepth.fill('0.42');
@@ -186,14 +142,12 @@ test('inactive slot LFO save keeps the edited slot visible', async ({ page }) =>
 
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.locator('#recovery-drawer').evaluate((drawer) => {
     drawer.open = true;
   });
   await page.locator('[data-profile-slot="1"]').click();
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#profile-slot-status')).toContainText('Slot B');
@@ -228,7 +182,6 @@ test('active slot LFO save does not warn to switch to itself', async ({ page }) 
 
   await page.goto('/benzknobz.html');
   await bootWithSimulator(page);
-  await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.evaluate(() => {
@@ -248,7 +201,6 @@ test('active slot LFO save does not warn to switch to itself', async ({ page }) 
     };
   });
 
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
   await page.locator('[data-performance-tab="lfo"]').click();
   await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
 

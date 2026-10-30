@@ -26,9 +26,7 @@ test('rpc queue throttles and respects single-flight ordering', async ({ page })
   });
 
   await page.goto('/benzknobz.html');
-  const simulatorToggle = page.locator('#simulator-toggle');
-  await simulatorToggle.click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.evaluate(() => {

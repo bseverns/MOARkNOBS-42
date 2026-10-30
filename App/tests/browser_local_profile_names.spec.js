@@ -5,13 +5,19 @@ test.beforeEach(async ({ page }) => {
     if (window.sessionStorage?.getItem('profile-name-test-ready')) return;
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     window.sessionStorage?.setItem('profile-name-test-ready', 'true');
   });
   await page.goto('/benzknobz.html');
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.locator('#recovery-drawer > summary').click();
 });
 
 test('browser-local profile names persist and never dirty firmware config', async ({ page }) => {
-  await page.locator('#recovery-drawer > summary').click();
   const input = page.locator('#profile-name');
 
   await input.fill('  Ambient   Set  ');
@@ -19,7 +25,7 @@ test('browser-local profile names persist and never dirty firmware config', asyn
 
   await expect(input).toHaveValue('Ambient Set');
   await expect(page.locator('#profile-slot-status')).toContainText('Ambient Set • Profile A');
-  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A target');
+  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A');
   await expect(page.locator('#profile-save')).toHaveText('Save to Ambient Set (Profile A)');
   await expect(page.locator('#apply')).toBeDisabled();
 
@@ -39,14 +45,13 @@ test('browser-local profile names persist and never dirty firmware config', asyn
   );
 
   await page.reload();
-  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A target');
+  await page.locator('#cold-start-simulator').click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A');
   await expect(page.locator('#stage-profile-select option[value="0"]')).toHaveText(
     'Ambient Set · Profile A'
   );
 
-  await page.getByRole('button', { name: 'Lab', exact: true }).click();
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await page.getByRole('button', { name: 'Stage', exact: true }).click();
   await expect(page.locator('#stage-profile-summary')).toHaveText('Ambient Set · Profile A');
   await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A');
@@ -59,7 +64,6 @@ test('browser-local profile names persist and never dirty firmware config', asyn
 });
 
 test('each profile slot keeps an independent local name', async ({ page }) => {
-  await page.locator('#recovery-drawer > summary').click();
   await page.locator('[data-profile-slot="1"]').click();
   await page.locator('#profile-name').fill('Bass Rig');
   await page.locator('#profile-name').blur();

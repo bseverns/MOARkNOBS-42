@@ -172,10 +172,11 @@ test('live arp controls push runtime shape and start stop state without dirtying
 
   await page.goto('/benzknobz.html');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
-
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
+  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('[data-performance-panel="arp"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Shared Arp Engine' })).toBeVisible();
@@ -229,10 +230,10 @@ test('profile arp round-trips generator settings and explicit assignments withou
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
-
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
   await expect(page.locator('[data-arp-engine-context-panel="profile"]')).toBeVisible();
@@ -263,15 +264,37 @@ test('profile arp round-trips generator settings and explicit assignments withou
   await expect(page.locator('#live-arp-status')).toContainText('Idle');
 });
 
+test('disconnect preserves an unsaved profile arp draft without claiming it was saved', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+  await page.goto('/benzknobz.html');
+  await page.locator('#cold-start-simulator').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.locator('[data-performance-tab="arp"]').click();
+  await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
+  const length = page.locator('#arp-pattern-length');
+  await length.fill('9');
+
+  await page.evaluate(() => window.__MN42_RUNTIME.disconnect());
+
+  await expect(length).toHaveValue('9');
+  await expect(page.locator('#arp-save')).toBeDisabled();
+  await expect(page.locator('#arp-status')).toContainText('Connect to inspect');
+});
+
 test('live arp controls use native runtime commands without config boot', async ({ page }) => {
   await page.addInitScript(installNativeArpHarness, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
-
-  await page.getByRole('tab', { name: 'Profile', exact: true }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
+  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 

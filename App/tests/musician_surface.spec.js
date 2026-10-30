@@ -13,8 +13,13 @@ async function boot(page, mode = 'basic') {
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, simulatorFixture: 'demo' };
   }, mode);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
+  await page.locator('#recovery-drawer > summary').click();
+  await page.locator('#load-demo-rig').click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+  await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
   expect(errors).toEqual([]);
   await expect(page.locator('.slot-editor')).toBeVisible();
   return errors;
@@ -232,10 +237,10 @@ test('Review focuses the exact staged field and logarithmic Lab sliders reset to
 test('State drawer groups starting points, device memory, and file backups without writing on open', async ({
   page
 }) => {
-  const errors = await boot(page);
+  const errors = await boot(page, 'advanced');
   const before = await page.evaluate(() => structuredClone(window.__MN42_RUNTIME.getState().live));
   const drawer = page.locator('#recovery-drawer');
-  await drawer.locator('summary').click();
+  await expect(drawer).toHaveAttribute('open', '');
   for (const id of [
     'preset-picker',
     'profile-save',
