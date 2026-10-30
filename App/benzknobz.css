@@ -40,10 +40,7 @@ body {
   min-height: 100vh;
   font-family: var(--font-display);
   line-height: 1.45;
-  background:
-    radial-gradient(circle at top, rgba(45, 226, 230, 0.16), transparent 52%),
-    radial-gradient(circle at bottom, rgba(255, 95, 150, 0.12), transparent 64%),
-    var(--color-bg);
+  background: var(--color-bg);
   color: var(--color-text);
   overflow-x: hidden;
   overflow-y: auto;
@@ -75,9 +72,8 @@ body {
 .compact-hero {
   padding: 18px 20px;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(21, 26, 36, 0.95), rgba(11, 15, 22, 0.92));
-  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-surface-alt);
 }
 
 .workspace-top {
@@ -97,7 +93,7 @@ body {
   color: var(--color-muted);
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  font-size: 0.72rem;
+  font: .65rem var(--font-mono);
 }
 
 .hero h1 {
@@ -2666,10 +2662,9 @@ html[data-ui-mode='advanced'] #connect-card {
   gap: 16px;
   min-width: 0;
   padding: 20px;
-  border: 1px solid rgba(45, 226, 230, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
-  background: linear-gradient(145deg, rgba(45, 226, 230, 0.06), rgba(0, 0, 0, 0.2));
-  box-shadow: var(--shadow-soft);
+  background: var(--color-surface-alt);
 }
 
 .lab-bench-header {
@@ -4786,9 +4781,8 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
   align-items: center;
   gap: 14px;
   padding: 8px clamp(12px, 3vw, 36px);
-  border-block: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
-  backdrop-filter: blur(12px);
+  border-block: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg);
   overflow-x: clip;
   pointer-events: none;
 }
@@ -4809,7 +4803,7 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 .workspace-tool-shell[open] .workspace-tool-picker { width: 100%; }
 .workspace-tool-shell h2, .workspace-tool-shell p { margin: 0; }
 .workspace-tool-shell h2 { font-size: .9rem; }
-.workspace-kicker { color: var(--color-muted); font: .65rem var(--font-mono); text-transform: uppercase; letter-spacing: .1em; }
+
 .workspace-tool-picker { display: flex; flex-wrap: wrap; gap: 6px; pointer-events: auto; }
 .workspace-tool-group { display: flex; flex-wrap: wrap; gap: 5px; padding: 0; border: 0; }
 .workspace-tool-group[hidden] { display: none !important; }
@@ -4855,6 +4849,7 @@ html[data-connected='false'][data-cold-recovery='true'] #recovery-drawer.ui-tier
 html[data-connected='false'][data-cold-recovery='true'][data-ui-mode='stage'] #recovery-drawer { display: block !important; }
 @media (max-width: 620px) {
   .workspace-tool-shell { position: static; align-items: flex-start; flex-direction: column; }
-  .workspace-tool-picker { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .workspace-tool-shell[open] { grid-template-columns: minmax(0, 1fr); }
+  .workspace-tool-picker { width: 100%; min-width: 0; contain: layout; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
   .workspace-tool-group { flex: 0 0 auto; }
 }

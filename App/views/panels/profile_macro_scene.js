@@ -7,6 +7,13 @@ import { createLocalProfileNames } from '../../runtime/local_profile_names.js';
 import { createProfileFileIO } from './profile_file_io.js';
 import { createProfileSceneControls } from './profile_scene_controls.js';
 import {
+  buildModMatrixView,
+  formatConflictMessage,
+  formatRouteDepth,
+  formatRouteLastValue,
+  formatRouteRange
+} from './mod_matrix_view.js';
+import {
   createProfileWorkflow,
   resolveProfileCapabilities,
   supportsAnyProfileAction as supportsAnyProfileActionForCapabilities,
@@ -400,110 +407,10 @@ export function createProfileMacroScenePanel({
     if (modMatrixActiveFilter) modMatrixActiveFilter.checked = modMatrixFilters.activeOnly;
   }
 
-  function formatRouteRange(route) {
-    const min = route?.range?.min;
-    const max = route?.range?.max;
-    if (Number.isFinite(Number(min)) && Number.isFinite(Number(max))) {
-      return `${min}-${max}`;
-    }
-    return '-';
-  }
-
-  function formatRouteDepth(route) {
-    if (Number.isFinite(Number(route?.depth))) return Number(route.depth).toFixed(2);
-    if (Number.isFinite(Number(route?.amount))) return Number(route.amount).toFixed(2);
-    return '-';
-  }
-
-  function formatRouteLastValue(route) {
-    if (Number.isFinite(Number(route?.last_value))) return String(route.last_value);
-    return '-';
-  }
-
-  function isSlotMatrixRoute(route = {}) {
-    if (String(route?.route_type ?? '').toLowerCase() === 'slot_value') return true;
-    return /^slot\d+\.value$/i.test(String(route?.destination ?? ''));
-  }
-
-  function readConflictWriterIds(conflict = {}) {
-    const candidates = [];
-    if (Array.isArray(conflict?.route_ids)) candidates.push(...conflict.route_ids);
-    if (Array.isArray(conflict?.routeIds)) candidates.push(...conflict.routeIds);
-    if (Array.isArray(conflict?.writers)) candidates.push(...conflict.writers);
-    if (typeof conflict?.writers === 'string') {
-      candidates.push(...conflict.writers.split(','));
-    }
-    return Array.from(
-      new Set(candidates.map((value) => String(value ?? '').trim()).filter((value) => value.length))
-    );
-  }
-
-  function routeMatchesConflict(route = {}, conflict = {}) {
-    const routeId = String(route?.id ?? '').trim();
-    const writerIds = readConflictWriterIds(conflict);
-    if (routeId && writerIds.includes(routeId)) return true;
-
-    if (conflict?.target === 'slot.value' && Number.isFinite(Number(conflict?.slot))) {
-      return String(route?.destination ?? '') === `slot${Number(conflict.slot)}.value`;
-    }
-    if (conflict?.target === 'midi.cc') {
-      const channel = Number(conflict?.channel);
-      const cc = Number(conflict?.cc);
-      if (!Number.isFinite(channel) || !Number.isFinite(cc)) return false;
-      const routeChannel = Number(route?.channel ?? route?.midi?.channel);
-      if (!Number.isFinite(routeChannel) || routeChannel !== channel) return false;
-      return [route?.cc_msb, route?.cc_lsb, route?.midi?.cc].some((value) => Number(value) === cc);
-    }
-    return false;
-  }
-
-  function formatConflictMessage(conflict = {}) {
-    if (typeof conflict?.message === 'string' && conflict.message.trim()) return conflict.message;
-    if (conflict?.target === 'slot.value' && Number.isFinite(Number(conflict?.slot))) {
-      return `Slot ${Number(conflict.slot)} value collision`;
-    }
-    if (conflict?.target === 'midi.cc') {
-      const channel = Number(conflict?.channel);
-      const cc = Number(conflict?.cc);
-      if (Number.isFinite(channel) && Number.isFinite(cc)) {
-        return `MIDI CC ${cc} on channel ${channel} has multiple writers`;
-      }
-    }
-    return `${conflict?.target ?? 'target'} collision`;
-  }
-
-  function buildModMatrixView(report = modMatrixReport) {
-    const routes = Array.isArray(report?.routes) ? report.routes : [];
-    const conflicts = Array.isArray(report?.conflicts) ? report.conflicts : [];
-    const filters = readModMatrixFilterSnapshot();
-    const filteredRoutes = routes.filter((route) => {
-      if (
-        filters.conflictsOnly &&
-        !conflicts.some((conflict) => routeMatchesConflict(route, conflict))
-      ) {
-        return false;
-      }
-      if (filters.lfoOnly && !isLfoMatrixRoute(route)) return false;
-      if (filters.slotOnly && !isSlotMatrixRoute(route)) return false;
-      if (filters.activeOnly && route?.active === false) return false;
-      return true;
+  function buildCurrentModMatrixView(report = modMatrixReport) {
+    return buildModMatrixView(report, readModMatrixFilterSnapshot(), {
+      previewLimit: MOD_MATRIX_ROUTE_PREVIEW_LIMIT
     });
-    const visibleRouteIds = new Set(
-      filteredRoutes.map((route) => String(route?.id ?? '').trim()).filter((value) => value.length)
-    );
-    const filteredConflicts = conflicts.filter((conflict) => {
-      const writerIds = readConflictWriterIds(conflict);
-      if (writerIds.length) return writerIds.some((writerId) => visibleRouteIds.has(writerId));
-      return filteredRoutes.some((route) => routeMatchesConflict(route, conflict));
-    });
-    return {
-      filters,
-      routes,
-      conflicts,
-      filteredRoutes,
-      filteredConflicts,
-      limitedRoutes: filteredRoutes.slice(0, MOD_MATRIX_ROUTE_PREVIEW_LIMIT)
-    };
   }
 
   function clearSelectedLfoRoute() {
@@ -569,7 +476,7 @@ export function createProfileMacroScenePanel({
       return;
     }
     const { filters, routes, conflicts, filteredRoutes, filteredConflicts, limitedRoutes } =
-      buildModMatrixView(report);
+      buildCurrentModMatrixView(report);
 
     const summary = document.createElement('div');
     summary.className = 'mod-matrix-summary';
@@ -682,7 +589,7 @@ export function createProfileMacroScenePanel({
     renderModMatrix();
     updateModMatrixControls();
     if (modMatrixReport) {
-      const view = buildModMatrixView(modMatrixReport);
+      const view = buildCurrentModMatrixView(modMatrixReport);
       setModMatrixStatus(
         'ok',
         `Showing ${view.filteredRoutes.length} of ${view.routes.length} routes and ${view.filteredConflicts.length} of ${view.conflicts.length} conflicts.`
@@ -705,7 +612,7 @@ export function createProfileMacroScenePanel({
       setModMatrixStatus('warn', 'Refresh the modulation matrix before exporting a report.');
       return;
     }
-    const view = buildModMatrixView(modMatrixReport);
+    const view = buildCurrentModMatrixView(modMatrixReport);
     const filename = `moarknobz-mod-matrix-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     downloadJson(filename, {
       type: 'mod_matrix_export',
@@ -734,7 +641,7 @@ export function createProfileMacroScenePanel({
       setModMatrixStatus('warn', 'Refresh the modulation matrix before copying conflicts.');
       return;
     }
-    const view = buildModMatrixView(modMatrixReport);
+    const view = buildCurrentModMatrixView(modMatrixReport);
     if (!view.filteredConflicts.length) {
       setModMatrixStatus('warn', 'No visible modulation conflicts to copy.');
       return;
@@ -1608,7 +1515,7 @@ export function createProfileMacroScenePanel({
     const hasReport =
       Array.isArray(modMatrixReport?.routes) || Array.isArray(modMatrixReport?.conflicts);
     const visibleConflictCount = hasReport
-      ? buildModMatrixView(modMatrixReport).filteredConflicts.length
+      ? buildCurrentModMatrixView(modMatrixReport).filteredConflicts.length
       : 0;
     if (modMatrixRefreshBtn) modMatrixRefreshBtn.disabled = !canInteract;
     [
@@ -2064,7 +1971,7 @@ export function createProfileMacroScenePanel({
       );
       renderModMatrix(modMatrixReport);
       const { routes, conflicts, filteredRoutes, filteredConflicts } =
-        buildModMatrixView(modMatrixReport);
+        buildCurrentModMatrixView(modMatrixReport);
       const conflictCount = filteredConflicts.length;
       setModMatrixStatus(
         conflictCount ? 'busy' : 'ok',

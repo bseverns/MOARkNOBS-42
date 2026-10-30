@@ -29,7 +29,7 @@ the runtime's label and recovery guidance.
 After `connected`, the runtime-provided connected state precedes a collapsed Workspace Tools disclosure. The existing
 workspace-panel controller remains the sole owner of workspace panel visibility; opening or closing the inventory does
 not open a panel, change mode, or write to the device. Explicit `panel`/`panels` deep links retain their requested-panel
-workflow. Hidden optional monitor panels retain the latest bounded runtime data but defer DOM rendering until opened. Device
+workflow. The disconnected shell uses a flat, minimal surface with only connection, simulator, and explicit local recovery actions prominent; device identity, metrics, modes, and tools remain absent until connection. Hidden optional monitor panels retain the latest bounded runtime data but defer DOM rendering until opened. Device
 Monitor, Slot Workspace, Stage, Selected Slot signal, Scope, and MIDI Monitor keep bounded snapshots while their
 presentation is closed; reopening renders that retained snapshot once and applies the current freshness state before
 resuming visible work. The before/after hierarchy and approved visual baselines are recorded in
