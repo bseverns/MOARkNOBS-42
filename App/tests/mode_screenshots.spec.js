@@ -10,11 +10,7 @@ async function openMode(page, mode) {
   }, mode);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`/?mode=${mode}`);
-  const connectButton =
-    mode === 'stage'
-      ? page.locator('#stage-connect')
-      : page.getByRole('button', { name: 'Connect' });
-  await connectButton.click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
 }
 
@@ -26,9 +22,7 @@ async function openModeAtViewport(page, mode, viewport) {
   }, mode);
   await page.setViewportSize(viewport);
   await page.goto(`/?mode=${mode}`);
-  await (mode === 'stage'
-    ? page.locator('#stage-connect')
-    : page.getByRole('button', { name: 'Connect' })).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
 }
 
