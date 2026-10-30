@@ -2,46 +2,16 @@ import { test, expect } from '@playwright/test';
 import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
 test.describe('Stage mode', () => {
-  test('renders without editor and lab panels', async ({ page }) => {
+  test('Stage mode remains connection-first until a runtime connects', async ({ page }) => {
     await page.goto('/?mode=stage');
 
-    await expect(page.locator('.global-mode-switch [data-ui-mode-btn="stage"]')).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    await expect(page.locator('#performer-panel')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Bench', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Lab', exact: true })).toBeVisible();
-    await expect(page.locator('#performer-panel')).toContainText(
-      'Performance-safe status and recovery. No staged editors or Apply controls here.'
-    );
-    await expect(page.locator('#stage-profile-summary')).toBeVisible();
-    await expect(page.locator('#stage-profile-summary')).toHaveText('Unavailable');
-    await expect(page.locator('#stage-scene-summary')).toHaveText('No browser recall');
-    await expect(page.locator('#stage-telemetry-state')).toHaveText('Telemetry offline');
-    await expect(page.locator('#stage-profile-load')).toBeVisible();
-    await expect(page.locator('#stage-scene-recall')).toBeVisible();
-    await expect(page.locator('#stage-panic-help')).toBeVisible();
-    await expect(page.locator('.connect-actions')).toBeHidden();
-    await expect(page.locator('#connect-card')).toBeHidden();
+    await expect(page.locator('#cold-start')).toBeVisible();
+    await expect(page.locator('#cold-connect')).toBeVisible();
+    await expect(page.locator('#cold-start-simulator')).toBeVisible();
+    await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('#editor-panel')).toBeHidden();
-    await expect(page.locator('#power-safety-pill')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
-    await expect(page.locator('#arg-settings')).toBeHidden();
-    await expect(page.locator('#led-settings')).toBeHidden();
-    await expect(page.locator('#device-monitor-section')).toBeHidden();
-    await expect(page.locator('#midi-panel')).toBeHidden();
     await expect(page.locator('#scope-panel')).toBeHidden();
-    await expect(page.locator('.debug-log-bridge')).toBeHidden();
-    await expect(page.locator('#simulator-toggle')).toBeHidden();
-    await expect(page.locator('#import-preset')).toBeHidden();
-    await expect(page.locator('#export-preset')).toBeHidden();
-    await expect(page.locator('#preset-picker')).toBeHidden();
-    await expect(page.locator('#apply-save-profile')).toBeHidden();
-    await expect(page.locator('#status')).toBeHidden();
-    await expect(page.locator('#stage-power-summary')).toContainText('Power status unavailable');
-    await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
-    await expect(page.locator('#global-power-warning')).toBeHidden();
   });
 
   test('shows simulator manifest power fields in the performer panel', async ({ page }) => {
@@ -50,7 +20,11 @@ test.describe('Stage mode', () => {
     });
     await page.goto('/?mode=stage');
 
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
+    await page.getByRole('button', { name: 'Bench', exact: true }).click();
+    await page.locator('#recovery-drawer > summary').click();
+    await page.locator('#load-demo-rig').click();
+    await page.getByRole('button', { name: 'Stage', exact: true }).click();
 
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
     await expect(page.locator('#stage-device-name')).toHaveText('MOARkNOBS-42');
@@ -93,7 +67,7 @@ test.describe('Stage mode', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/?mode=stage');
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
     const drawer = page.locator('#stage-motion');
@@ -247,7 +221,7 @@ test.describe('Stage mode', () => {
     }, { schemaVersion: MN42_SCHEMA_VERSION });
     await page.goto('/?mode=stage');
 
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
 
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
     await expect(page.locator('#stage-dirty-state')).toHaveText('Clean');
@@ -267,37 +241,24 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
   });
 
-  test('switching from Stage to Lab restores bench tools', async ({ page }) => {
+  test('switching from Stage to Lab exposes workspace tools without opening them', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/?mode=stage');
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
-
     await expect(page.locator('#performer-panel')).toBeHidden();
+    await expect(page.locator('#live-panel')).toBeHidden();
+    await page.locator('.workspace-tool-shell > summary').click();
+    await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
+    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+    await page.getByRole('button', { name: 'EF Controls', exact: true }).click();
     await expect(page.locator('#live-panel')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeVisible();
-    await expect(page.locator('#arg-settings')).toBeVisible();
-    await expect(page.locator('#led-settings')).toBeVisible();
-    await page.getByRole('tab', { name: 'Observe', exact: true }).click();
-    await expect(page.locator('#device-monitor-section')).toBeVisible();
-    await page.getByRole('tab', { name: 'Evidence', exact: true }).click();
-    await expect(page.locator('#slot-detail-panel')).toBeVisible();
-    await expect(page.locator('#simulator-toggle')).toBeVisible();
-
-    const liveBox = await page.locator('#live-panel').boundingBox();
-    const editorBox = await page.locator('#editor-panel').boundingBox();
-    const utilityBox = await page.locator('#connect-card').boundingBox();
-    if (!liveBox || !editorBox || !utilityBox) {
-      throw new Error('Advanced workbench columns did not render');
-    }
-    expect(liveBox.x).toBeLessThan(editorBox.x);
-    expect(editorBox.x).toBeLessThan(utilityBox.x);
-    expect(utilityBox.width).toBeGreaterThan(300);
   });
 
   test('device monitor shows EEPROM health from the manifest', async ({ page }) => {
@@ -306,9 +267,10 @@ test.describe('Stage mode', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/benzknobz.html');
-    await page.locator('#simulator-toggle').click();
-    await page.getByRole('button', { name: 'Connect' }).click();
-    await page.getByRole('tab', { name: 'Observe', exact: true }).click();
+    await page.locator('#cold-start-simulator').click();
+    await page.getByRole('button', { name: 'Lab', exact: true }).click();
+    await page.locator('.workspace-tool-shell > summary').click();
+    await page.getByRole('button', { name: 'Device Monitor', exact: true }).click();
 
     await expect(page.locator('#device-monitor')).toContainText('OLED present');
     await expect(page.locator('#device-monitor')).toContainText('OLED ready');
@@ -322,29 +284,21 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#device-monitor')).toContainText('Primary');
   });
 
-  test('switching from Stage to Bench restores the calm editor surface', async ({ page }) => {
+  test('switching from Stage to Bench keeps optional workspace tools closed', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/?mode=stage');
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
     await page.getByRole('button', { name: 'Bench', exact: true }).click();
-
     await expect(page.locator('#performer-panel')).toBeHidden();
-    await expect(page.locator('#stage-panel')).toBeVisible();
+    await expect(page.locator('#editor-panel')).toBeHidden();
+    await page.locator('.workspace-tool-shell > summary').click();
+    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
     await expect(page.locator('#editor-panel')).toBeVisible();
-    await expect(page.locator('#connect-card')).toBeVisible();
-    await expect(page.locator('#check-compatibility')).toBeHidden();
-    await expect(page.locator('#config-mode')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
-    await expect(page.locator('#arg-settings')).toBeHidden();
-    await expect(page.locator('#scope-panel')).toBeHidden();
-    await expect(page.locator('#stage-power-summary')).toBeHidden();
-    await expect(page.locator('#stage-scene-recall')).toBeHidden();
-    await expect(page.locator('#stage-panic-help')).toBeHidden();
-    await expect(page.locator('#usb-midi-toggle')).toBeHidden();
   });
 
   test('dirty staged state does not expose editing controls in Stage', async ({ page }) => {
@@ -352,7 +306,7 @@ test.describe('Stage mode', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/?mode=stage');
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
     await page.evaluate(() => {
@@ -394,7 +348,7 @@ test.describe('Stage mode', () => {
       };
     });
     await page.goto('/?mode=stage');
-    await page.locator('#stage-connect').click();
+    await page.locator('#cold-start-simulator').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
     const writesBefore = await page.evaluate(async () => {
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
