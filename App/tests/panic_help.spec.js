@@ -10,8 +10,7 @@ test('panic help dialog surfaces recovery actions and firmware lanes on demand',
   });
 
   await page.goto('/benzknobz.html');
-  await page.locator('#simulator-toggle').click();
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.getByRole('button', { name: 'Stage', exact: true }).click();
