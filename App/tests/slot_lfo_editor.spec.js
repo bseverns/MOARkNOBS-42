@@ -7,8 +7,11 @@ async function bootAdvancedSimulator(page) {
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
   });
   await page.goto('/benzknobz.html');
+  await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.locator('.workspace-tool-shell > summary').click();
+  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
+  await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
   await expect(page.locator('.slot-editor')).toBeVisible();
 }
 
