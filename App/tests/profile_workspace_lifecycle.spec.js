@@ -50,15 +50,29 @@ test('dirty LFO draft survives reconnect and requires confirmation before profil
   await expect(page.locator('#profile-slot-status')).toContainText('Slot A');
 });
 
-test('dirty profile arp draft survives runtime error and reconnect', async ({ page }) => {
+test('dirty profile arp draft survives a transport read error and reconnect', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__failProfileTransportRead = false;
+    window.__MN42_TEST_HOOKS = {
+      mutateTransport(transport) {
+        const nextLine = transport.nextLine.bind(transport);
+        transport.nextLine = async () => {
+          if (window.__failProfileTransportRead) throw new Error('test transport read failure');
+          return nextLine();
+        };
+      }
+    };
+  });
   await bootProfileWorkspace(page);
   await page.locator('[data-performance-tab="arp"]').click();
   await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
   const pattern = page.locator('#arp-pattern-length');
   await pattern.fill('9');
 
-  await page.evaluate(() => window.__MN42_RUNTIME.disconnect());
+  await page.evaluate(() => { window.__failProfileTransportRead = true; });
+  await expect(page.locator('#connect-fail-help')).toHaveAttribute('open', '');
   await expect(pattern).toHaveValue('9');
+  await page.evaluate(() => { window.__failProfileTransportRead = false; });
   await page.locator('#connect').click();
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
   await expect(pattern).toHaveValue('9');

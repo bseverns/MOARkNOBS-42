@@ -667,7 +667,15 @@ const boot = () => {
       { id: 'ef-controls', label: 'EF Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '.ef-modulation-cluster' },
       { id: 'led-controls', label: 'LED Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '#led-settings' },
       { id: 'device-link', label: 'Device Link Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '[data-instrument-zone="live"]' },
-      { id: 'profile-performance', label: 'Profile Performance', modes: ['advanced'], group: 'Lab Profile', selector: '#profile-performance-workspace' },
+      {
+        id: 'profile-performance',
+        label: 'Profile Performance',
+        modes: ['advanced'],
+        group: 'Lab Profile',
+        selector: '#profile-performance-workspace',
+        aliases: ['arp-profile', 'lfo-profile', 'incoming-midi'],
+        onAliasOpen: (id) => setPerformanceTab({ 'arp-profile': 'arp', 'lfo-profile': 'lfo', 'incoming-midi': 'incoming' }[id])
+      },
       { id: 'device-monitor', label: 'Device Monitor', modes: ['advanced'], group: 'Lab Observe', selector: '#device-monitor-section' },
       { id: 'scope', label: 'Scope', modes: ['advanced'], group: 'Lab Observe', selector: '#scope-panel' },
       { id: 'midi-monitor', label: 'MIDI Monitor', modes: ['advanced'], group: 'Lab Observe', selector: '#midi-panel' },

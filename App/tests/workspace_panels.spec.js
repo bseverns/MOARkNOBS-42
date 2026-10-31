@@ -225,6 +225,22 @@ test.describe('progressive workspace panels', () => {
     await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(2);
   });
 
+  for (const [legacyId, tab] of [['arp-profile', 'arp'], ['lfo-profile', 'lfo'], ['incoming-midi', 'incoming']]) {
+    test(`legacy ${legacyId} deep link opens its Profile Performance tab`, async ({ page }) => {
+      await page.addInitScript(() => {
+        window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };
+      });
+      await page.goto(`/benzknobz.html?mode=advanced&panel=${legacyId}`);
+      await page.locator('#connect').click();
+      await openWorkspaceTools(page);
+
+      await expect(page.getByRole('button', { name: 'Profile Performance', exact: true })).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator(`[data-performance-panel="${tab}"]`)).toBeVisible();
+      await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(1);
+      await expect(page).toHaveURL(/panel=profile-performance/);
+    });
+  }
+
   test('Workspace Tools supports keyboard disclosure and panel toggling', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };
