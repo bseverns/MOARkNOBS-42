@@ -97,7 +97,7 @@ slot or a machine-level performance parameter and travels with its profile.
 **Profile Performance** is one optional Workspace Tool; its Arpeggiator, LFO/routes, and Incoming MIDI tablist alone
 selects the visible inner panel. Profile Arp and LFO edits are browser-local unsaved drafts, not device truth or
 persistence proof. Disconnect and runtime errors disable writes but retain dirty drafts; reconnect readback refreshes
-only clean lanes. Switching profile or explicitly reloading a dirty lane requires a discard confirmation. Saving the
+only clean lanes. A dirty utility draft keeps its selected target profile across reconnect even when the board reports another active profile. Switching profile or explicitly reloading a dirty lane requires a discard confirmation. Saving the
 target profile and recalling the active device profile remain separate actions.
 
 The selected-slot Mapping tab names `data1` according to the chosen outgoing message: **CC number**, **Note number**,
