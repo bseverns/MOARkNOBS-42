@@ -176,7 +176,7 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await page.locator('.workspace-tool-shell > summary').click();
   await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
-  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('[data-performance-panel="arp"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Shared Arp Engine' })).toBeVisible();
@@ -233,7 +233,7 @@ test('profile arp round-trips generator settings and explicit assignments withou
   await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await page.locator('.workspace-tool-shell > summary').click();
-  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
   await expect(page.locator('[data-arp-engine-context-panel="profile"]')).toBeVisible();
@@ -273,7 +273,7 @@ test('disconnect preserves an unsaved profile arp draft without claiming it was 
   await page.goto('/benzknobz.html');
   await page.locator('#cold-start-simulator').click();
   await page.locator('.workspace-tool-shell > summary').click();
-  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
   const length = page.locator('#arp-pattern-length');
@@ -294,7 +294,7 @@ test('live arp controls use native runtime commands without config boot', async 
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await page.locator('.workspace-tool-shell > summary').click();
   await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
-  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 

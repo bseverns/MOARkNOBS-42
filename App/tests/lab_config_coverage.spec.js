@@ -34,9 +34,7 @@ async function bootLabSimulator(page) {
     'EF Controls',
     'LED Controls',
     'Device Link Controls',
-    'Arpeggiator Profile',
-    'LFO Profile',
-    'Incoming MIDI'
+    'Profile Performance'
   ]) {
     await page.getByRole('button', { name, exact: true }).click();
   }

@@ -667,9 +667,7 @@ const boot = () => {
       { id: 'ef-controls', label: 'EF Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '.ef-modulation-cluster' },
       { id: 'led-controls', label: 'LED Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '#led-settings' },
       { id: 'device-link', label: 'Device Link Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '[data-instrument-zone="live"]' },
-      { id: 'arp-profile', label: 'Arpeggiator Profile', modes: ['advanced'], group: 'Lab Profile', selector: '[data-performance-panel="arp"]' },
-      { id: 'lfo-profile', label: 'LFO Profile', modes: ['advanced'], group: 'Lab Profile', selector: '[data-performance-panel="lfo"]' },
-      { id: 'incoming-midi', label: 'Incoming MIDI', modes: ['advanced'], group: 'Lab Profile', selector: '[data-performance-panel="incoming"]' },
+      { id: 'profile-performance', label: 'Profile Performance', modes: ['advanced'], group: 'Lab Profile', selector: '#profile-performance-workspace' },
       { id: 'device-monitor', label: 'Device Monitor', modes: ['advanced'], group: 'Lab Observe', selector: '#device-monitor-section' },
       { id: 'scope', label: 'Scope', modes: ['advanced'], group: 'Lab Observe', selector: '#scope-panel' },
       { id: 'midi-monitor', label: 'MIDI Monitor', modes: ['advanced'], group: 'Lab Observe', selector: '#midi-panel' },
@@ -981,7 +979,7 @@ const boot = () => {
     },
     openLfoGenerator: (laneIndex) => {
       uiModeController.setUIMode('advanced', { preserveDraft: true });
-      workspacePanelController.open('lfo-profile');
+      workspacePanelController.open('profile-performance');
       setPerformanceTab('lfo');
       const lane = document.querySelector(`#lfo-editor .lfo-section:nth-child(${laneIndex + 1})`);
       lane?.scrollIntoView({ block: 'center' });
@@ -1388,7 +1386,7 @@ const boot = () => {
       return;
     }
     if (!uiModeController.setUIMode('advanced')) return;
-    const toolForRoot = { efSlots: 'ef-controls', filter: 'ef-controls', arg: 'ef-controls', envelopeMode: 'ef-controls', led: 'led-controls', lfos: 'lfo-profile', midiInputBindings: 'incoming-midi' };
+    const toolForRoot = { efSlots: 'ef-controls', filter: 'ef-controls', arg: 'ef-controls', envelopeMode: 'ef-controls', led: 'led-controls', lfos: 'profile-performance', midiInputBindings: 'profile-performance' };
     if (toolForRoot[parts[0]]) workspacePanelController.open(toolForRoot[parts[0]]);
     if (parts[0] === 'lfos') setPerformanceTab('lfo');
     if (parts[0] === 'midiInputBindings') setPerformanceTab('incoming');

@@ -802,12 +802,13 @@ export function createProfileMacroScenePanel({
     });
   }
 
-  function confirmDiscardArpDraft(action) {
-    if (!arpDraftDirty) return true;
+  function confirmDiscardProfileUtilityDrafts(action, focus = 'all') {
+    const discardArp = arpDraftDirty && focus !== 'lfo';
+    const discardLfo = lfoDraftDirty && focus !== 'arp';
+    if (!discardArp && !discardLfo) return true;
     if (typeof window === 'undefined' || typeof window.confirm !== 'function') return false;
-    return window.confirm(
-      `${action} will discard unsaved Profile ${slotLabel(activeProfileSlot)} arp defaults. Continue?`
-    );
+    const lanes = [discardArp && 'arp defaults', discardLfo && 'LFO routes'].filter(Boolean).join(' and ');
+    return window.confirm(`${action} will discard unsaved Profile ${slotLabel(activeProfileSlot)} ${lanes}. Continue?`);
   }
 
   function updateSelectedArpContext() {
@@ -1356,7 +1357,7 @@ export function createProfileMacroScenePanel({
     const changed = nextActive !== deviceActiveProfileSlot;
     deviceActiveProfileSlot = nextActive;
     onDeviceActiveProfileChanged(nextActive);
-    if (alignTarget && nextActive !== activeProfileSlot) {
+    if (alignTarget && nextActive !== activeProfileSlot && !arpDraftDirty && !lfoDraftDirty) {
       setActiveProfileSlot(nextActive, { persist: false });
     } else if (changed && profileSlotStatus) {
       profileSlotStatus.textContent = `${describeSlot(
@@ -1656,11 +1657,13 @@ export function createProfileMacroScenePanel({
   }
 
   function applyProfileUtilityDrafts(response = {}) {
-    setArpDraft(response?.arp ?? createDefaultArpDraft());
-    setLfoDraft({
-      lfos: Array.isArray(response?.lfos) ? response.lfos : createDefaultLfoDraft().lfos,
-      routes: Array.isArray(response?.routes) ? response.routes : createDefaultLfoDraft().routes
-    });
+    if (!arpDraftDirty) setArpDraft(response?.arp ?? createDefaultArpDraft());
+    if (!lfoDraftDirty) {
+      setLfoDraft({
+        lfos: Array.isArray(response?.lfos) ? response.lfos : createDefaultLfoDraft().lfos,
+        routes: Array.isArray(response?.routes) ? response.routes : createDefaultLfoDraft().routes
+      });
+    }
   }
 
   async function refreshProfileUtilities({ silent = false, focus = 'all' } = {}) {
@@ -1669,9 +1672,10 @@ export function createProfileMacroScenePanel({
       setLfoStatus('muted', 'Connect to inspect the selected profile A–D entry.');
       return;
     }
-    if (arpDraftDirty && focus !== 'lfo') {
-      if (silent || !confirmDiscardArpDraft('Refreshing profile modulation')) return;
-      arpDraftDirty = false;
+    if (!silent && !confirmDiscardProfileUtilityDrafts('Refreshing profile modulation', focus)) return;
+    if (!silent) {
+      if (focus !== 'lfo') arpDraftDirty = false;
+      if (focus !== 'arp') lfoDraftDirty = false;
     }
     if (profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
     arpBusy = true;
@@ -2080,11 +2084,14 @@ export function createProfileMacroScenePanel({
         );
         if (
           slotIndex !== activeProfileSlot &&
-          !confirmDiscardArpDraft(`Switching to Profile ${slotLabel(slotIndex)}`)
+          !confirmDiscardProfileUtilityDrafts(`Switching to Profile ${slotLabel(slotIndex)}`)
         ) {
           return;
         }
-        if (slotIndex !== activeProfileSlot) arpDraftDirty = false;
+        if (slotIndex !== activeProfileSlot) {
+          arpDraftDirty = false;
+          lfoDraftDirty = false;
+        }
         setActiveProfileSlot(slotIndex);
         void refreshProfileUtilities({ silent: true });
       });
@@ -2158,7 +2165,7 @@ export function createProfileMacroScenePanel({
       liveArpPatternLengthInput
     ].forEach((control) => control?.addEventListener('change', () => readLiveArpFormIntoDraft()));
     arpRefreshBtn?.addEventListener('click', () => {
-      if (!confirmDiscardArpDraft('Loading profile arp defaults')) return;
+      if (!confirmDiscardProfileUtilityDrafts('Loading profile arp defaults', 'arp')) return;
       arpDraftDirty = false;
       refreshProfileUtilities({ focus: 'arp' });
     });
@@ -2264,7 +2271,7 @@ export function createProfileMacroScenePanel({
   }
 
   function onTelemetry(frame = {}) {
-    if (lfoDraftDirty || profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
+    if (arpDraftDirty || lfoDraftDirty || profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
     syncDeviceActiveProfile(frame, { refresh: true });
   }
 
@@ -2288,7 +2295,6 @@ export function createProfileMacroScenePanel({
   function onDisconnected() {
     deviceCapabilities = resolveProfileCapabilities(localManifest);
     profileInteractable = false;
-    arpDraftDirty = false;
     profileWorkflow.reset();
     macroAvailable = false;
     arpBusy = false;
@@ -2313,7 +2319,6 @@ export function createProfileMacroScenePanel({
   function onRuntimeError() {
     deviceCapabilities = resolveProfileCapabilities(localManifest);
     profileInteractable = false;
-    arpDraftDirty = false;
     profileWorkflow.reset();
     macroAvailable = false;
     arpBusy = false;
