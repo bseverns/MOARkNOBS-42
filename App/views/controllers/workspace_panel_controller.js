@@ -142,7 +142,10 @@ export function createWorkspacePanelController({
   }
 
   function open(id, options = {}) {
-    return setOpen(entries.find((entry) => entry.id === id), true, options);
+    const entry = entries.find((candidate) => candidate.id === id || candidate.aliases?.includes(id));
+    const opened = setOpen(entry, true, options);
+    if (opened && id !== entry.id) entry.onAliasOpen?.(id);
+    return opened;
   }
 
   function close(id, options = {}) {
