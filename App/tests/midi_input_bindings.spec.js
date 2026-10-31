@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function openIncomingMidi(page) {
   await page.getByRole('button', { name: 'Lab', exact: true }).click();
   await page.locator('.workspace-tool-shell > summary').click();
-  await page.getByRole('button', { name: 'Incoming MIDI', exact: true }).click();
+  await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
   await page.getByRole('tab', { name: 'Incoming MIDI', exact: true }).click();
   const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
   await expect(inputSection).toBeVisible();

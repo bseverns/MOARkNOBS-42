@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await page.locator('#cold-start-simulator').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await page.locator('.workspace-tool-shell > summary').click();
-  await page.getByRole('button', { name: 'Arpeggiator Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
   await page.locator('#recovery-drawer > summary').click();
 });
 

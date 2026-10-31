@@ -95,6 +95,18 @@ test.describe('Mode screenshots', () => {
     });
   });
 
+  test('Lab multiple-open-panel screenshot artifact', async ({ page }) => {
+    await openMode(page, 'advanced');
+    await page.locator('.workspace-tool-shell > summary').click();
+    for (const name of ['Profile Performance', 'Device Monitor', 'Scope']) {
+      await page.getByRole('button', { name, exact: true }).click();
+    }
+    await page.locator('[data-performance-tab="incoming"]').click();
+    const screenshotDir = path.resolve('test-results/screenshots');
+    await fs.mkdir(screenshotDir, { recursive: true });
+    await page.screenshot({ path: path.join(screenshotDir, 'lab-multiple-open-panels.png'), fullPage: true });
+  });
+
   const viewportMatrix = [
     { name: 'phone', width: 390, height: 844, mode: 'stage' },
     { name: 'tablet-portrait', width: 768, height: 1024, mode: 'stage' },
