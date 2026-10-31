@@ -89,6 +89,35 @@ test('disconnect preserves an unsaved profile LFO draft without claiming it was 
   await expect(page.locator('#lfo-status')).toContainText('Connect to inspect');
 });
 
+test('reconnect keeps a dirty inactive-profile LFO draft on its selected target', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+  await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
+  await page.locator('#recovery-drawer').evaluate((drawer) => { drawer.open = true; });
+  await page.evaluate(() => document.querySelector('[data-profile-slot="1"]').click());
+  await expect(page.locator('#profile-slot-status')).toContainText('Slot B');
+  const depth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
+  await depth.fill('0.41');
+  await depth.dispatchEvent('change');
+
+  await page.evaluate(() => window.__MN42_RUNTIME.disconnect());
+  await page.locator('#connect').click();
+  await expect(page.locator('#connection-pill')).toHaveText('Connected');
+  await expect(page.locator('#profile-slot-status')).toContainText('Slot B');
+  await page.locator('#lfo-save').click();
+
+  const [slotA, slotB] = await page.evaluate(() => Promise.all([
+    window.__MN42_RUNTIME.sendRpc({ rpc: 'get_profile', slot: 0 }),
+    window.__MN42_RUNTIME.sendRpc({ rpc: 'get_profile', slot: 1 })
+  ]));
+  expect(slotA.lfos[0].depth).not.toBe(0.41);
+  expect(slotB.lfos[0].depth).toBe(0.41);
+});
+
 test('failed LFO profile save preserves unrelated staged configuration', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();

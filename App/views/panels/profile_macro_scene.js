@@ -1357,7 +1357,7 @@ export function createProfileMacroScenePanel({
     const changed = nextActive !== deviceActiveProfileSlot;
     deviceActiveProfileSlot = nextActive;
     onDeviceActiveProfileChanged(nextActive);
-    if (alignTarget && nextActive !== activeProfileSlot) {
+    if (alignTarget && nextActive !== activeProfileSlot && !arpDraftDirty && !lfoDraftDirty) {
       setActiveProfileSlot(nextActive, { persist: false });
     } else if (changed && profileSlotStatus) {
       profileSlotStatus.textContent = `${describeSlot(
