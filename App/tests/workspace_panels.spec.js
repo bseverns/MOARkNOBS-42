@@ -211,4 +211,34 @@ test.describe('progressive workspace panels', () => {
     );
     await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(1);
   });
+
+  test('legacy panels deep link opens exactly its requested eligible panels', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };
+    });
+    await page.goto('/benzknobz.html?mode=advanced&panels=scope,device-monitor');
+    await page.locator('#connect').click();
+    await openWorkspaceTools(page);
+
+    await expect(page.locator('#scope-panel')).toBeVisible();
+    await expect(page.locator('#device-monitor-section')).toBeVisible();
+    await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(2);
+  });
+
+  test('Workspace Tools supports keyboard disclosure and panel toggling', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };
+    });
+    await page.goto('/benzknobz.html?mode=advanced');
+    await page.locator('#cold-start-simulator').click();
+    await expect(page.locator('#connection-pill')).toContainText('Connected');
+    const summary = page.locator('.workspace-tool-shell > summary');
+    await summary.press('Enter');
+    await expect(page.locator('.workspace-tool-shell')).toHaveAttribute('open', '');
+
+    const scope = page.getByRole('button', { name: 'Scope', exact: true });
+    await scope.press('Enter');
+    await expect(scope).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#scope-panel')).toBeVisible();
+  });
 });

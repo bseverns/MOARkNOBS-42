@@ -74,7 +74,7 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
 
 - **Stage** is the performance surface: connection, live profile/scene recall, power safety, slot activity, envelope
   levels, motion, and panic help.
-- **Configure** is the default selected-slot workspace: Mapping, one Reactive path (EF source, ARG relationship, then EF character), and Motion/fixed LFO lanes. ARG constructs the Reactive input before EF shaping; it is not a peer output stage. Motion shows each shared generator’s shape and rate while generator edits remain in Lab.
+- **Bench** is the default selected-slot workspace: Mapping, one Reactive path (EF source, ARG relationship, then EF character), and Motion/fixed LFO lanes. ARG constructs the Reactive input before EF shaping; it is not a peer output stage. Motion shows each shared generator’s shape and rate while generator edits remain in Lab.
   The signal strip displays device observations separately from staged settings.
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
@@ -114,7 +114,7 @@ Signal contribution graphics require a coherent, recent measured snapshot; missi
 
 Device-backed controls must be advertised by the manifest/schema or a documented live protocol lane. Browser-only slot
 labels remain local metadata and must not be serialized as device configuration. Legacy browser-local MIDI-badge
-metadata may still be read, but Configure does not expose it as instrument behavior. Optional display metadata sent to
+metadata may still be read, but Bench does not expose it as instrument behavior. Optional display metadata sent to
 the Bridge remains advisory and cannot affect routing authority.
 
 Import stages configuration locally. Export saves the current candidate, including unsent edits. Profile A–D actions,
@@ -159,7 +159,7 @@ npm --prefix App run test:architecture
 
 Playwright exercises the real runtime/view modules through the stable `benzknobz.html` harness, including simulator,
 schema validation, staged diff, Apply/receipt failures, uncertainty recovery, migration blocking, profiles, and the
-mode surfaces. A small approved snapshot set protects the top-level Configure, Lab, Stage, and open Incoming MIDI
+mode surfaces. A small approved snapshot set protects the top-level Bench, Lab, Stage, and open Incoming MIDI
 hierarchies. Because the App deliberately uses native system UI and monospace font stacks, those approved images run on
 the canonical macOS + pinned Playwright Chromium CI lane; other platforms skip only these four pixel assertions and
 still run the remaining App suite. Routine screenshot artifacts remain diagnostic rather than approved baselines. `lab_config_coverage.spec.js`
