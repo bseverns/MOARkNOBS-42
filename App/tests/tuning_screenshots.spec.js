@@ -15,7 +15,6 @@ async function bootConfigureSimulator(page) {
   await page.locator('#recovery-drawer > summary').click();
   await page.locator('#load-demo-rig').click();
   await page.locator('.workspace-tool-shell > summary').click();
-  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
 }
 
 test('selected-slot tuning screenshot states', async ({ page }) => {

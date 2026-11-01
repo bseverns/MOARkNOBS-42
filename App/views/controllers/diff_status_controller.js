@@ -124,7 +124,6 @@ export function createDiffStatusController({
 
   function markDirty(isDirty) {
     console.debug('[UI] markDirty', isDirty);
-    if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
     if (changeBar) changeBar.toggleAttribute('hidden', !isDirty);
     reserveDockSpace();
     if (docRoot) docRoot.dataset.dirty = isDirty ? 'true' : 'false';

@@ -375,13 +375,19 @@ const boot = () => {
 
   let utilityDrafts = { arp: false, lfo: false, target: 0 };
   function renderPendingWork() {
-    const parts = [];
     const changes = runtime?.diff?.().length ?? 0;
-    if (changes) parts.push(`${changes} config ${changes === 1 ? 'change' : 'changes'} · Apply sends to instrument`);
     const utilities = [utilityDrafts.arp && 'Arp', utilityDrafts.lfo && 'LFO'].filter(Boolean);
-    if (utilities.length) parts.push(`Profile ${'ABCD'[utilityDrafts.target] ?? 'A'} ${utilities.join(' + ')} local · Save writes profile`);
-    pendingWork?.toggleAttribute('hidden', !parts.length);
-    if (pendingWork) pendingWork.textContent = parts.join(' • ');
+    const parts = [
+      changes && `${changes} config ${changes === 1 ? 'change' : 'changes'} · Apply sends to instrument`,
+      utilities.length && `Profile ${'ABCD'[utilityDrafts.target] ?? 'A'} ${utilities.join(' + ')} local · Save writes profile`
+    ].filter(Boolean);
+    const total = changes + utilities.length;
+    dirtyBadge?.toggleAttribute('hidden', !total);
+    if (dirtyBadge) {
+      dirtyBadge.textContent = `${total} pending edit${total === 1 ? '' : 's'}`;
+      dirtyBadge.title = parts.join(' • ');
+    }
+    pendingWork?.setAttribute('hidden', '');
   }
   const diffStatusController = createDiffStatusController({
     runtime,

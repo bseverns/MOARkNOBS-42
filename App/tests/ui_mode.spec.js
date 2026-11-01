@@ -12,9 +12,8 @@ test.describe('UI mode', () => {
     const benchButton = page.getByRole('button', { name: 'Bench', exact: true });
     const labButton = page.getByRole('button', { name: 'Lab', exact: true });
     await expect(benchButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#editor-panel')).toBeHidden();
+    await expect(page.locator('#editor-panel')).toBeVisible();
     await page.locator('.workspace-tool-shell > summary').click();
-    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
     await expect(page.locator('#editor-panel')).toBeVisible();
 
     await labButton.click();
@@ -71,7 +70,6 @@ test.describe('UI mode', () => {
     await page.locator('#recovery-drawer > summary').click();
     await page.locator('#load-demo-rig').click();
     await page.locator('.workspace-tool-shell > summary').click();
-    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
     await expect(page.locator('#slot-detail-panel')).toBeHidden();
     await expect(page.locator('#export-preset')).toBeVisible();
     await expect(page.locator('#import-preset')).toBeVisible();

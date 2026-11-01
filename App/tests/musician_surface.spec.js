@@ -18,8 +18,7 @@ async function boot(page, mode = 'basic') {
   await page.locator('#recovery-drawer > summary').click();
   await page.locator('#load-demo-rig').click();
   await page.locator('.workspace-tool-shell > summary').click();
-  await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
-  await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
+  if (mode === 'advanced') await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
   expect(errors).toEqual([]);
   await expect(page.locator('.slot-editor')).toBeVisible();
   return errors;

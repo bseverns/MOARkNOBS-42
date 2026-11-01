@@ -284,7 +284,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#device-monitor')).toContainText('Primary');
   });
 
-  test('switching from Stage to Bench keeps optional workspace tools closed', async ({ page }) => {
+  test('switching from Stage to Bench opens its instrument workspace', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
@@ -294,9 +294,6 @@ test.describe('Stage mode', () => {
 
     await page.getByRole('button', { name: 'Bench', exact: true }).click();
     await expect(page.locator('#performer-panel')).toBeHidden();
-    await expect(page.locator('#editor-panel')).toBeHidden();
-    await page.locator('.workspace-tool-shell > summary').click();
-    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
     await expect(page.locator('#editor-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeHidden();
   });

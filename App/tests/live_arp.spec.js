@@ -216,7 +216,8 @@ test('live arp controls push runtime shape and start stop state without dirtying
 
   await page.locator('#live-arp-stop').click();
   await expect(page.locator('#live-arp-status')).toContainText('Idle');
-  await expect(page.locator('#dirty-badge')).toBeHidden();
+  await expect(page.locator('#dirty-badge')).toHaveText('1 pending edit');
+  await expect(page.locator('#dirty-badge')).toHaveAttribute('title', 'Profile A Arp local · Save writes profile');
   await expect(page.locator('#apply')).toBeDisabled();
 });
 
