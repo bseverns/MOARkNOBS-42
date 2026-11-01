@@ -674,8 +674,8 @@ const boot = () => {
     picker: document.getElementById('workspace-tool-picker'),
     initialMode: initialUiMode,
     registry: [
-      { id: 'live-slots', label: 'Live Slots', modes: ['basic', 'advanced'], group: 'Bench', selector: '#live-panel' },
-      { id: 'slot-editor', label: 'Selected Slot Editor', modes: ['basic', 'advanced'], group: 'Bench', selector: '#editor-panel' },
+      { id: 'live-slots', label: 'Live Slots', modes: ['basic', 'advanced'], group: 'Bench', selector: '#live-panel', initialOpen: true, initialModes: ['basic'] },
+      { id: 'slot-editor', label: 'Selected Slot Editor', modes: ['basic', 'advanced'], group: 'Bench', selector: '#editor-panel', initialOpen: true, initialModes: ['basic'] },
       { id: 'ef-controls', label: 'EF Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '.ef-modulation-cluster' },
       { id: 'led-controls', label: 'LED Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '#led-settings' },
       { id: 'device-link', label: 'Device Link Controls', modes: ['advanced'], group: 'Lab Instrument', selector: '[data-instrument-zone="live"]' },
@@ -708,7 +708,7 @@ const boot = () => {
     }
   });
   emptyInspectSlotsBtn?.addEventListener('click', () => workspacePanelController.open('live-slots', { focus: true }));
-  let hydrateWorkspaceDeepLink = true;
+  let hydrateWorkspaceDeepLink = Boolean(new URLSearchParams(window.location.search).get('panel') ?? new URLSearchParams(window.location.search).get('panels'));
   const uiModeController = createUiModeController({
     docRoot,
     initialMode: initialUiMode,

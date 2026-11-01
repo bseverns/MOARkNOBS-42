@@ -40,10 +40,12 @@ test.describe('progressive workspace panels', () => {
     );
     await expect(page.getByRole('button', { name: 'Configure', exact: true })).toHaveCount(0);
     await expect(page.locator('#workspace-tool-picker')).toBeHidden();
-    await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(0);
+    await expect(page.locator('#live-panel')).toBeVisible();
+    await expect(page.locator('#editor-panel')).toBeVisible();
+    await expect(page.locator('#selected-slot-signal')).toBeVisible();
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
-    await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(0);
+    await expect(page.locator('[data-workspace-panel]:visible')).toHaveCount(2);
     await openWorkspaceTools(page);
     await expect(page.getByRole('tablist', { name: 'Lab Bench workspaces' })).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Lab Observe tools' })).toBeVisible();
@@ -96,7 +98,6 @@ test.describe('progressive workspace panels', () => {
 
   test('mode changes retain open tools that remain eligible', async ({ page }) => {
     await bootSimulator(page, 'basic');
-    await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
 
@@ -110,8 +111,7 @@ test.describe('progressive workspace panels', () => {
   test('a tool does not reopen after the operator closes it', async ({ page }) => {
     await bootSimulator(page, 'basic');
     const liveSlots = page.getByRole('button', { name: 'Live Slots', exact: true });
-    await expect(liveSlots).toHaveAttribute('aria-pressed', 'false');
-    await liveSlots.click();
+    await expect(liveSlots).toHaveAttribute('aria-pressed', 'true');
     await liveSlots.click();
 
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
@@ -127,10 +127,9 @@ test.describe('progressive workspace panels', () => {
     await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveCSS('min-height', '44px');
   });
 
-  test('selecting a Bench slot opens and focuses its editor on demand', async ({ page }) => {
+  test('selecting a Bench slot keeps its editor context available', async ({ page }) => {
     await bootSimulator(page, 'basic');
 
-    await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
     await page.locator('#slots [data-index="4"]').click();
 
     await expect(page.locator('#editor-panel')).toBeVisible();
@@ -141,7 +140,6 @@ test.describe('progressive workspace panels', () => {
 
   test('slot grid announces and activates the keyboard-selected slot', async ({ page }) => {
     await bootSimulator(page, 'basic');
-    await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
     const slots = page.locator('#slots');
     await slots.focus();
     await slots.press('ArrowRight');
@@ -165,7 +163,6 @@ test.describe('progressive workspace panels', () => {
     await page.locator('#recovery-drawer > summary').click();
     await page.locator('#load-demo-rig').click();
     await page.getByRole('button', { name: 'Bench', exact: true }).click();
-    await page.getByRole('button', { name: 'Selected Slot Editor', exact: true }).click();
     const ccInput = page.locator('.slot-editor label:has-text("CC number") input').first();
     await ccInput.fill('45');
     await ccInput.dispatchEvent('change');

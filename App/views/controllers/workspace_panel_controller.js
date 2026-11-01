@@ -132,7 +132,7 @@ export function createWorkspacePanelController({
         .forEach((id) => open(id, { updateUrl: false }));
     }
     entries
-      .filter((entry) => entry.initialOpen && allowed(entry) && !initializedOpen.has(entry.id))
+      .filter((entry) => entry.initialOpen && (!entry.initialModes || entry.initialModes.includes(activeMode)) && allowed(entry) && !openDeepLink && !initializedOpen.has(entry.id))
       .forEach((entry) => {
         initializedOpen.add(entry.id);
         open(entry.id, { updateUrl: false });
