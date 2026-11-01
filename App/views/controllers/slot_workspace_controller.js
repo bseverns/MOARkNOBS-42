@@ -76,6 +76,11 @@ export function createSlotWorkspaceController({
       else if (key === 'ArrowDown') next += columns;
       else if (key === 'Home') next = 0;
       else if (key === 'End') next = slotState.slots.length - 1;
+      else if (key === 'Enter' || key === ' ') {
+        event.preventDefault();
+        selectSlot(slotState.selected);
+        return;
+      }
       else return;
       event.preventDefault();
       selectSlot(Math.max(0, Math.min(slotState.slots.length - 1, next)));
@@ -95,6 +100,7 @@ export function createSlotWorkspaceController({
     }
     slotVirtualizer.setData(slotState.slots);
     slotVirtualizer.highlight(slotState.selected);
+    syncActiveDescendant();
     efVirtualizer.setData(slotState.efSlots);
     onSlotsChanged(slotState.slots);
   }
@@ -104,6 +110,7 @@ export function createSlotWorkspaceController({
     slotState.selected = Math.min(Math.max(0, index), maxIndex);
     slotVirtualizer.highlight(slotState.selected);
     slotVirtualizer.scrollToIndex(slotState.selected);
+    syncActiveDescendant();
     performerPanel?.highlightSelectedSlot?.();
     onSelectSlot(slotState.selected);
   }
@@ -150,6 +157,7 @@ export function createSlotWorkspaceController({
     el.className = 'slot-button';
     el.tabIndex = -1;
     el.innerHTML = '';
+    el.id = `slot-grid-option-${index}`;
     el.dataset.index = String(index);
     const label = document.createElement('span');
     label.className = 'slot-label';
@@ -168,7 +176,16 @@ export function createSlotWorkspaceController({
     el.append(label, state, modulation);
     el.onclick = () => selectSlot(index);
     el.setAttribute('role', 'button');
+    el.setAttribute('aria-pressed', String(index === slotState.selected));
+    el.setAttribute('aria-label', `Slot ${index + 1}, ${slot?.type ?? 'unassigned'}`);
     el.classList.toggle('selected', index === slotState.selected);
+  }
+
+  function syncActiveDescendant() {
+    slotContainer?.setAttribute('aria-activedescendant', `slot-grid-option-${slotState.selected}`);
+    slotContainer?.querySelectorAll('[data-index]').forEach((el) => {
+      el.setAttribute('aria-pressed', String(Number(el.dataset.index) === slotState.selected));
+    });
   }
 
   function normalizeFollowerSlotList(item, maxSlotIndex) {

@@ -64,7 +64,8 @@ prove rollback. The candidate stays visible until readback resolves the outcome.
 
 Profile, scene, macro-recall, and transport actions use their native command paths rather than masquerading as config
 diffs. Actions that can replace a dirty configuration draft must be blocked until the operator applies or discards it.
-Schema-rendered controls stage browser intent synchronously and debounce only outbound live patches. Destroying or
+A Profile save with dirty configuration remains the guarded Apply-then-save operation, and its control must name both
+writes before it is activated. Schema-rendered controls stage browser intent synchronously and debounce only outbound live patches. Destroying or
 rebuilding a rendered control must cancel its pending transmission without discarding the staged edit. Removing an
 array item remains authoritative over timers owned by that item's former controls.
 
@@ -79,9 +80,9 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
   account for every slot-schema leaf. Its full-width Bench preserves Instrument, Profile, Observe, and Evidence as
-  Workspace Tools catalog categories; the catalog is the only optional-tool navigation. The Lab Bench owns only the
-  spatial grouping and mounting of tools whose panels the workspace controller has opened. Scope, MIDI Monitor, Device
-  Monitor, Modulation Matrix, Staged Diff, Slot Inspector, and Debug Log must remain discoverable in their catalog
+  Workspace Tools catalog categories. The Lab Bench owns only the spatial grouping and mounting of tools whose panels the
+  workspace controller has opened. The catalog uses visible, restrained category headings and 44px minimum tool targets.
+  Scope, MIDI Monitor, Device Monitor, Modulation Matrix, Staged Diff, Slot Inspector, and Debug Log must remain discoverable in their catalog
   category while closed. A mode change preserves open panels that are eligible in the destination mode and closes only
   ineligible panels; initial panels open once per page load, while a deep link intentionally resets the panel set to its
   requested panels. Instrument visually separates staged **Machine configuration** (Apply required) from immediate

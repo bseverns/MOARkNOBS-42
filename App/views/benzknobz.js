@@ -98,6 +98,7 @@ const boot = () => {
   const diffPanel = document.getElementById('diff-panel');
   const diffOutput = document.getElementById('diff-output');
   const dirtyBadge = document.getElementById('dirty-badge');
+  const pendingWork = document.getElementById('pending-work');
   const headerProfileStatus = document.getElementById('header-profile-status');
   const changeBar = document.getElementById('change-bar');
   const changeCount = document.getElementById('change-count');
@@ -123,6 +124,7 @@ const boot = () => {
   const simulatorToggle = document.getElementById('simulator-toggle');
   const emptySimulatorBtn = document.getElementById('empty-start-simulator');
   const emptyDemoRigBtn = document.getElementById('empty-load-demo-rig');
+  const emptyInspectSlotsBtn = document.getElementById('empty-inspect-slots');
   const coldConnectBtn = document.getElementById('cold-connect');
   const coldSimulatorBtn = document.getElementById('cold-start-simulator');
   const coldRecoveryBtn = document.getElementById('cold-open-recovery');
@@ -371,9 +373,19 @@ const boot = () => {
     return trimmed || 'unknown';
   }
 
+  let utilityDrafts = { arp: false, lfo: false, target: 0 };
+  function renderPendingWork() {
+    const parts = [];
+    const changes = runtime?.diff?.().length ?? 0;
+    if (changes) parts.push(`${changes} config ${changes === 1 ? 'change' : 'changes'} · Apply sends to instrument`);
+    const utilities = [utilityDrafts.arp && 'Arp', utilityDrafts.lfo && 'LFO'].filter(Boolean);
+    if (utilities.length) parts.push(`Profile ${'ABCD'[utilityDrafts.target] ?? 'A'} ${utilities.join(' + ')} local · Save writes profile`);
+    pendingWork?.toggleAttribute('hidden', !parts.length);
+    if (pendingWork) pendingWork.textContent = parts.join(' • ');
+  }
   const diffStatusController = createDiffStatusController({
     runtime,
-    onDirtyChanged: updateStagePanel,
+    onDirtyChanged: () => { updateStagePanel(); renderPendingWork(); },
     elements: {
       statusEl,
       statusLabel,
@@ -695,6 +707,7 @@ const boot = () => {
       if (entry.id === 'slot-editor') populateDetail({ renderEditor: false });
     }
   });
+  emptyInspectSlotsBtn?.addEventListener('click', () => workspacePanelController.open('live-slots', { focus: true }));
   let hydrateWorkspaceDeepLink = true;
   const uiModeController = createUiModeController({
     docRoot,
@@ -877,6 +890,10 @@ const boot = () => {
         name: typeof scene?.name === 'string' ? scene.name : ''
       };
       updateStagePanel();
+    },
+    onUtilityDraftChanged: (drafts) => {
+      utilityDrafts = drafts;
+      renderPendingWork();
     },
     elements: {
       profileSlotButtons,

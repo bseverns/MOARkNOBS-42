@@ -59,6 +59,7 @@ test.describe('Profiles toolbar', () => {
     await freqInput.fill('444');
     await freqInput.dispatchEvent('change');
     await expect(page.locator('#dirty-badge')).toBeVisible();
+    await expect(page.locator('#profile-save')).toHaveText('Apply staged edits and save to Profile A');
 
     await page.locator('#profile-save').click();
     await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
