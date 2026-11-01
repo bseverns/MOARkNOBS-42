@@ -47,6 +47,9 @@ test.describe('progressive workspace panels', () => {
     await openWorkspaceTools(page);
     await expect(page.getByRole('tablist', { name: 'Lab Bench workspaces' })).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Lab Observe tools' })).toBeVisible();
+    const observeLegend = page.locator('[data-workspace-tool-group="Lab Observe"] legend');
+    await expect(observeLegend).toBeVisible();
+    await expect(observeLegend).toHaveCSS('position', 'static');
     await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -118,9 +121,10 @@ test.describe('progressive workspace panels', () => {
     await expect(liveSlots).toHaveAttribute('aria-pressed', 'false');
   });
 
-  test('the picker remains an interactive scroll target', async ({ page }) => {
+  test('the picker remains an interactive touch target', async ({ page }) => {
     await bootSimulator(page, 'advanced');
     await expect(page.locator('#workspace-tool-picker')).toHaveCSS('pointer-events', 'auto');
+    await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveCSS('min-height', '44px');
   });
 
   test('selecting a Bench slot opens and focuses its editor on demand', async ({ page }) => {
@@ -133,6 +137,19 @@ test.describe('progressive workspace panels', () => {
     await expect(page.locator('#editor-panel')).toContainText('Shape this slot');
     await expect(page.locator('#editor-panel')).toHaveAttribute('data-workspace-open', 'true');
     await expect(page.locator('#editor-panel h2')).toBeFocused();
+  });
+
+  test('slot grid announces and activates the keyboard-selected slot', async ({ page }) => {
+    await bootSimulator(page, 'basic');
+    await page.getByRole('button', { name: 'Live Slots', exact: true }).click();
+    const slots = page.locator('#slots');
+    await slots.focus();
+    await slots.press('ArrowRight');
+    await expect(slots).toHaveAttribute('aria-activedescendant', 'slot-grid-option-1');
+    await expect(page.locator('#slot-grid-option-0')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#slot-grid-option-1')).toHaveAttribute('aria-pressed', 'true');
+    await slots.press('Enter');
+    await expect(page.locator('#editor-panel')).toBeVisible();
   });
 
   test('dirty drafts survive an explicitly confirmed mode transition', async ({ page }) => {

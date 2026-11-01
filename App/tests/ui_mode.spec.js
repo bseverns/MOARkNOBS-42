@@ -46,6 +46,9 @@ test.describe('UI mode', () => {
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
     await expect(page.locator('#cold-start')).toBeHidden();
     await expect(page.locator('#workspace-empty-state')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Inspect slots', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Inspect slots', exact: true }).click();
+    await expect(page.locator('#live-panel')).toBeVisible();
     await expect(page.locator('.workspace-tool-shell')).toBeVisible();
     await expect(page.locator('.workspace-tool-shell')).not.toHaveAttribute('open', '');
     await expect
@@ -101,8 +104,10 @@ test.describe('UI mode', () => {
     await expect(page.locator('#change-review-dialog')).toHaveAttribute('open', '');
     await expect(page.locator('#change-review-output')).toContainText('1 staged change');
     await expect(page.locator('.change-review-group')).toHaveCount(1);
-    await expect(page.locator('.change-review-values')).toContainText('Live');
-    await expect(page.locator('.change-review-values')).toContainText('Staged');
+    await expect(page.locator('.change-review-values')).toContainText('Device now');
+    await expect(page.locator('.change-review-values')).toContainText('Apply will set');
+    await page.getByText('Exact values', { exact: true }).first().click();
+    await expect(page.locator('.change-review-values details')).toContainText('Before:');
     await page.locator('#change-review-close').click();
     const apply = page.locator('#apply');
     await expect(apply).toBeEnabled();

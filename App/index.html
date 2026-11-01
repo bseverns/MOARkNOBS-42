@@ -32,6 +32,7 @@
             </details>
             <span class="active-profile-pill" id="header-profile-status">Profile A</span>
             <span id="dirty-badge" role="status" hidden>Staged changes</span>
+            <span id="pending-work" role="status" hidden></span>
           </div>
           <div class="connect-actions compact-connect-actions" data-ui-modes="basic advanced">
             <button id="connect" type="button" disabled aria-busy="true">Connect</button>
@@ -185,8 +186,9 @@
     <main>
       <section id="workspace-empty-state" class="workspace-empty-state" data-ui-modes="basic advanced">
         <p class="workspace-kicker">Connection verified</p>
-        <h2>Choose a workspace tool when you need it.</h2>
-        <p class="microcopy">The tool inventory stays collapsed until you open it. Staged changes remain local until Apply.</p>
+        <h2>Start by inspecting the instrument.</h2>
+        <p class="microcopy">Open the slot map to inspect or select a slot. Staged changes remain local until Apply.</p>
+        <button id="empty-inspect-slots" class="action-primary" type="button">Inspect slots</button>
         <div class="simulator-start-actions" data-ui-modes="basic">
           <button id="empty-start-simulator" class="action-primary" type="button">Restart simulator</button>
           <button id="empty-load-demo-rig" type="button">Load Demo Rig</button>
@@ -350,7 +352,7 @@
             <h2>Live Slots</h2>
             <p class="microcopy">Six columns to mirror the PCB. Click a slot or ride the arrow keys to roam.</p>
           </header>
-          <div id="slots" class="button-grid" tabindex="0" aria-label="Slot overview"></div>
+          <div id="slots" class="button-grid" tabindex="0" role="toolbar" aria-label="Slot overview"></div>
           <div class="slot-type-legend" aria-label="Slot type legend">
             <span class="slot-type-key" data-slot-type="off">OFF</span>
             <span class="slot-type-key" data-slot-type="cc">CC</span>

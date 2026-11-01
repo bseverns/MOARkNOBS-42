@@ -168,7 +168,8 @@ export function createProfileMacroScenePanel({
   onProfileNamesChanged = () => {},
   onScenesChanged = () => {},
   onDeviceActiveProfileChanged = () => {},
-  onSceneRecalled = () => {}
+  onSceneRecalled = () => {},
+  onUtilityDraftChanged = () => {}
 } = {}) {
   const {
     profileSlotButtons = [],
@@ -286,6 +287,9 @@ export function createProfileMacroScenePanel({
   let profileWizardTargetSlot = activeProfileSlot;
   let deviceCapabilities = resolveProfileCapabilities(localManifest);
   let bound = false;
+  function notifyUtilityDraftChanged() {
+    onUtilityDraftChanged({ target: activeProfileSlot, arp: arpDraftDirty, lfo: lfoDraftDirty });
+  }
   const localProfileNames = createLocalProfileNames({ profileCount: PROFILE_LABELS.length });
   localProfileNames.read();
   const profileFileIO = createProfileFileIO({
@@ -746,6 +750,7 @@ export function createProfileMacroScenePanel({
       assigned_slots: normalizeAssignedSlots(nextDraft.assigned_slots)
     };
     arpDraftDirty = markDirty;
+    notifyUtilityDraftChanged();
     syncArpForm();
     updateSelectedArpContext();
   }
@@ -925,6 +930,7 @@ export function createProfileMacroScenePanel({
   function markLfoDraftDirty() {
     clearSelectedLfoRoute();
     lfoDraftDirty = true;
+    notifyUtilityDraftChanged();
     setLfoStatus(
       'busy',
       `${describeSlot()} edited locally. Push & save LFO changes to hear and scope them.`
@@ -961,6 +967,7 @@ export function createProfileMacroScenePanel({
     lfoDraft = { lfos: nextLfos, routes: nextRoutes };
     clearSelectedLfoRoute();
     lfoDraftDirty = false;
+    notifyUtilityDraftChanged();
     renderLfoEditor();
     updateLfoControls();
   }
@@ -1378,6 +1385,13 @@ export function createProfileMacroScenePanel({
     return changed;
   }
 
+  function renderProfileSaveLabel() {
+    if (!profileSaveBtn) return;
+    profileSaveBtn.textContent = runtime.getState().dirty
+      ? `Apply staged edits and save to ${profileActionTarget(activeProfileSlot)}`
+      : `Save to ${profileActionTarget(activeProfileSlot)}`;
+  }
+
   // Update the selected profile slot and mirror it into the UI/state badges.
   function setActiveProfileSlot(index, { persist = true } = {}) {
     const bounded = clampProfileSlot(index, PROFILE_LABELS.length);
@@ -1392,7 +1406,7 @@ export function createProfileMacroScenePanel({
     }
     const actionTarget = profileActionTarget(bounded);
     if (profileNameInput) profileNameInput.value = profileName(bounded);
-    if (profileSaveBtn) profileSaveBtn.textContent = `Save to ${actionTarget}`;
+    renderProfileSaveLabel();
     if (profileLoadBtn) profileLoadBtn.textContent = `Switch to ${actionTarget} now`;
     if (profileResetBtn) profileResetBtn.textContent = `Reset ${actionTarget}`;
     if (applySaveProfileBtn) applySaveProfileBtn.textContent = `Apply and save to ${actionTarget}`;
@@ -1405,7 +1419,10 @@ export function createProfileMacroScenePanel({
   // Recompute enabled/disabled state for all profile/macro/scene controls.
   function refreshProfileControls() {
     const canInteract = profileInteractable && !profileWorkflow.isLocked();
-    if (profileSaveBtn) profileSaveBtn.disabled = !canInteract || !deviceCapabilities.profileSave;
+    if (profileSaveBtn) {
+      profileSaveBtn.disabled = !canInteract || !deviceCapabilities.profileSave;
+      renderProfileSaveLabel();
+    }
     if (profileLoadBtn) profileLoadBtn.disabled = !canInteract || !deviceCapabilities.profileLoad;
     if (profileResetBtn)
       profileResetBtn.disabled = !canInteract || !deviceCapabilities.profileReset;
@@ -1739,6 +1756,7 @@ export function createProfileMacroScenePanel({
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       arpDraftDirty = false;
+      notifyUtilityDraftChanged();
       setArpStatus(
         'ok',
         deviceCapabilities.arpProfileAssignments
@@ -1942,6 +1960,7 @@ export function createProfileMacroScenePanel({
               )} to hear and scope these LFOs.`
       );
       lfoDraftDirty = false;
+      notifyUtilityDraftChanged();
       setStatus(
         liveApplied ? 'ok' : 'warn',
         liveApplied

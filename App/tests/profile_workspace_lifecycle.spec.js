@@ -50,6 +50,17 @@ test('dirty LFO draft survives reconnect and requires confirmation before profil
   await expect(page.locator('#profile-slot-status')).toContainText('Slot A');
 });
 
+test('pending work names a local Profile utility draft and its save lane', async ({ page }) => {
+  await bootProfileWorkspace(page);
+  await page.locator('[data-performance-tab="lfo"]').click();
+  const depth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
+  await depth.fill('0.42');
+  await depth.dispatchEvent('change');
+
+  await expect(page.locator('#pending-work')).toHaveText('Profile A LFO local · Save writes profile');
+  await expect(page.locator('#dirty-badge')).toBeHidden();
+});
+
 test('dirty profile arp draft survives a transport read error and reconnect', async ({ page }) => {
   await page.addInitScript(() => {
     window.__failProfileTransportRead = false;
