@@ -66,7 +66,8 @@ Profile, scene, macro-recall, and transport actions use their native command pat
 diffs. Actions that can replace a dirty configuration draft must be blocked until the operator applies or discards it.
 A Profile save with dirty configuration remains the guarded Apply-then-save operation, and its control must name both
 writes before it is activated. The profile slot/name render path and interaction refresh share that dirty-aware label so
-renaming cannot temporarily obscure the Apply write. Schema-rendered controls stage browser intent synchronously and debounce only outbound live patches. Destroying or
+renaming cannot temporarily obscure the Apply write. The change review must lead with the human-facing field name and
+actual device-before / Apply-after values; its exact schema path is secondary. Schema-rendered controls stage browser intent synchronously and debounce only outbound live patches. Destroying or
 rebuilding a rendered control must cancel its pending transmission without discarding the staged edit. Removing an
 array item remains authoritative over timers owned by that item's former controls.
 

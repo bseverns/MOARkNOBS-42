@@ -715,9 +715,7 @@ const boot = () => {
     hints: UI_MODE_HINTS,
     getSlotCount: () => slotState.slots.length,
     renderSlotEditor,
-    canChangeMode: () =>
-      !runtime.getState().dirty ||
-      window.confirm('You have staged changes. Change workspace mode? Your staged changes remain until Apply or Revert.'),
+    canChangeMode: () => true,
     setPerformerVisible: (visible) => {
       performerPanelController.setVisible(visible);
       if (!visible && stageMotion?.open) stageMotion.open = false;

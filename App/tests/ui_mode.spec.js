@@ -105,9 +105,9 @@ test.describe('UI mode', () => {
     await expect(page.locator('#change-review-output')).toContainText('1 staged change');
     await expect(page.locator('.change-review-group')).toHaveCount(1);
     await expect(page.locator('.change-review-values')).toContainText('Device now');
-    await expect(page.locator('.change-review-values')).toContainText('Apply will set');
-    await page.getByText('Exact values', { exact: true }).first().click();
-    await expect(page.locator('.change-review-values details')).toContainText('Before:');
+    await expect(page.locator('.change-review-values')).toContainText('After Apply');
+    await expect(page.locator('.change-review-values')).toContainText('45');
+    await expect(page.getByText('Exact values', { exact: true })).toHaveCount(0);
     await page.locator('#change-review-close').click();
     const apply = page.locator('#apply');
     await expect(apply).toBeEnabled();

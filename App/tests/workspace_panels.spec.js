@@ -152,8 +152,15 @@ test.describe('progressive workspace panels', () => {
     await expect(page.locator('#editor-panel')).toBeVisible();
   });
 
-  test('dirty drafts survive an explicitly confirmed mode transition', async ({ page }) => {
+  test('dirty drafts survive a mode transition without confirmation', async ({ page }) => {
     await bootSimulator(page, 'basic');
+    await page.evaluate(() => {
+      window.__modeConfirmCalled = false;
+      window.confirm = () => {
+        window.__modeConfirmCalled = true;
+        return false;
+      };
+    });
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
     await page.locator('#recovery-drawer > summary').click();
     await page.locator('#load-demo-rig').click();
@@ -164,10 +171,6 @@ test.describe('progressive workspace panels', () => {
     await ccInput.dispatchEvent('change');
     await expect(page.locator('#dirty-badge')).toBeVisible();
 
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('staged changes remain');
-      await dialog.accept();
-    });
     await page.getByRole('button', { name: 'Lab', exact: true }).click();
 
     await expect(page.getByRole('button', { name: 'Lab', exact: true })).toHaveAttribute(
@@ -175,6 +178,7 @@ test.describe('progressive workspace panels', () => {
       'true'
     );
     await expect(page.locator('#dirty-badge')).toBeVisible();
+    await expect(page.evaluate(() => window.__modeConfirmCalled)).resolves.toBe(false);
     expect(await page.evaluate(() => window.__MN42_RUNTIME.getState().staged.slots[0].data1)).toBe(45);
   });
 
