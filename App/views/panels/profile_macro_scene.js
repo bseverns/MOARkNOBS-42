@@ -1385,6 +1385,13 @@ export function createProfileMacroScenePanel({
     return changed;
   }
 
+  function renderProfileSaveLabel() {
+    if (!profileSaveBtn) return;
+    profileSaveBtn.textContent = runtime.getState().dirty
+      ? `Apply staged edits and save to ${profileActionTarget(activeProfileSlot)}`
+      : `Save to ${profileActionTarget(activeProfileSlot)}`;
+  }
+
   // Update the selected profile slot and mirror it into the UI/state badges.
   function setActiveProfileSlot(index, { persist = true } = {}) {
     const bounded = clampProfileSlot(index, PROFILE_LABELS.length);
@@ -1399,7 +1406,7 @@ export function createProfileMacroScenePanel({
     }
     const actionTarget = profileActionTarget(bounded);
     if (profileNameInput) profileNameInput.value = profileName(bounded);
-    if (profileSaveBtn) profileSaveBtn.textContent = `Save to ${actionTarget}`;
+    renderProfileSaveLabel();
     if (profileLoadBtn) profileLoadBtn.textContent = `Switch to ${actionTarget} now`;
     if (profileResetBtn) profileResetBtn.textContent = `Reset ${actionTarget}`;
     if (applySaveProfileBtn) applySaveProfileBtn.textContent = `Apply and save to ${actionTarget}`;
@@ -1414,9 +1421,7 @@ export function createProfileMacroScenePanel({
     const canInteract = profileInteractable && !profileWorkflow.isLocked();
     if (profileSaveBtn) {
       profileSaveBtn.disabled = !canInteract || !deviceCapabilities.profileSave;
-      profileSaveBtn.textContent = runtime.getState().dirty
-        ? `Apply staged edits and save to ${profileActionTarget(activeProfileSlot)}`
-        : `Save to ${profileActionTarget(activeProfileSlot)}`;
+      renderProfileSaveLabel();
     }
     if (profileLoadBtn) profileLoadBtn.disabled = !canInteract || !deviceCapabilities.profileLoad;
     if (profileResetBtn)
