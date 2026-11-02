@@ -29,10 +29,16 @@ test('selected slot explains measured contributions without synthesizing missing
 }) => {
   const errors = await boot(page);
   await expect(page.locator('#selected-slot-signal')).toContainText('Control input');
+  await expect(page.locator('#selected-slot-signal')).toContainText('Physical control / baseline');
   await expect(page.locator('#selected-slot-signal')).toContainText('Reactive response');
   await expect(page.locator('#selected-slot-signal')).toContainText('EF / ARG');
   await expect(page.locator('#selected-slot-signal')).toContainText('Motion');
-  await expect(page.locator('#selected-slot-signal')).toContainText('MIDI output');
+  await expect(page.locator('#selected-slot-signal')).toContainText('Resolved output');
+  await expect(page.locator('#selected-slot-signal')).toContainText('MIDI value / mapping');
+  await expect(page.locator('#selected-slot-signal')).toContainText(
+    'does not confirm a MIDI message was sent'
+  );
+  await expect(page.locator('.signal-flow-operator')).toHaveText(['+', '+', '+', '=']);
   await expect(page.locator('[data-configure-zone=envelope]')).toBeVisible();
   await expect(page.locator('[data-configure-zone=arg]')).toBeVisible();
   await expect(page.locator('[data-configure-zone=lfo]')).toBeVisible();
@@ -270,6 +276,12 @@ test('musician workspace stays usable at desktop and phone widths with the Apply
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: '/tmp/mn42-app-configure-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
+  const signal = page.locator('#selected-slot-signal');
+  await signal.scrollIntoViewIfNeeded();
+  await expect(signal.locator('.signal-scroll-cue')).toBeVisible();
+  const strip = signal.locator('.signal-contributions');
+  expect(await strip.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
+  expect(await signal.locator('.signal-output').evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThanOrEqual(132);
   const depth = page.getByRole('spinbutton', { name: 'LFO 2 depth (%)', exact: true });
   await depth.focus();
   await expect(depth).toBeInViewport();

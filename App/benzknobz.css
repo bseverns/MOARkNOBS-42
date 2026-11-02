@@ -4747,12 +4747,14 @@ html[data-ui-mode='basic'] #selected-slot-signal { position: sticky; top: 8px; z
 #selected-slot-signal .microcopy { margin: 0; }
 .signal-contributions { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .signal-contribution { min-width: 92px; flex: 1 1 0; display: grid; gap: 5px; border: 1px solid rgba(45,226,230,.22); border-radius: 5px; padding: 8px; background: rgba(9,17,24,.5); text-align: left; }
-.signal-contribution span { color: var(--color-muted); font-size: .65rem; }
-.signal-technical { color: var(--color-accent); font: inherit; }
+.signal-contribution span { color: var(--color-muted); font-size: .72rem; }
+.signal-technical { color: var(--color-accent); font: .62rem var(--font-mono); }
+.signal-output { min-width: 132px; flex-grow: 1.45; border-color: rgba(45,226,230,.48); background: rgba(45,226,230,.08); }
 .signal-contribution strong { font-family: var(--font-mono); font-size: .8rem; overflow-wrap: anywhere; }
 .signal-contribution meter { width: 100%; height: 12px; }
 .signal-contribution meter[hidden] { display: none; }
-.signal-flow-arrow { align-self: center; color: var(--color-accent); font-size: 1.2rem; font-weight: 700; }
+.signal-flow-operator { align-self: center; color: var(--color-accent); font-size: 1.2rem; font-weight: 700; }
+.signal-scroll-cue { display: none; margin: -2px 0 0; color: var(--color-muted); font-size: .68rem; text-align: right; }
 .signal-navigation { cursor: pointer; color: inherit; font: inherit; }
 .signal-navigation:hover, .signal-navigation:focus-visible { border-color: var(--color-accent); outline: 0; box-shadow: 0 0 0 2px rgba(45,226,230,.18); }
 #selected-slot-signal:not([data-freshness='Live telemetry']) .signal-contributions { opacity: .65; }
@@ -4797,7 +4799,8 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
   html[data-ui-mode='basic'] #selected-slot-signal { position: static; }
 }
 @media (max-width: 560px) {
-  .signal-contribution { min-width: 104px; }
+  .signal-contribution:not(.signal-output) { min-width: 104px; }
+  .signal-scroll-cue { display: block; }
   .configure-modulation { grid-template-columns: minmax(0, 1fr); }
   .state-starting-point { grid-template-columns: minmax(0, 1fr); }
   .change-bar { left: 12px; width: calc(100% - 24px); transform: none; gap: 4px; }

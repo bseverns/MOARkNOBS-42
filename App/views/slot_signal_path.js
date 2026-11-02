@@ -81,22 +81,22 @@ export function renderSlotSignal(
   const strip = document.createElement('div');
   strip.className = 'signal-contributions';
   const parts = [
-    ['Control input', 'Hand', textValue(signal.baseline), signal.baseline, false, null],
+    ['Control input', 'Physical control / baseline', textValue(signal.baseline), signal.baseline, false, null],
     ['Reactive response', 'EF / ARG', signedValue(signal.reactive), signal.reactive, true, 'reactive'],
     ['Motion', 'LFO 1', signedValue(signal.lfos[0]), signal.lfos[0], true, 'lfo-0'],
     ['Motion', 'LFO 2', signedValue(signal.lfos[1]), signal.lfos[1], true, 'lfo-1'],
-    ['MIDI output', '', textValue(signal.output), signal.output, false, null]
+    ['Resolved output', 'MIDI value / mapping', textValue(signal.output), signal.output, false, null]
   ];
   parts.forEach(([label, technical, value, amount, bipolar, destination], partIndex) => {
     if (partIndex) {
-      const arrow = document.createElement('span');
-      arrow.className = 'signal-flow-arrow';
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '→';
-      strip.appendChild(arrow);
+      const operator = document.createElement('span');
+      operator.className = 'signal-flow-operator';
+      operator.setAttribute('aria-hidden', 'true');
+      operator.textContent = partIndex === parts.length - 1 ? '=' : '+';
+      strip.appendChild(operator);
     }
     const item = document.createElement(destination ? 'button' : 'div');
-    item.className = `signal-contribution${destination ? ' signal-navigation' : ''}`;
+    item.className = `signal-contribution${destination ? ' signal-navigation' : ''}${partIndex === parts.length - 1 ? ' signal-output' : ''}`;
     if (destination) {
       item.type = 'button';
       const focusLabel = technical === 'EF / ARG' ? 'Reactive · EF / ARG' : technical;
@@ -122,8 +122,12 @@ export function renderSlotSignal(
     item.append(name, reading, meter);
     strip.appendChild(item);
   });
+  const scrollCue = document.createElement('p');
+  scrollCue.className = 'signal-scroll-cue';
+  scrollCue.setAttribute('aria-hidden', 'true');
+  scrollCue.textContent = 'Scroll for all contributions →';
   const route = document.createElement('p');
   route.className = 'microcopy signal-source';
-  route.textContent = `Control input → Reactive response (EF / ARG) → Motion (LFO 1 / LFO 2) → MIDI output. ${signal.source}. ${signal.measured ? 'Measured deltas after clamping; select Reactive or an LFO to focus its controls.' : 'Separate contributions are not reported in the current snapshot.'}`;
-  container.append(heading, caption, strip, route);
+  route.textContent = `Control input + Reactive response (EF / ARG) + Motion (LFO 1 / LFO 2) = Resolved output. ${signal.source}. ${signal.measured ? 'Measured deltas after clamping. Resolved output is a device observation; it does not confirm a MIDI message was sent. Select Reactive or an LFO to focus its controls.' : 'Separate contributions are not reported in the current snapshot.'}`;
+  container.append(heading, caption, strip, scrollCue, route);
 }
