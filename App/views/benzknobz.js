@@ -385,6 +385,7 @@ const boot = () => {
     ].filter(Boolean);
     const total = changes + utilities.length;
     pendingWork?.toggleAttribute('hidden', !total);
+    if (!total && pendingWork) pendingWork.open = false;
     dirtyBadge?.toggleAttribute('hidden', !total);
     if (dirtyBadge) {
       dirtyBadge.textContent = `${total} pending edit${total === 1 ? '' : 's'}`;

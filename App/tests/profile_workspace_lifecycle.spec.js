@@ -52,23 +52,38 @@ test('dirty LFO draft survives reconnect and requires confirmation before profil
 
 test('pending work consolidates Profile utility drafts into one header indicator', async ({ page }) => {
   await bootProfileWorkspace(page);
+  await page.locator('[data-performance-tab="arp"]').click();
+  await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
+  await page.locator('#arp-pattern-length').fill('9');
   await page.locator('[data-performance-tab="lfo"]').click();
   const depth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
   await depth.fill('0.42');
   await depth.dispatchEvent('change');
 
-  await expect(page.locator('#dirty-badge')).toHaveText('1 pending edit');
+  await expect(page.locator('#dirty-badge')).toHaveText('2 pending edits');
   await expect(page.locator('#pending-work')).toBeVisible();
-  await expect(page.locator('#pending-work summary')).toHaveText('1 pending edit');
-  await expect(page.locator('#pending-work')).toContainText('Profile A LFO draft');
+  await expect(page.locator('#pending-work summary')).toHaveText('2 pending edits');
+  await expect(page.locator('#pending-work')).toContainText('Profile A Arp + LFO draft');
   await expect(page.locator('#pending-work')).toContainText('Save writes profile');
   await page.locator('#pending-work summary').click();
-  const profileDraft = page.getByRole('button', { name: 'Open Profile A LFO draft' });
+  const profileDraft = page.getByRole('button', { name: 'Open Profile A Arp + LFO draft' });
   await expect(profileDraft).toBeVisible();
   await profileDraft.click();
   await expect(page.locator('#pending-work')).not.toHaveAttribute('open', '');
   await expect(page.getByRole('button', { name: 'Lab', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-performance-tab="lfo"]')).toBeFocused();
+});
+
+test('an Arp-only pending action opens the Arp tab', async ({ page }) => {
+  await bootProfileWorkspace(page);
+  await page.locator('[data-performance-tab="arp"]').click();
+  await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
+  await page.locator('#arp-pattern-length').fill('9');
+  await page.locator('#arp-pattern-length').dispatchEvent('change');
+
+  await page.locator('#pending-work summary').click();
+  await page.getByRole('button', { name: 'Open Profile A Arp draft' }).click();
+  await expect(page.locator('[data-performance-tab="arp"]')).toBeFocused();
 });
 
 test('dirty profile arp draft survives a transport read error and reconnect', async ({ page }) => {

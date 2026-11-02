@@ -112,12 +112,20 @@ test.describe('UI mode', () => {
     await expect(page.locator('.change-review-values')).toContainText('45');
     await expect(page.getByText('Exact values', { exact: true })).toHaveCount(0);
     await page.locator('#change-review-close').click();
+    await page.locator('#pending-work summary').click();
+    await expect(page.locator('#pending-work')).toHaveAttribute('open', '');
     const apply = page.locator('#apply');
     await expect(apply).toBeEnabled();
     await apply.click();
     await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await expect(page.locator('#change-bar')).toBeHidden();
+    await expect(page.locator('#pending-work')).not.toHaveAttribute('open', '');
+
+    await ccInput.fill('46');
+    await ccInput.dispatchEvent('change');
+    await expect(page.locator('#pending-work')).toBeVisible();
+    await expect(page.locator('#pending-work')).not.toHaveAttribute('open', '');
   });
 
   test('pending-work disclosure stays above the workspace tool layer at desktop and phone widths', async ({ page }) => {
@@ -155,5 +163,32 @@ test.describe('UI mode', () => {
       });
       expect(overlaysTools, `${viewport.width}px viewport`).toBe(true);
     }
+  });
+
+  test('pending-work disclosure fits the natural phone layout after scrolling to its trigger', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/benzknobz.html');
+    await page.locator('#cold-start-simulator').click();
+    await page.locator('#recovery-drawer > summary').click();
+    await page.locator('#load-demo-rig').click();
+    const ccInput = page.locator('.slot-editor label:has-text("CC number") input').first();
+    await ccInput.fill('45');
+    await ccInput.dispatchEvent('change');
+
+    const pending = page.locator('#pending-work');
+    await pending.scrollIntoViewIfNeeded();
+    await pending.locator('summary').click();
+    const menu = page.locator('#pending-work-summary');
+    await expect(menu).toBeVisible();
+    const box = await menu.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(844);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 });
