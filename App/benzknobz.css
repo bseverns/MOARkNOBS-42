@@ -4607,6 +4607,9 @@ footer {
 
   html[data-ui-mode='advanced'] #connect-card {
     grid-column: 2;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 
   html[data-ui-mode='advanced'] #slot-detail-panel,

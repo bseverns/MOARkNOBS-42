@@ -38,9 +38,11 @@ Channel cards, with raw JSON under Advanced, apply on the next Bridge start in C
 compatibility retains its automatic CC assignments.
 Invalid raw definitions block starting and saving until corrected.
 
-**Monitor** follows MN42 → USB → Bridge and the four OSC/MIDI directions. Idle routes remain neutral; observed
-Bridge output does not confirm receipt in a host application. Device evidence is available under **Device details**,
-and alerts link to the relevant Diagnostics section. See the [console tour](../docs/bridge/BridgeConsoleTour.md).
+**Monitor** follows MN42 → USB → Bridge, the four device-control OSC/MIDI directions, and the always-forwarded
+MIDI → OSC typed-event lane (with optional custom mappings). A route is either unconfigured, configured but idle,
+or observed by the Bridge; observed Bridge output does not confirm receipt in a host application. Device evidence is
+available under **Device details**, and alerts link to the relevant Diagnostics section. See the
+[console tour](../docs/bridge/BridgeConsoleTour.md).
 
 The HTTP server binds to loopback by default. Every launch creates a random control token and opens a tokenized URL;
 treat it as a local credential. Public-interface HTTP requires the explicit `--unsafe-network-http` option and your own

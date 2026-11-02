@@ -793,7 +793,7 @@ dt {
 .patch-branches {
   display: grid;
   position: relative;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.8rem;
   width: 100%;
   padding-top: 2rem;
@@ -912,8 +912,8 @@ h3:focus {
   content: '';
   position: absolute;
   top: 1rem;
-  left: 12.5%;
-  right: 12.5%;
+  left: 10%;
+  right: 10%;
   border-top: 2px solid var(--edge-strong);
 }
 .patch-branches::after {

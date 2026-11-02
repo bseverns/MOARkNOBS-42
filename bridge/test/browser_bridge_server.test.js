@@ -1,5 +1,7 @@
 const { strict: assert } = require('node:assert');
 const { EventEmitter } = require('node:events');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Readable } = require('node:stream');
 
 const { createBrowserBridgeServer } = require('../lib/http_bridge_server');
@@ -1029,6 +1031,39 @@ async function run() {
     consoleHtml,
     /Live patchbay[\s\S]*Performance setup:[\s\S]*OSC destination · OSC[\s\S]*MIDI destination · MIDI/,
     'Monitor should expose named passive routing destinations',
+  );
+  assert.match(
+    consoleHtml,
+    /id="route-midi-osc"[\s\S]*MIDI IN → OSC OUT[\s\S]*Bridge-observed activity/,
+    'Monitor should expose live MIDI-to-OSC activity without claiming destination receipt',
+  );
+  const bridgeUiSource = fs.readFileSync(
+    path.join(__dirname, '..', 'ui', 'bridge-ui.js'),
+    'utf8',
+  );
+  assert.match(
+    bridgeUiSource,
+    /App profile \(advisory\):/,
+    'App-supplied profile labels must remain advisory in Monitor',
+  );
+  assert.match(
+    bridgeUiSource,
+    /advisory browser metadata:/,
+    'App-supplied slot labels must remain advisory in route traces',
+  );
+  assert.doesNotMatch(
+    bridgeUiSource,
+    /lane === 'midiOsc' && !config\.midiToOscMappings\?\.length/,
+    'The always-forwarded typed MIDI-to-OSC lane must not be hidden when no custom mapping is configured',
+  );
+  const bridgeCss = fs.readFileSync(
+    path.join(__dirname, '..', 'ui', 'bridge-ui.css'),
+    'utf8',
+  );
+  assert.match(
+    bridgeCss,
+    /\.patch-branches\s*\{[\s\S]*grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)[\s\S]*\.patch-branches::before\s*\{[\s\S]*left:\s*10%;[\s\S]*right:\s*10%;/,
+    'The five Monitor lanes must share one desktop patchbay branch',
   );
   assert.match(
     consoleHtml,

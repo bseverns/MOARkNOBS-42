@@ -227,6 +227,22 @@ test.describe('progressive workspace panels', () => {
     expect(await page.evaluate(() => window.__workspaceWrites.length)).toBe(before);
   });
 
+  test('Lab controls remain clickable after their panel scrolls beside the Session rail', async ({ page }) => {
+    await bootSimulator(page, 'advanced');
+    await page.setViewportSize({ width: 1280, height: 633 });
+    await page.getByRole('button', { name: 'Bench', exact: true }).click();
+    await page.locator('#slots [data-index="7"]').click();
+    await page.getByRole('button', { name: 'Lab', exact: true }).click();
+    await page.getByRole('button', { name: 'Profile Performance', exact: true }).click();
+    await page.locator('[data-performance-tab="arp"]').click();
+    await page.locator('#selected-arp-assignment-toggle').click();
+    await page.evaluate(() => window.scrollTo(0, 1600));
+    await page.locator('#live-arp-octave').scrollIntoViewIfNeeded();
+    await page.locator('#live-arp-octave').fill('2');
+    await page.locator('#live-arp-apply').click();
+    await expect(page.locator('#status-label')).toHaveText('Live arp updated');
+  });
+
   test('deep links open only the requested allowed panel', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, workspacePanels: 'minimal' };

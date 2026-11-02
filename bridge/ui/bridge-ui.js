@@ -103,6 +103,7 @@ const routeHeartbeatNodes = {
   deviceMidi: document.getElementById('route-device-midi'),
   oscDevice: document.getElementById('route-osc-device'),
   midiDevice: document.getElementById('route-midi-device'),
+  midiOsc: document.getElementById('route-midi-osc'),
 };
 
 const modeTabs = [...document.querySelectorAll('.mode-tab')];
@@ -768,8 +769,9 @@ function formatRoute(route) {
         (entry) => entry.index === slotIndex,
       )
     : null;
-  const advisoryLabel =
-    slotMetadata?.routeDescription || slotMetadata?.label || '';
+  const advisoryLabel = slotMetadata?.routeDescription || slotMetadata?.label
+    ? `advisory browser metadata: ${slotMetadata.routeDescription || slotMetadata.label}`
+    : '';
   const tail = [route.traceId, advisoryLabel, route.source, route.destination]
     .filter(Boolean)
     .join(' · ');
@@ -846,15 +848,15 @@ function renderRoutingHeartbeat(routes = []) {
     if (!card) return;
     const state = consoleState.bridge || {};
     const config = state.config || formValues();
-    const noMidiRoutes =
-      lane === 'deviceMidi' &&
-      config.midiTelemetryMode === 'mapped' &&
-      !config.outboundMidiMappings?.length;
+    const noConfiguredRoutes =
+      (lane === 'deviceMidi' &&
+        config.midiTelemetryMode === 'mapped' &&
+        !config.outboundMidiMappings?.length);
     const description = !state.running
       ? { label: 'Bridge stopped', status: 'muted' }
       : !state.serialConnected
         ? { label: 'USB disconnected', status: 'error' }
-        : noMidiRoutes
+        : noConfiguredRoutes
           ? { label: 'No configured routes', status: 'muted' }
           : heartbeat[lane];
     const intent = card.querySelector('small');
@@ -868,6 +870,8 @@ function renderRoutingHeartbeat(routes = []) {
             ? `Listening on ${config.oscBind || '127.0.0.1'}:${config.oscListen || 9000}`
             : lane === 'midiDevice'
               ? 'Configured MIDI input'
+              : lane === 'midiOsc'
+                ? 'Typed events and custom routes · Bridge-observed activity'
               : 'Configured OSC output';
     const label = card.querySelector('span');
     if (label) label.textContent = destinations[lane];
@@ -987,7 +991,7 @@ function renderStateJson(state) {
     const metadata = consoleState.bridge?.appDisplayMetadata;
     const activeProfileLabel =
       metadata?.profileLabels?.[metadata?.activeProfile];
-    if (activeProfileLabel) details.push(`App profile: ${activeProfileLabel}`);
+    if (activeProfileLabel) details.push(`App profile (advisory): ${activeProfileLabel}`);
     stagePerformanceSetup.textContent = details.join(' · ');
   }
 }

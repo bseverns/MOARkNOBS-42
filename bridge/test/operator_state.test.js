@@ -101,7 +101,16 @@ function run() {
     deviceMidi: { label: 'active now', status: 'ok', recent: true },
     oscDevice: { label: 'seen 12s ago', status: 'muted', recent: false },
     midiDevice: { label: 'not seen', status: 'muted', recent: false },
+    midiOsc: { label: 'not seen', status: 'muted', recent: false },
   });
+  assert.deepEqual(
+    describeRouteHeartbeats(
+      [{ flow: 'midi->osc', hostTimestampMs: now - 1000 }],
+      now,
+    ).midiOsc,
+    { label: 'active now', status: 'ok', recent: true },
+    'Live MIDI to OSC routes should have their own observed-activity state',
+  );
   assert.deepEqual(
     describeRoutingDestinations({
       oscDestinationName: 'TouchDesigner',
@@ -115,6 +124,7 @@ function run() {
       deviceMidi: 'Ableton · MIDI MN42 IAC',
       oscDevice: 'TouchDesigner · OSC input',
       midiDevice: 'Ableton · MIDI input',
+      midiOsc: 'TouchDesigner · MIDI events and custom routes',
     },
   );
   assert.deepEqual(

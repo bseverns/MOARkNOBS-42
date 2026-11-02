@@ -8,6 +8,7 @@
     'serial->midi': 'deviceMidi',
     'osc->serial': 'oscDevice',
     'midi->serial': 'midiDevice',
+    'midi->osc': 'midiOsc',
   });
   const HOST_SETUP_FORMAT = 'mn42-bridge-host-setups';
   const HOST_SETUP_VERSION = 1;
@@ -316,6 +317,7 @@
       deviceMidi: `${midiName} · MIDI ${midiPort}`,
       oscDevice: `${oscName} · OSC input`,
       midiDevice: `${midiName} · MIDI input`,
+      midiOsc: `${oscName} · MIDI events and custom routes`,
     };
   }
 
