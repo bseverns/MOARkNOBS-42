@@ -23,6 +23,8 @@
   --slot-grid-rows: 7;
   --ef-row-height: 108px;
   --ef-row-count: 6;
+  --layer-workspace-tools: 18;
+  --layer-pending-work: 20;
   color-scheme: dark;
 }
 
@@ -2364,13 +2366,16 @@ button:not(:disabled):focus-visible {
   display: none !important;
 }
 
-.pending-work { position: relative; }
+.pending-work {
+  position: relative;
+  z-index: var(--layer-pending-work);
+}
 .pending-work summary { list-style: none; cursor: pointer; }
 .pending-work summary::-webkit-details-marker { display: none; }
 .pending-work[open] #dirty-badge { box-shadow: 0 0 0 2px rgba(255, 95, 150, 0.38); }
 #pending-work-summary {
   position: absolute;
-  z-index: 5;
+  z-index: var(--layer-pending-work);
   right: 0;
   display: grid;
   gap: 4px;
@@ -4797,7 +4802,7 @@ html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 .workspace-tool-shell {
   position: relative;
   top: 0;
-  z-index: 18;
+  z-index: var(--layer-workspace-tools);
   display: flex;
   align-items: center;
   gap: 14px;

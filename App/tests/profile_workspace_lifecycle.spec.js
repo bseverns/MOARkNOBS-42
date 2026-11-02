@@ -63,7 +63,12 @@ test('pending work consolidates Profile utility drafts into one header indicator
   await expect(page.locator('#pending-work')).toContainText('Profile A LFO draft');
   await expect(page.locator('#pending-work')).toContainText('Save writes profile');
   await page.locator('#pending-work summary').click();
-  await expect(page.getByRole('button', { name: 'Open Profile A LFO draft' })).toBeVisible();
+  const profileDraft = page.getByRole('button', { name: 'Open Profile A LFO draft' });
+  await expect(profileDraft).toBeVisible();
+  await profileDraft.click();
+  await expect(page.locator('#pending-work')).not.toHaveAttribute('open', '');
+  await expect(page.getByRole('button', { name: 'Lab', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-performance-tab="lfo"]')).toBeFocused();
 });
 
 test('dirty profile arp draft survives a transport read error and reconnect', async ({ page }) => {

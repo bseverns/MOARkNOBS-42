@@ -85,6 +85,7 @@ test.describe('UI mode', () => {
     await expect(page.locator('#pending-work')).toBeVisible();
     await page.locator('#pending-work summary').click();
     await page.getByRole('button', { name: 'Review 1 pending configuration change' }).click();
+    await expect(page.locator('#pending-work')).not.toHaveAttribute('open', '');
     await expect(page.locator('#change-review-dialog')).toHaveAttribute('open', '');
     await page.locator('#change-review-close').click();
     await expect(page.locator('#change-bar')).toBeVisible();
@@ -117,5 +118,42 @@ test.describe('UI mode', () => {
     await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await expect(page.locator('#change-bar')).toBeHidden();
+  });
+
+  test('pending-work disclosure stays above the workspace tool layer at desktop and phone widths', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    });
+    await page.goto('/benzknobz.html');
+    await page.locator('#cold-start-simulator').click();
+    await page.locator('#recovery-drawer > summary').click();
+    await page.locator('#load-demo-rig').click();
+    const ccInput = page.locator('.slot-editor label:has-text("CC number") input').first();
+    await ccInput.fill('45');
+    await ccInput.dispatchEvent('change');
+
+    for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+      await page.locator('#pending-work-summary').evaluate((element) => element.removeAttribute('style'));
+      await page.setViewportSize(viewport);
+      const pending = page.locator('#pending-work');
+      if (!(await pending.evaluate((element) => element.open))) await pending.locator('summary').click();
+      const overlaysTools = await page.evaluate(() => {
+        const pending = document.querySelector('#pending-work-summary');
+        const tools = document.querySelector('.workspace-tool-shell');
+        tools.scrollIntoView({ block: 'center' });
+        const toolRect = tools.getBoundingClientRect();
+        Object.assign(pending.style, {
+          position: 'fixed',
+          left: `${toolRect.left}px`,
+          top: `${toolRect.top}px`,
+          width: `${toolRect.width}px`,
+        });
+        const stack = document.elementsFromPoint(toolRect.left + 8, toolRect.top + 8);
+        const pendingIndex = stack.indexOf(pending);
+        const toolsIndex = stack.indexOf(tools);
+        return pendingIndex >= 0 && (toolsIndex < 0 || pendingIndex < toolsIndex);
+      });
+      expect(overlaysTools, `${viewport.width}px viewport`).toBe(true);
+    }
   });
 });

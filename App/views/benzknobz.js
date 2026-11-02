@@ -396,7 +396,10 @@ const boot = () => {
       button.type = 'button';
       button.textContent = `${changes} configuration ${changes === 1 ? 'change' : 'changes'}`;
       button.setAttribute('aria-label', `Review ${changes} pending configuration ${changes === 1 ? 'change' : 'changes'}`);
-      button.addEventListener('click', () => changeReviewBtn?.click());
+      button.addEventListener('click', () => {
+        pendingWork.open = false;
+        changeReviewBtn?.click();
+      });
       const detail = document.createElement('p');
       detail.textContent = 'Staged locally · Apply sends to instrument';
       pendingWorkSummary?.append(button, detail);
@@ -408,9 +411,13 @@ const boot = () => {
       button.textContent = profile;
       button.setAttribute('aria-label', `Open ${profile}`);
       button.addEventListener('click', () => {
+        pendingWork.open = false;
         uiModeController.setUIMode('advanced', { preserveDraft: true });
-        workspacePanelController.open('profile-performance');
+        workspacePanelController.open('profile-performance', { focus: false });
         setPerformanceTab(utilityDrafts.lfo ? 'lfo' : 'arp');
+        const activeTab = performanceTabButtons.find((tab) => tab.getAttribute('aria-selected') === 'true');
+        activeTab?.scrollIntoView({ block: 'center' });
+        activeTab?.focus({ preventScroll: true });
       });
       const detail = document.createElement('p');
       detail.textContent = 'Browser-local · Save writes profile';
