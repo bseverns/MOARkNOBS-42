@@ -78,7 +78,7 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
 - **Stage** is the performance surface: connection, live profile/scene recall, power safety, slot activity, envelope
   levels, motion, and panic help.
 - **Bench** is the default selected-slot workspace: Mapping, one Reactive path (EF source, ARG relationship, then EF character), and Motion/fixed LFO lanes. ARG constructs the Reactive input before EF shaping; it is not a peer output stage. Motion shows each shared generator’s shape and rate while generator edits remain in Lab.
-  The signal strip displays device observations separately from staged settings. On normal Bench entry, the slot map and selected-slot editor open once; an explicit panel deep link remains authoritative.
+  The signal strip leads with the musician-facing chain **Control input → Reactive response (EF / ARG) → Motion (LFO) → MIDI output** while retaining exact technical labels beside the relevant stages. It displays device observations separately from staged settings. On normal Bench entry, the slot map and selected-slot editor open once; an explicit panel deep link remains authoritative.
   One header indicator counts both staged configuration and Profile utility drafts. Its native disclosure names each
   write lane and closes before navigating to its review or Profile draft, where focus lands on the active tab; it resets closed
   whenever pending work clears, so later work reappears as a collapsed disclosure. It does not merge their Apply and Save authority.

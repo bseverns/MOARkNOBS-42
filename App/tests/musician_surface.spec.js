@@ -28,7 +28,11 @@ test('selected slot explains measured contributions without synthesizing missing
   page
 }) => {
   const errors = await boot(page);
-  await expect(page.locator('#selected-slot-signal')).toBeVisible();
+  await expect(page.locator('#selected-slot-signal')).toContainText('Control input');
+  await expect(page.locator('#selected-slot-signal')).toContainText('Reactive response');
+  await expect(page.locator('#selected-slot-signal')).toContainText('EF / ARG');
+  await expect(page.locator('#selected-slot-signal')).toContainText('Motion');
+  await expect(page.locator('#selected-slot-signal')).toContainText('MIDI output');
   await expect(page.locator('[data-configure-zone=envelope]')).toBeVisible();
   await expect(page.locator('[data-configure-zone=arg]')).toBeVisible();
   await expect(page.locator('[data-configure-zone=lfo]')).toBeVisible();
@@ -146,9 +150,9 @@ test('signal evidence handles startup, stale snapshots, and ARG as one reactive 
 
 test('selected-slot meters follow confirmed ARG and LFO enable state', async ({ page }) => {
   const errors = await boot(page);
-  const reactiveMeter = page.locator('meter[aria-label^="Reactive · EF / ARG:"]');
-  const lfoOneMeter = page.locator('meter[aria-label^="LFO 1:"]');
-  const lfoTwoMeter = page.locator('meter[aria-label^="LFO 2:"]');
+  const reactiveMeter = page.locator('meter[aria-label^="Reactive response · EF / ARG:"]');
+  const lfoOneMeter = page.locator('meter[aria-label^="Motion · LFO 1:"]');
+  const lfoTwoMeter = page.locator('meter[aria-label^="Motion · LFO 2:"]');
 
   await expect(reactiveMeter).toBeVisible();
   await expect(reactiveMeter).not.toHaveAttribute('aria-label', /Not reported/);

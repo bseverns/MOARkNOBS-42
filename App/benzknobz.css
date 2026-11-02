@@ -4727,9 +4727,17 @@ footer {
 
 /* Configure centers the selected instrument voice; Lab retains its bench layout. */
 html[data-ui-mode='basic'] main { grid-template-columns: minmax(0, 1fr); }
-html[data-ui-mode='basic'] #stage-panel { grid-template-columns: minmax(290px, .65fr) minmax(0, 1.8fr); }
+html[data-ui-mode='basic'] #stage-panel {
+  grid-template-columns: minmax(330px, .9fr) minmax(0, 1.45fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(45,226,230,.16);
+  border-radius: var(--radius-lg);
+  background: rgba(10,18,26,.38);
+}
 html[data-ui-mode='basic'] #connect-card { grid-column: 1 / -1; }
 html[data-ui-mode='basic'] #live-panel { position: sticky; top: 12px; }
+html[data-ui-mode='basic'] #live-panel .live-block { opacity: .82; }
 #selected-slot-signal { display: grid; gap: 8px; padding: 14px; border: 1px solid rgba(45,226,230,.3);
   border-radius: var(--radius-sm); background: #101b23; min-width: 0; }
 html[data-ui-mode='basic'] #selected-slot-signal { position: sticky; top: 8px; z-index: 4; }
@@ -4740,6 +4748,7 @@ html[data-ui-mode='basic'] #selected-slot-signal { position: sticky; top: 8px; z
 .signal-contributions { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .signal-contribution { min-width: 92px; flex: 1 1 0; display: grid; gap: 5px; border: 1px solid rgba(45,226,230,.22); border-radius: 5px; padding: 8px; background: rgba(9,17,24,.5); text-align: left; }
 .signal-contribution span { color: var(--color-muted); font-size: .65rem; }
+.signal-technical { color: var(--color-accent); font: inherit; }
 .signal-contribution strong { font-family: var(--font-mono); font-size: .8rem; overflow-wrap: anywhere; }
 .signal-contribution meter { width: 100%; height: 12px; }
 .signal-contribution meter[hidden] { display: none; }
@@ -4783,7 +4792,7 @@ html[data-ui-mode='basic'][data-dirty='true'] #page-shell,
 html[data-ui-mode='advanced'][data-dirty='true'] #page-shell { padding-bottom: var(--apply-dock-space, 100px); }
 html { scroll-padding-bottom: var(--apply-dock-space, 0px); }
 @media (max-width: 1000px) {
-  html[data-ui-mode='basic'] #stage-panel { grid-template-columns: minmax(0, 1fr); }
+  html[data-ui-mode='basic'] #stage-panel { grid-template-columns: minmax(0, 1fr); padding: 0; border: 0; background: transparent; }
   html[data-ui-mode='basic'] #live-panel { position: static; }
   html[data-ui-mode='basic'] #selected-slot-signal { position: static; }
 }

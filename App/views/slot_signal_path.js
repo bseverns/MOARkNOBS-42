@@ -81,13 +81,13 @@ export function renderSlotSignal(
   const strip = document.createElement('div');
   strip.className = 'signal-contributions';
   const parts = [
-    ['Hand', textValue(signal.baseline), signal.baseline, false, null],
-    ['Reactive · EF / ARG', signedValue(signal.reactive), signal.reactive, true, 'reactive'],
-    ['LFO 1', signedValue(signal.lfos[0]), signal.lfos[0], true, 'lfo-0'],
-    ['LFO 2', signedValue(signal.lfos[1]), signal.lfos[1], true, 'lfo-1'],
-    ['Output', textValue(signal.output), signal.output, false, null]
+    ['Control input', 'Hand', textValue(signal.baseline), signal.baseline, false, null],
+    ['Reactive response', 'EF / ARG', signedValue(signal.reactive), signal.reactive, true, 'reactive'],
+    ['Motion', 'LFO 1', signedValue(signal.lfos[0]), signal.lfos[0], true, 'lfo-0'],
+    ['Motion', 'LFO 2', signedValue(signal.lfos[1]), signal.lfos[1], true, 'lfo-1'],
+    ['MIDI output', '', textValue(signal.output), signal.output, false, null]
   ];
-  parts.forEach(([label, value, amount, bipolar, destination], partIndex) => {
+  parts.forEach(([label, technical, value, amount, bipolar, destination], partIndex) => {
     if (partIndex) {
       const arrow = document.createElement('span');
       arrow.className = 'signal-flow-arrow';
@@ -99,11 +99,18 @@ export function renderSlotSignal(
     item.className = `signal-contribution${destination ? ' signal-navigation' : ''}`;
     if (destination) {
       item.type = 'button';
-      item.setAttribute('aria-label', `Focus ${label} controls`);
+      const focusLabel = technical === 'EF / ARG' ? 'Reactive · EF / ARG' : technical;
+      item.setAttribute('aria-label', `Focus ${focusLabel} controls`);
       item.addEventListener('click', () => onNavigate(destination));
     }
     const name = document.createElement('span');
     name.textContent = label;
+    if (technical) {
+      const detail = document.createElement('small');
+      detail.className = 'signal-technical';
+      detail.textContent = technical;
+      name.append(' · ', detail);
+    }
     const reading = document.createElement('strong');
     reading.textContent = value;
     const meter = document.createElement('meter');
@@ -111,12 +118,12 @@ export function renderSlotSignal(
     meter.max = 127;
     meter.value = amount ?? 0;
     meter.hidden = amount === null;
-    meter.setAttribute('aria-label', `${label}: ${value}`);
+    meter.setAttribute('aria-label', `${technical ? `${label} · ${technical}` : label}: ${value}`);
     item.append(name, reading, meter);
     strip.appendChild(item);
   });
   const route = document.createElement('p');
   route.className = 'microcopy signal-source';
-  route.textContent = `${signal.source} → LFO 1 → LFO 2 → output. ${signal.measured ? 'Measured deltas after clamping; select Reactive or an LFO to focus its controls.' : 'Separate contributions are not reported in the current snapshot.'}`;
+  route.textContent = `Control input → Reactive response (EF / ARG) → Motion (LFO 1 / LFO 2) → MIDI output. ${signal.source}. ${signal.measured ? 'Measured deltas after clamping; select Reactive or an LFO to focus its controls.' : 'Separate contributions are not reported in the current snapshot.'}`;
   container.append(heading, caption, strip, route);
 }
