@@ -121,13 +121,24 @@ test.describe('progressive workspace panels', () => {
     await expect(liveSlots).toHaveAttribute('aria-pressed', 'false');
   });
 
+  test('the connected fallback appears only after the final Bench panel closes', async ({ page }) => {
+    await bootSimulator(page, 'basic');
+    const liveSlots = page.getByRole('button', { name: 'Live Slots', exact: true });
+    const editor = page.getByRole('button', { name: 'Selected Slot Editor', exact: true });
+
+    await liveSlots.click();
+    await expect(page.locator('#workspace-empty-state')).toBeHidden();
+    await editor.click();
+    await expect(page.locator('#workspace-empty-state')).toBeVisible();
+  });
+
   test('the picker remains an interactive touch target', async ({ page }) => {
     await bootSimulator(page, 'advanced');
     await expect(page.locator('#workspace-tool-picker')).toHaveCSS('pointer-events', 'auto');
     await expect(page.getByRole('button', { name: 'Scope', exact: true })).toHaveCSS('min-height', '44px');
   });
 
-  test('selecting a Bench slot keeps its editor context available', async ({ page }) => {
+  test('selecting a Bench slot keeps its editor context available without stealing focus', async ({ page }) => {
     await bootSimulator(page, 'basic');
 
     await page.locator('#slots [data-index="4"]').click();
@@ -135,18 +146,20 @@ test.describe('progressive workspace panels', () => {
     await expect(page.locator('#editor-panel')).toBeVisible();
     await expect(page.locator('#editor-panel')).toContainText('Shape this slot');
     await expect(page.locator('#editor-panel')).toHaveAttribute('data-workspace-open', 'true');
-    await expect(page.locator('#editor-panel h2')).toBeFocused();
+    await expect(page.locator('#editor-panel h2')).not.toBeFocused();
   });
 
-  test('slot grid announces and activates the keyboard-selected slot', async ({ page }) => {
+  test('slot grid retains keyboard focus across consecutive selection keys', async ({ page }) => {
     await bootSimulator(page, 'basic');
     const slots = page.locator('#slots');
     await slots.focus();
-    await slots.press('ArrowRight');
-    await expect(slots).toHaveAttribute('aria-activedescendant', 'slot-grid-option-1');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(slots).toBeFocused();
+    await expect(slots).toHaveAttribute('aria-activedescendant', 'slot-grid-option-2');
     await expect(page.locator('#slot-grid-option-0')).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.locator('#slot-grid-option-1')).toHaveAttribute('aria-pressed', 'true');
-    await slots.press('Enter');
+    await expect(page.locator('#slot-grid-option-2')).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Enter');
     await expect(page.locator('#editor-panel')).toBeVisible();
   });
 

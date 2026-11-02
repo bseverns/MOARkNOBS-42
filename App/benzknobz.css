@@ -2364,6 +2364,25 @@ button:not(:disabled):focus-visible {
   display: none !important;
 }
 
+.pending-work { position: relative; }
+.pending-work summary { list-style: none; cursor: pointer; }
+.pending-work summary::-webkit-details-marker { display: none; }
+.pending-work[open] #dirty-badge { box-shadow: 0 0 0 2px rgba(255, 95, 150, 0.38); }
+#pending-work-summary {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 250px;
+  padding: 10px;
+  border: 1px solid rgba(255, 95, 150, 0.5);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+#pending-work-summary button { text-align: left; }
+#pending-work-summary p { margin: 0; color: var(--color-muted); font-size: 0.78rem; }
+
 .ui-tier-hidden {
   display: none !important;
 }
@@ -2564,6 +2583,8 @@ html[data-ui-mode='advanced'][data-dirty='true'] #page-shell {
   background: rgba(13, 17, 25, 0.42);
   text-align: center;
 }
+
+.workspace-empty-state[hidden] { display: none !important; }
 
 .workspace-empty-state h2 {
   max-width: 34ch;

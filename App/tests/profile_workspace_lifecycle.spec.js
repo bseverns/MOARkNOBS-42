@@ -58,8 +58,12 @@ test('pending work consolidates Profile utility drafts into one header indicator
   await depth.dispatchEvent('change');
 
   await expect(page.locator('#dirty-badge')).toHaveText('1 pending edit');
-  await expect(page.locator('#dirty-badge')).toHaveAttribute('title', 'Profile A LFO local · Save writes profile');
-  await expect(page.locator('#pending-work')).toBeHidden();
+  await expect(page.locator('#pending-work')).toBeVisible();
+  await expect(page.locator('#pending-work summary')).toHaveText('1 pending edit');
+  await expect(page.locator('#pending-work')).toContainText('Profile A LFO draft');
+  await expect(page.locator('#pending-work')).toContainText('Save writes profile');
+  await page.locator('#pending-work summary').click();
+  await expect(page.getByRole('button', { name: 'Open Profile A LFO draft' })).toBeVisible();
 });
 
 test('dirty profile arp draft survives a transport read error and reconnect', async ({ page }) => {

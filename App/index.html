@@ -31,8 +31,10 @@
               </div>
             </details>
             <span class="active-profile-pill" id="header-profile-status">Profile A</span>
-            <span id="dirty-badge" role="status" hidden>Staged changes</span>
-            <span id="pending-work" role="status" hidden></span>
+            <details id="pending-work" class="pending-work" hidden>
+              <summary><span id="dirty-badge" role="status" hidden>Staged changes</span></summary>
+              <div id="pending-work-summary"></div>
+            </details>
           </div>
           <div class="connect-actions compact-connect-actions" data-ui-modes="basic advanced">
             <button id="connect" type="button" disabled aria-busy="true">Connect</button>

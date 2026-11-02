@@ -99,6 +99,7 @@ const boot = () => {
   const diffOutput = document.getElementById('diff-output');
   const dirtyBadge = document.getElementById('dirty-badge');
   const pendingWork = document.getElementById('pending-work');
+  const pendingWorkSummary = document.getElementById('pending-work-summary');
   const headerProfileStatus = document.getElementById('header-profile-status');
   const changeBar = document.getElementById('change-bar');
   const changeCount = document.getElementById('change-count');
@@ -125,6 +126,7 @@ const boot = () => {
   const emptySimulatorBtn = document.getElementById('empty-start-simulator');
   const emptyDemoRigBtn = document.getElementById('empty-load-demo-rig');
   const emptyInspectSlotsBtn = document.getElementById('empty-inspect-slots');
+  const workspaceEmptyState = document.getElementById('workspace-empty-state');
   const coldConnectBtn = document.getElementById('cold-connect');
   const coldSimulatorBtn = document.getElementById('cold-start-simulator');
   const coldRecoveryBtn = document.getElementById('cold-open-recovery');
@@ -382,12 +384,38 @@ const boot = () => {
       utilities.length && `Profile ${'ABCD'[utilityDrafts.target] ?? 'A'} ${utilities.join(' + ')} local · Save writes profile`
     ].filter(Boolean);
     const total = changes + utilities.length;
+    pendingWork?.toggleAttribute('hidden', !total);
     dirtyBadge?.toggleAttribute('hidden', !total);
     if (dirtyBadge) {
       dirtyBadge.textContent = `${total} pending edit${total === 1 ? '' : 's'}`;
       dirtyBadge.title = parts.join(' • ');
     }
-    pendingWork?.setAttribute('hidden', '');
+    pendingWorkSummary?.replaceChildren();
+    if (changes) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = `${changes} configuration ${changes === 1 ? 'change' : 'changes'}`;
+      button.setAttribute('aria-label', `Review ${changes} pending configuration ${changes === 1 ? 'change' : 'changes'}`);
+      button.addEventListener('click', () => changeReviewBtn?.click());
+      const detail = document.createElement('p');
+      detail.textContent = 'Staged locally · Apply sends to instrument';
+      pendingWorkSummary?.append(button, detail);
+    }
+    if (utilities.length) {
+      const profile = `Profile ${'ABCD'[utilityDrafts.target] ?? 'A'} ${utilities.join(' + ')} draft`;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = profile;
+      button.setAttribute('aria-label', `Open ${profile}`);
+      button.addEventListener('click', () => {
+        uiModeController.setUIMode('advanced', { preserveDraft: true });
+        workspacePanelController.open('profile-performance');
+        setPerformanceTab(utilityDrafts.lfo ? 'lfo' : 'arp');
+      });
+      const detail = document.createElement('p');
+      detail.textContent = 'Browser-local · Save writes profile';
+      pendingWorkSummary?.append(button, detail);
+    }
   }
   const diffStatusController = createDiffStatusController({
     runtime,
@@ -703,16 +731,21 @@ const boot = () => {
       { id: 'session-log', label: 'Session Log', modes: ['advanced'], group: 'Lab Evidence', selector: '.debug-log-bridge' }
     ].map(workspaceTool),
     onVisibilityChanged: (entry, open) => {
-      if (!open) return;
-      if (entry.id === 'device-monitor') {
-        deviceMonitorController.render();
-        if (latestTelemetry) deviceMonitorController.renderTelemetry(latestTelemetry);
-        if (latestTelemetryHealth) deviceMonitorController.renderTelemetryHealth(latestTelemetryHealth);
+      if (open) {
+        if (entry.id === 'device-monitor') {
+          deviceMonitorController.render();
+          if (latestTelemetry) deviceMonitorController.renderTelemetry(latestTelemetry);
+          if (latestTelemetryHealth) deviceMonitorController.renderTelemetryHealth(latestTelemetryHealth);
+        }
+        if (entry.id === 'live-slots') slotWorkspaceController.renderTelemetry();
+        if (entry.id === 'slot-editor') populateDetail({ renderEditor: false });
       }
-      if (entry.id === 'live-slots') slotWorkspaceController.renderTelemetry();
-      if (entry.id === 'slot-editor') populateDetail({ renderEditor: false });
+      renderWorkspaceEmptyState();
     }
   });
+  function renderWorkspaceEmptyState() {
+    workspaceEmptyState?.toggleAttribute('hidden', workspacePanelController.getOpenPanelIds().length > 0);
+  }
   emptyInspectSlotsBtn?.addEventListener('click', () => workspacePanelController.open('live-slots', { focus: true }));
   let hydrateWorkspaceDeepLink = Boolean(new URLSearchParams(window.location.search).get('panel') ?? new URLSearchParams(window.location.search).get('panels'));
   const uiModeController = createUiModeController({
@@ -728,6 +761,7 @@ const boot = () => {
     },
     onModeChanged: (mode) => {
       workspacePanelController.setMode(mode, { openDeepLink: hydrateWorkspaceDeepLink });
+      renderWorkspaceEmptyState();
       hydrateWorkspaceDeepLink = false;
       updateStagePanel();
     },
@@ -1025,9 +1059,9 @@ const boot = () => {
     performerPanel: performerPanelController,
     isLivePanelOpen: () => workspacePanelController.getOpenPanelIds().includes('live-slots'),
     isSlotEditorOpen: () => workspacePanelController.getOpenPanelIds().includes('slot-editor'),
-    onSelectSlot: () => {
+    onSelectSlot: (_index, { activate } = {}) => {
       populateDetail();
-      if (uiModeController.getUiMode() === 'basic') {
+      if (activate && uiModeController.getUiMode() === 'basic') {
         workspacePanelController.open('slot-editor', { focus: true });
       }
     },

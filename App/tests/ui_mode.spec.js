@@ -44,10 +44,9 @@ test.describe('UI mode', () => {
 
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
     await expect(page.locator('#cold-start')).toBeHidden();
-    await expect(page.locator('#workspace-empty-state')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Inspect slots', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Inspect slots', exact: true }).click();
     await expect(page.locator('#live-panel')).toBeVisible();
+    await expect(page.locator('#editor-panel')).toBeVisible();
+    await expect(page.locator('#workspace-empty-state')).toBeHidden();
     await expect(page.locator('.workspace-tool-shell')).toBeVisible();
     await expect(page.locator('.workspace-tool-shell')).not.toHaveAttribute('open', '');
     await expect
@@ -83,6 +82,11 @@ test.describe('UI mode', () => {
     await ccInput.dispatchEvent('change');
 
     await expect(page.locator('#dirty-badge')).toBeVisible();
+    await expect(page.locator('#pending-work')).toBeVisible();
+    await page.locator('#pending-work summary').click();
+    await page.getByRole('button', { name: 'Review 1 pending configuration change' }).click();
+    await expect(page.locator('#change-review-dialog')).toHaveAttribute('open', '');
+    await page.locator('#change-review-close').click();
     await expect(page.locator('#change-bar')).toBeVisible();
     await expect(page.locator('#change-count')).toHaveText('● 1 staged');
     await expect(page.locator('#change-bar')).toHaveCSS('position', 'fixed');

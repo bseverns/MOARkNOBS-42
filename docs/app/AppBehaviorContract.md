@@ -79,7 +79,8 @@ The complete state model is [Configuration Transaction Model](../reference/Confi
   levels, motion, and panic help.
 - **Bench** is the default selected-slot workspace: Mapping, one Reactive path (EF source, ARG relationship, then EF character), and Motion/fixed LFO lanes. ARG constructs the Reactive input before EF shaping; it is not a peer output stage. Motion shows each shared generator’s shape and rate while generator edits remain in Lab.
   The signal strip displays device observations separately from staged settings. On normal Bench entry, the slot map and selected-slot editor open once; an explicit panel deep link remains authoritative.
-  One header indicator counts both staged configuration and Profile utility drafts, while its title preserves each write lane.
+  One header indicator counts both staged configuration and Profile utility drafts. Its native disclosure names each
+  write lane and navigates only to its review or Profile draft; it does not merge their Apply and Save authority.
 - **Lab** exposes complete EF, ARG, fixed-LFO, filter, LED, scope, MIDI-monitor, import/export, and diagnostic controls.
   Every device-schema configuration root must have a marked Lab surface, and the hand-built selected-slot editor must
   account for every slot-schema leaf. Its full-width Bench preserves Instrument, Profile, Observe, and Evidence as

@@ -78,7 +78,7 @@ export function createSlotWorkspaceController({
       else if (key === 'End') next = slotState.slots.length - 1;
       else if (key === 'Enter' || key === ' ') {
         event.preventDefault();
-        selectSlot(slotState.selected);
+        selectSlot(slotState.selected, { activate: true });
         return;
       }
       else return;
@@ -105,14 +105,14 @@ export function createSlotWorkspaceController({
     onSlotsChanged(slotState.slots);
   }
 
-  function selectSlot(index) {
+  function selectSlot(index, { activate = false } = {}) {
     const maxIndex = Math.max(0, slotState.slots.length - 1);
     slotState.selected = Math.min(Math.max(0, index), maxIndex);
     slotVirtualizer.highlight(slotState.selected);
     slotVirtualizer.scrollToIndex(slotState.selected);
     syncActiveDescendant();
     performerPanel?.highlightSelectedSlot?.();
-    onSelectSlot(slotState.selected);
+    onSelectSlot(slotState.selected, { activate });
   }
 
   function paintTelemetry(frame) {
